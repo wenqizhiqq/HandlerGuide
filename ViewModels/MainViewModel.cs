@@ -20,6 +20,9 @@ namespace HandlerGuide.ViewModels
 
         public bool IsActive { get => _active; set => Set(ref _active, value); }
 
+        /// <summary>固定屏页面（如主界面）：内容填满视口高度，底部条贴底。</summary>
+        public bool Fill { get; set; }
+
         /// <summary>页面内容（首次访问时构建并缓存）。</summary>
         public Element Content => _content ?? (_content = Build != null ? Build() : new StackElement());
 

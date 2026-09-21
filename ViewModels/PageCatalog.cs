@@ -129,9 +129,13 @@ namespace HandlerGuide.ViewModels
         }
 
         public static PageVm Home(MainViewModel main)
-            => D("home", "🏠", "主界面",
+        {
+            var p = D("home", "🏠", "主界面",
                  "控制程序基本显示界面：命令中心工具条 + 主界面，显示当前控制程序的主要状态。",
                  HomePages.MainScreen);
+            p.Fill = true;
+            return p;
+        }
 
         public static PageVm Manual(MainViewModel main)
             => D("manual", "📖", "说明书",

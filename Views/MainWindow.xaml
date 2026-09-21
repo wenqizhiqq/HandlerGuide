@@ -246,15 +246,32 @@
         </Border>
 
         <!-- ================= 页面主体 ================= -->
-        <ScrollViewer Grid.Row="3" x:Name="PageScroll" VerticalScrollBarVisibility="Auto" Padding="20,16,20,20">
-            <StackPanel>
-                <TextBlock Text="{Binding PageTitle}" FontSize="22" FontWeight="SemiBold"
-                           Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap" />
-                <TextBlock Text="{Binding PageDesc}" FontSize="12.5" TextWrapping="Wrap"
-                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,6,0,16" />
-                <ContentControl Content="{Binding CurrentContent}" />
-            </StackPanel>
-        </ScrollViewer>
+        <Grid Grid.Row="3" Margin="20,16,20,8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <TextBlock Text="{Binding PageTitle}" FontSize="22" FontWeight="SemiBold"
+                       Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap" />
+            <TextBlock Grid.Row="1" Text="{Binding PageDesc}" FontSize="12.5" TextWrapping="Wrap"
+                       Foreground="{StaticResource TextSecondaryBrush}" Margin="0,6,0,12" />
+            <ScrollViewer Grid.Row="2" x:Name="PageScroll" VerticalScrollBarVisibility="Auto">
+                <ContentControl Content="{Binding CurrentContent}">
+                    <ContentControl.Style>
+                        <Style TargetType="ContentControl">
+                            <Style.Triggers>
+                                <!--  固定屏页面（如主界面）填满视口，使底部条真正贴底  -->
+                                <DataTrigger Binding="{Binding CurrentPage.Fill}" Value="True">
+                                    <Setter Property="MinHeight"
+                                            Value="{Binding ViewportHeight, ElementName=PageScroll, Mode=OneWay}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ContentControl.Style>
+                </ContentControl>
+            </ScrollViewer>
+        </Grid>
 
         <!-- ================= 底部状态条 ================= -->
         <Border Grid.Row="4" Background="{StaticResource CardBgBrush}"

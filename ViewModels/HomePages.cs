@@ -10,7 +10,8 @@ namespace HandlerGuide.ViewModels
         public static Element MainScreen()
         {
             var m = E.M;
-            var root = E.Grid().Cols("360", "*", "276");
+            var root = E.Grid().Cols("360", "*", "276").Rows("*");
+            root.VAlign = VerticalAlignment.Stretch;
 
             // ---------------- 左列 ----------------
             var left = E.V();
@@ -75,7 +76,9 @@ namespace HandlerGuide.ViewModels
                 E.MiniBtn("自动清洁", () => m.Log("信息", "自动清洁")),
                 E.MiniBtn("手动清洁", () => m.Log("信息", "手动清洁"))));
 
-            root.Add(E.Box(E.Scroll(left), E.CardBg, null, 0, 12, new Thickness(14), new Thickness(0, 0, 12, 0)), col: 0);
+            var leftBox = E.Box(E.Scroll(left), E.CardBg, null, 0, 12, new Thickness(14), new Thickness(0, 0, 12, 0));
+            leftBox.VAlign = VerticalAlignment.Stretch;
+            root.Add(leftBox, col: 0);
 
             // ---------------- 中列 ----------------
             var mid = E.V();
@@ -118,7 +121,9 @@ namespace HandlerGuide.ViewModels
                 new[] { "初始模式", "连续模式", "复测-初始模式", "复测-连续模式" }, 150), 74));
 
             mid.Children.Add(stats);
-            root.Add(E.Box(E.Scroll(mid), E.CardBg, null, 0, 12, new Thickness(14), new Thickness(0, 0, 12, 0)), col: 1);
+            var midBox = E.Box(E.Scroll(mid), E.CardBg, null, 0, 12, new Thickness(14), new Thickness(0, 0, 12, 0));
+            midBox.VAlign = VerticalAlignment.Stretch;
+            root.Add(midBox, col: 1);
 
             // ---------------- 右列：批次数据统计窗口 ----------------
             var right = E.V(E.T("批次数据统计", 13, E.P, true).Margin(0, 0, 0, 8));
@@ -139,7 +144,9 @@ namespace HandlerGuide.ViewModels
                     cg.Add(E.Display("0/0", 58, E.BandGrey), i, 2);
             }
             right.Children.Add(cg);
-            root.Add(E.Box(E.Scroll(right), E.CardBg, null, 0, 12, new Thickness(14)), col: 2);
+            var rightBox = E.Box(E.Scroll(right), E.CardBg, null, 0, 12, new Thickness(14));
+            rightBox.VAlign = VerticalAlignment.Stretch;
+            root.Add(rightBox, col: 2);
 
             // ---------------- 底部：拆卸 / SNAP + 信号灯 + 版权 ----------------
             var bottom = E.V(
@@ -154,6 +161,7 @@ namespace HandlerGuide.ViewModels
                     new Thickness(10, 4, 10, 4), new Thickness(0, 8, 0, 0)));
 
             var outer = E.Grid().Rows("*", "Auto");
+            outer.VAlign = VerticalAlignment.Stretch;
             outer.Add(root, 0);
             outer.Add(bottom, 1);
             return outer;

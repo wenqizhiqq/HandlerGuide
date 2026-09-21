@@ -168,7 +168,9 @@ namespace HandlerGuide.ViewModels
         public static ScrollElement Scroll(Element content, double height = 0,
             ScrollBarVisibility h = ScrollBarVisibility.Disabled, ScrollBarVisibility v = ScrollBarVisibility.Auto)
         {
-            return new ScrollElement { Content = content, ViewHeight = height > 0 ? height : double.NaN, HScroll = h, VScroll = v };
+            // 纵向默认撑满：放进固定高度容器（如主界面三列）时占满可用高度
+            return new ScrollElement { Content = content, ViewHeight = height > 0 ? height : double.NaN,
+                HScroll = h, VScroll = v, VAlign = VerticalAlignment.Stretch };
         }
 
         // ---------------- 分组卡片 ----------------
