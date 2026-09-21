@@ -17,7 +17,7 @@
                    FontWeight="{Binding FontWeight}"
                    TextWrapping="{Binding Wrap}"
                    TextAlignment="{Binding Align}"
-                   Margin="{Binding Margin}"
+                   Margin="{Binding EffectiveMargin}"
                    Width="{Binding Width}"
                    Height="{Binding Height}"
                    HorizontalAlignment="{Binding HAlign}"
@@ -28,7 +28,7 @@
     <!-- ================= 布局 ================= -->
     <DataTemplate DataType="{x:Type vm:StackElement}">
         <ItemsControl ItemsSource="{Binding Children}"
-                      Margin="{Binding Margin}"
+                      Margin="{Binding EffectiveMargin}"
                       Width="{Binding Width}" Height="{Binding Height}"
                       HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}">
             <ItemsControl.ItemsPanel>
@@ -41,7 +41,7 @@
 
     <DataTemplate DataType="{x:Type vm:WrapElement}">
         <ItemsControl ItemsSource="{Binding Children}"
-                      Margin="{Binding Margin}"
+                      Margin="{Binding EffectiveMargin}"
                       Width="{Binding Width}" Height="{Binding Height}"
                       HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}">
             <ItemsControl.ItemsPanel>
@@ -54,7 +54,7 @@
 
     <DataTemplate DataType="{x:Type vm:ColsElement}">
         <ItemsControl ItemsSource="{Binding Children}"
-                      Margin="{Binding Margin}"
+                      Margin="{Binding EffectiveMargin}"
                       Width="{Binding Width}" Height="{Binding Height}"
                       HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}">
             <ItemsControl.ItemsPanel>
@@ -67,7 +67,7 @@
 
     <DataTemplate DataType="{x:Type vm:GridElement}">
         <ItemsControl ItemsSource="{Binding Children}"
-                      Margin="{Binding Margin}"
+                      Margin="{Binding EffectiveMargin}"
                       Width="{Binding Width}" Height="{Binding Height}"
                       HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}">
             <ItemsControl.ItemsPanel>
@@ -100,7 +100,7 @@
                 BorderThickness="{Binding BorderThickness}"
                 CornerRadius="{Binding Radius}"
                 Padding="{Binding Padding}"
-                Margin="{Binding Margin}"
+                Margin="{Binding EffectiveMargin}"
                 Width="{Binding Width}" Height="{Binding Height}"
                 HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}"
                 ToolTip="{Binding ToolTip}">
@@ -113,7 +113,7 @@
     <DataTemplate DataType="{x:Type vm:ScrollElement}">
         <ScrollViewer Content="{Binding Content}"
                       Height="{Binding ViewHeight}"
-                      Margin="{Binding Margin}"
+                      Margin="{Binding EffectiveMargin}"
                       Width="{Binding Width}"
                       HorizontalScrollBarVisibility="{Binding HScroll}"
                       VerticalScrollBarVisibility="{Binding VScroll}"
@@ -125,7 +125,10 @@
     <DataTemplate DataType="{x:Type vm:GroupElement}">
         <Border Background="{StaticResource CardBgBrush}"
                 BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
-                CornerRadius="12" Padding="16,13,16,13" Margin="0,0,0,12">
+                CornerRadius="12" Padding="16,13,16,13" Margin="{Binding EffectiveMargin}"
+                Width="{Binding Width}" Height="{Binding Height}"
+                HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}"
+                ToolTip="{Binding ToolTip}">
             <StackPanel>
                 <TextBlock Text="{Binding Title}" FontSize="12.5" FontWeight="SemiBold"
                            Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"
@@ -137,7 +140,10 @@
 
     <DataTemplate DataType="{x:Type vm:BandElement}">
         <Border Background="{Binding Background}" CornerRadius="10"
-                Padding="14,11,14,11" Margin="0,0,0,10">
+                Padding="14,11,14,11" Margin="{Binding EffectiveMargin}"
+                Width="{Binding Width}" Height="{Binding Height}"
+                HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}"
+                ToolTip="{Binding ToolTip}">
             <StackPanel>
                 <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="SemiBold"
                            Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"
@@ -149,7 +155,10 @@
 
     <!-- ================= 表单行 ================= -->
     <DataTemplate DataType="{x:Type vm:FieldRowElement}">
-        <Grid Margin="0,3,0,3" vw:GridSpec.Cols="{Binding ColsSpec}" vw:GridSpec.Rows="Auto">
+        <Grid Margin="{Binding EffectiveMargin}" vw:GridSpec.Cols="{Binding ColsSpec}" vw:GridSpec.Rows="Auto"
+                Width="{Binding Width}" Height="{Binding Height}"
+                      HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}"
+                      ToolTip="{Binding ToolTip}">
             <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12.5" TextAlignment="Right"
                        Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"
                        Margin="{Binding LabelMargin}"
@@ -163,7 +172,10 @@
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type vm:FillRowElement}">
-        <Grid Margin="0,2,0,2" vw:GridSpec.Cols="{Binding ColsSpec}" vw:GridSpec.Rows="Auto">
+        <Grid Margin="{Binding EffectiveMargin}" vw:GridSpec.Cols="{Binding ColsSpec}" vw:GridSpec.Rows="Auto"
+                Width="{Binding Width}" Height="{Binding Height}"
+                     HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}"
+                     ToolTip="{Binding ToolTip}">
             <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12"
                        Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"
                        Visibility="{Binding HasLabel, Converter={StaticResource BoolVis}}" />
@@ -180,7 +192,10 @@
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type vm:TwoColElement}">
-        <ItemsControl ItemsSource="{Binding Pairs}" Margin="{Binding Margin}" />
+        <ItemsControl ItemsSource="{Binding Pairs}" Margin="{Binding EffectiveMargin}"
+                      Width="{Binding Width}" Height="{Binding Height}"
+                      HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}"
+                      ToolTip="{Binding ToolTip}" />
     </DataTemplate>
 
     <!-- ================= 输入控件 ================= -->
@@ -189,7 +204,7 @@
                  Width="{Binding Width}" Height="{Binding Height}"
                  IsReadOnly="{Binding IsReadOnly}"
                  HorizontalContentAlignment="Right"
-                 Margin="{Binding Margin}"
+                 Margin="{Binding EffectiveMargin}"
                  HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}">
             <TextBox.Style>
                 <Style TargetType="TextBox" BasedOn="{StaticResource FieldTextBox}">
@@ -210,7 +225,7 @@
                  Width="{Binding Width}" Height="{Binding Height}"
                  IsReadOnly="{Binding IsReadOnly}"
                  HorizontalContentAlignment="Left"
-                 Margin="{Binding Margin}"
+                 Margin="{Binding EffectiveMargin}"
                  HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}">
             <TextBox.Style>
                 <Style TargetType="TextBox" BasedOn="{StaticResource FieldTextBox}">
@@ -231,8 +246,10 @@
                   ItemsSource="{Binding Items}"
                   SelectedIndex="{Binding SelectedIndex}"
                   Width="{Binding Width}"
-                  Margin="{Binding Margin}"
-                  HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}" />
+                  Margin="{Binding EffectiveMargin}"
+                  HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}" 
+                Height="{Binding Height}"
+                  ToolTip="{Binding ToolTip}" />
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type vm:CheckElement}">
@@ -241,15 +258,20 @@
                   FontSize="12.5"
                   Foreground="{StaticResource TextPrimaryBrush}"
                   VerticalContentAlignment="Center"
-                  Margin="{Binding Margin}"
-                  Visibility="{Binding BoxVisible, Converter={StaticResource BoolVis}}" />
+                  Margin="{Binding EffectiveMargin}"
+                  Visibility="{Binding BoxVisible, Converter={StaticResource BoolVis}}" 
+                Width="{Binding Width}"
+                  HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}"
+                  ToolTip="{Binding ToolTip}" />
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type vm:SwitchElement}">
         <ToggleButton Style="{StaticResource SwitchToggle}"
                       IsChecked="{Binding IsChecked}"
-                      Margin="{Binding Margin}"
-                      HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}" />
+                      Margin="{Binding EffectiveMargin}"
+                      HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}" 
+                Width="{Binding Width}" Height="{Binding Height}"
+                      ToolTip="{Binding ToolTip}" />
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type vm:RadioElement}">
@@ -258,8 +280,11 @@
                      GroupName="{Binding GroupName}"
                      FontSize="12.5"
                      Foreground="{StaticResource TextPrimaryBrush}"
-                     Margin="{Binding Margin}"
-                     VerticalContentAlignment="Center" />
+                     Margin="{Binding EffectiveMargin}"
+                     VerticalContentAlignment="Center" 
+                Width="{Binding Width}"
+                     HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}"
+                     ToolTip="{Binding ToolTip}" />
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type vm:ButtonElement}">
@@ -270,22 +295,28 @@
                 FontWeight="{Binding FontWeight}"
                 Padding="{Binding Padding}"
                 Width="{Binding Width}" Height="{Binding Height}"
-                Margin="{Binding Margin}"
+                Margin="{Binding EffectiveMargin}"
                 Background="{Binding Background, Converter={StaticResource UnsetIfNull}}"
                 Foreground="{Binding Foreground, Converter={StaticResource UnsetIfNull}}"
                 BorderBrush="{Binding BorderBrush, Converter={StaticResource UnsetIfNull}}"
                 BorderThickness="{Binding BorderThickness, Converter={StaticResource UnsetIfNull}}"
                 HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}"
-                Cursor="Hand" />
+                Cursor="Hand" 
+                ToolTip="{Binding ToolTip}" />
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type vm:SliderElement}">
         <Slider Minimum="{Binding Min}" Maximum="{Binding Max}" Value="{Binding Value}"
-                Width="{Binding Width}" VerticalAlignment="Center" Margin="{Binding Margin}" />
+                Width="{Binding Width}" Margin="{Binding EffectiveMargin}"
+                Height="{Binding Height}"
+                HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}"
+                ToolTip="{Binding ToolTip}" />
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type vm:SliderRowElement}">
-        <Grid Margin="0,4,0,4" vw:GridSpec.Cols="*,Auto" vw:GridSpec.Rows="Auto">
+        <Grid Margin="{Binding EffectiveMargin}" Width="{Binding Width}" Height="{Binding Height}"
+              HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}"
+              vw:GridSpec.Cols="*,Auto" vw:GridSpec.Rows="Auto">
             <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12.5"
                        Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
             <StackPanel Grid.Column="1" Orientation="Horizontal">
@@ -301,13 +332,17 @@
     <DataTemplate DataType="{x:Type vm:LampElement}">
         <Border Width="{Binding Size}" Height="{Binding Size}"
                 Background="{Binding Fill}" CornerRadius="{Binding Rad}"
-                Margin="{Binding Margin}" VerticalAlignment="Center" />
+                Margin="{Binding EffectiveMargin}" VerticalAlignment="Center" 
+                HorizontalAlignment="{Binding HAlign}"
+                ToolTip="{Binding ToolTip}" />
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type vm:ClickLampElement}">
         <Border Width="{Binding Size}" Height="{Binding Size}"
                 Background="{Binding Fill}" CornerRadius="{Binding Rad}"
-                Margin="{Binding Margin}" Cursor="Hand" VerticalAlignment="Center">
+                Margin="{Binding EffectiveMargin}" Cursor="Hand" VerticalAlignment="Center"
+                HorizontalAlignment="{Binding HAlign}"
+                ToolTip="{Binding ToolTip}">
             <Border.InputBindings>
                 <MouseBinding MouseAction="LeftClick" Command="{Binding ToggleCommand}" />
             </Border.InputBindings>
@@ -317,7 +352,9 @@
     <DataTemplate DataType="{x:Type vm:LiveLampElement}">
         <Border Width="{Binding Size}" Height="{Binding Size}"
                 Background="{Binding Fill}" CornerRadius="{Binding Rad}"
-                Margin="{Binding Margin}" VerticalAlignment="Center" />
+                Margin="{Binding EffectiveMargin}" VerticalAlignment="Center" 
+                HorizontalAlignment="{Binding HAlign}"
+                ToolTip="{Binding ToolTip}" />
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type vm:DisplayElement}">
@@ -325,8 +362,9 @@
                 BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
                 CornerRadius="6" Padding="8,4,8,4"
                 Width="{Binding Width}" Height="{Binding Height}"
-                Margin="{Binding Margin}"
-                HorizontalAlignment="{Binding HAlign}" VerticalAlignment="Center">
+                Margin="{Binding EffectiveMargin}"
+                HorizontalAlignment="{Binding HAlign}" VerticalAlignment="Center"
+                ToolTip="{Binding ToolTip}">
             <TextBlock Text="{Binding Text}" FontSize="{Binding FontSize}" Foreground="{Binding Foreground}"
                        TextAlignment="{Binding Align}" HorizontalAlignment="Center" VerticalAlignment="Center" />
         </Border>
@@ -337,8 +375,9 @@
                 BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
                 CornerRadius="6" Padding="8,4,8,4"
                 Width="{Binding Width}" Height="{Binding Height}"
-                Margin="{Binding Margin}"
-                HorizontalAlignment="{Binding HAlign}" VerticalAlignment="Center">
+                Margin="{Binding EffectiveMargin}"
+                HorizontalAlignment="{Binding HAlign}" VerticalAlignment="Center"
+                ToolTip="{Binding ToolTip}">
             <TextBlock Text="{Binding Value}" FontSize="{Binding FontSize}" Foreground="{Binding Foreground}"
                        TextAlignment="{Binding Align}" HorizontalAlignment="Center" VerticalAlignment="Center" />
         </Border>
@@ -351,13 +390,15 @@
                 BorderThickness="{Binding BorderThickness}"
                 Padding="{Binding Padding}"
                 Width="{Binding Width}" Height="{Binding Height}"
-                HorizontalAlignment="Stretch">
+                Margin="{Binding EffectiveMargin}"
+                HorizontalAlignment="{Binding HAlign}"
+                ToolTip="{Binding ToolTip}">
             <ContentControl Content="{Binding Content}" VerticalAlignment="Center" HorizontalAlignment="Stretch" />
         </Border>
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type vm:MatrixRow}">
-        <StackPanel Orientation="Horizontal">
+        <StackPanel Orientation="Horizontal" Margin="{Binding EffectiveMargin}" HorizontalAlignment="{Binding HAlign}">
             <ContentControl Content="{Binding Head}" />
             <ItemsControl ItemsSource="{Binding Cells}">
                 <ItemsControl.ItemsPanel>
@@ -370,7 +411,8 @@
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type vm:MatrixElement}">
-        <StackPanel Margin="{Binding Margin}" HorizontalAlignment="Left">
+        <StackPanel Margin="{Binding EffectiveMargin}" HorizontalAlignment="Left"
+                ToolTip="{Binding ToolTip}">
             <ItemsControl ItemsSource="{Binding Header}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -383,7 +425,7 @@
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type vm:CellRow}">
-        <ItemsControl ItemsSource="{Binding Cells}">
+        <ItemsControl ItemsSource="{Binding Cells}" Margin="{Binding EffectiveMargin}" HorizontalAlignment="{Binding HAlign}">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
                     <StackPanel Orientation="Horizontal" />
@@ -393,7 +435,8 @@
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type vm:CellGridElement}">
-        <ItemsControl ItemsSource="{Binding Rows}" Margin="{Binding Margin}" HorizontalAlignment="Left" />
+        <ItemsControl ItemsSource="{Binding Rows}" Margin="{Binding EffectiveMargin}" HorizontalAlignment="Left" 
+                ToolTip="{Binding ToolTip}" />
     </DataTemplate>
 
     <!-- ================= 图形 ================= -->
@@ -425,7 +468,8 @@
     <DataTemplate DataType="{x:Type vm:CanvasElement}">
         <ItemsControl ItemsSource="{Binding Items}"
                       Width="{Binding CanvasWidth}" Height="{Binding CanvasHeight}"
-                      Margin="{Binding Margin}" HorizontalAlignment="Left">
+                      Margin="{Binding EffectiveMargin}" HorizontalAlignment="Left"
+                ToolTip="{Binding ToolTip}">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
                     <Canvas />
@@ -442,7 +486,8 @@
 
     <!-- ================= 标签页 ================= -->
     <DataTemplate DataType="{x:Type vm:TabsElement}">
-        <StackPanel Margin="{Binding Margin}">
+        <StackPanel Margin="{Binding EffectiveMargin}"
+                ToolTip="{Binding ToolTip}">
             <ItemsControl ItemsSource="{Binding Tabs}" Margin="0,0,0,10">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>

@@ -16,12 +16,32 @@ namespace HandlerGuide.ViewModels
 
     public abstract class Element : ObservableObject
     {
-        public Thickness Margin { get; set; }
-        public double Width { get; set; } = double.NaN;
-        public double Height { get; set; } = double.NaN;
-        public HorizontalAlignment HAlign { get; set; } = HorizontalAlignment.Stretch;
-        public VerticalAlignment VAlign { get; set; } = VerticalAlignment.Center;
-        public string ToolTip { get; set; }
+        private Thickness _margin;
+        private double _width = double.NaN;
+        private double _height = double.NaN;
+        private HorizontalAlignment _hAlign = HorizontalAlignment.Stretch;
+        private VerticalAlignment _vAlign = VerticalAlignment.Center;
+        private string _toolTip;
+
+        /// <summary>外边距；未显式设置时视图层使用 <see cref="DefaultMargin"/>。</summary>
+        public Thickness Margin
+        {
+            get => _margin;
+            set { if (Set(ref _margin, value)) Raise(nameof(EffectiveMargin)); }
+        }
+
+        /// <summary>宽度 / 高度；0 会被当作“零宽”，需要自适应请用 double.NaN。</summary>
+        public double Width { get => _width; set => Set(ref _width, value); }
+        public double Height { get => _height; set => Set(ref _height, value); }
+        public HorizontalAlignment HAlign { get => _hAlign; set => Set(ref _hAlign, value); }
+        public VerticalAlignment VAlign { get => _vAlign; set => Set(ref _vAlign, value); }
+        public string ToolTip { get => _toolTip; set => Set(ref _toolTip, value); }
+
+        /// <summary>子类可重写的默认外边距（例如分组卡片之间的间距）。</summary>
+        protected virtual Thickness DefaultMargin => default(Thickness);
+
+        /// <summary>视图层统一的绑定目标：显式 Margin 优先，否则用 DefaultMargin。</summary>
+        public Thickness EffectiveMargin => _margin == default(Thickness) ? DefaultMargin : _margin;
     }
 
     // ---------------- 文本 ----------------
@@ -127,6 +147,9 @@ namespace HandlerGuide.ViewModels
 
     public class GroupElement : Element
     {
+        /// <summary>该类型在视图中的默认外边距。</summary>
+        protected override Thickness DefaultMargin => new Thickness(0, 0, 0, 12);
+
         public string Title { get; set; }
         public List<Element> Children { get; } = new List<Element>();
         public bool HasTitle => !string.IsNullOrEmpty(Title);
@@ -134,6 +157,9 @@ namespace HandlerGuide.ViewModels
 
     public class BandElement : Element
     {
+        /// <summary>该类型在视图中的默认外边距。</summary>
+        protected override Thickness DefaultMargin => new Thickness(0, 0, 0, 10);
+
         public string Title { get; set; }
         public Brush Background { get; set; }
         public List<Element> Children { get; } = new List<Element>();
@@ -144,6 +170,9 @@ namespace HandlerGuide.ViewModels
 
     public class FieldRowElement : Element
     {
+        /// <summary>该类型在视图中的默认外边距。</summary>
+        protected override Thickness DefaultMargin => new Thickness(0, 3, 0, 3);
+
         public string Label { get; set; }
         public Element Control { get; set; }
         public double LabelWidth { get; set; } = 118;
@@ -159,6 +188,9 @@ namespace HandlerGuide.ViewModels
 
     public class FillRowElement : Element
     {
+        /// <summary>该类型在视图中的默认外边距。</summary>
+        protected override Thickness DefaultMargin => new Thickness(0, 2, 0, 2);
+
         public string Label { get; set; }
         public Element Control { get; set; }
         public double LabelWidth { get; set; } = 96;
@@ -386,6 +418,9 @@ namespace HandlerGuide.ViewModels
 
     public class SliderRowElement : Element
     {
+        /// <summary>该类型在视图中的默认外边距。</summary>
+        protected override Thickness DefaultMargin => new Thickness(0, 4, 0, 4);
+
         private readonly string _key;
         private double _value;
 
@@ -544,12 +579,12 @@ namespace HandlerGuide.ViewModels
         public Thickness Padding { get; set; }
     }
 
-    public class CellRow
+    public class CellRow : Element
     {
         public List<CellElement> Cells { get; } = new List<CellElement>();
     }
 
-    public class MatrixRow
+    public class MatrixRow : Element
     {
         public CellElement Head { get; set; }
         public List<Element> Cells { get; } = new List<Element>();
