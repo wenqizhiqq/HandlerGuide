@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RollForward>Major</RollForward>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <!-- 视图模型里大量可选参数使用 null 默认值，关闭对应的可空性提示噪音 -->
+    <NoWarn>$(NoWarn);CS8618;CS8625;CS8601;CS8603;CS8604;CS8600;CS8602;CS8629;CS8605;CS8765;CS8612;CS8767;CS8622</NoWarn>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>HandlerGuide</AssemblyName>
+    <RootNamespace>HandlerGuide</RootNamespace>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 把用户手册随程序一起发布，运行时直接读取复刻页面 -->
+    <None Include="..\Pick and Place Handler 9000 User Manual_CN.docx" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

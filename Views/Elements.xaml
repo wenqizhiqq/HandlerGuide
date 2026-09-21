@@ -1,0 +1,474 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:vm="clr-namespace:HandlerGuide.ViewModels"
+                    xmlns:vw="clr-namespace:HandlerGuide.Views">
+
+    <vw:StyleKeyConverter x:Key="StyleKey" />
+    <vw:UnsetIfNullConverter x:Key="UnsetIfNull" />
+    <vw:DoubleToThicknessConverter x:Key="NumThickness" />
+    <vw:DoubleToCornerRadiusConverter x:Key="NumCorner" />
+    <BooleanToVisibilityConverter x:Key="BoolVis" />
+
+    <!-- ================= 文本 ================= -->
+    <DataTemplate DataType="{x:Type vm:TextElement}">
+        <TextBlock Text="{Binding Text}"
+                   FontSize="{Binding FontSize}"
+                   Foreground="{Binding Foreground}"
+                   FontWeight="{Binding FontWeight}"
+                   TextWrapping="{Binding Wrap}"
+                   TextAlignment="{Binding Align}"
+                   Margin="{Binding Margin}"
+                   Width="{Binding Width}"
+                   Height="{Binding Height}"
+                   HorizontalAlignment="{Binding HAlign}"
+                   VerticalAlignment="{Binding VAlign}"
+                   ToolTip="{Binding ToolTip}" />
+    </DataTemplate>
+
+    <!-- ================= 布局 ================= -->
+    <DataTemplate DataType="{x:Type vm:StackElement}">
+        <ItemsControl ItemsSource="{Binding Children}"
+                      Margin="{Binding Margin}"
+                      Width="{Binding Width}" Height="{Binding Height}"
+                      HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="{Binding Orientation}" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+        </ItemsControl>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:WrapElement}">
+        <ItemsControl ItemsSource="{Binding Children}"
+                      Margin="{Binding Margin}"
+                      Width="{Binding Width}" Height="{Binding Height}"
+                      HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+        </ItemsControl>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:ColsElement}">
+        <ItemsControl ItemsSource="{Binding Children}"
+                      Margin="{Binding Margin}"
+                      Width="{Binding Width}" Height="{Binding Height}"
+                      HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Columns="{Binding Columns}" Rows="1" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+        </ItemsControl>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:GridElement}">
+        <ItemsControl ItemsSource="{Binding Children}"
+                      Margin="{Binding Margin}"
+                      Width="{Binding Width}" Height="{Binding Height}"
+                      HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <Grid vw:GridSpec.Cols="{Binding ColsSpec}" vw:GridSpec.Rows="{Binding RowsSpec}" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemContainerStyle>
+                <Style TargetType="ContentPresenter">
+                    <Setter Property="Grid.Row" Value="{Binding Row}" />
+                    <Setter Property="Grid.Column" Value="{Binding Col}" />
+                    <Setter Property="Grid.RowSpan" Value="{Binding RowSpan}" />
+                    <Setter Property="Grid.ColumnSpan" Value="{Binding ColSpan}" />
+                </Style>
+            </ItemsControl.ItemContainerStyle>
+        </ItemsControl>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:GridChild}">
+        <ContentControl Content="{Binding El}" />
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:SpacerElement}">
+        <Border Width="{Binding W}" Height="{Binding H}" />
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:BoxElement}">
+        <Border Background="{Binding Background, Converter={StaticResource UnsetIfNull}}"
+                BorderBrush="{Binding BorderBrush, Converter={StaticResource UnsetIfNull}}"
+                BorderThickness="{Binding BorderThickness}"
+                CornerRadius="{Binding Radius}"
+                Padding="{Binding Padding}"
+                Margin="{Binding Margin}"
+                Width="{Binding Width}" Height="{Binding Height}"
+                HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}"
+                ToolTip="{Binding ToolTip}">
+            <ContentControl Content="{Binding Child}"
+                            Width="{Binding ChildWidth}" Height="{Binding ChildHeight}"
+                            HorizontalAlignment="{Binding ChildHAlign}" />
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:ScrollElement}">
+        <ScrollViewer Content="{Binding Content}"
+                      Height="{Binding ViewHeight}"
+                      Margin="{Binding Margin}"
+                      Width="{Binding Width}"
+                      HorizontalScrollBarVisibility="{Binding HScroll}"
+                      VerticalScrollBarVisibility="{Binding VScroll}"
+                      HorizontalAlignment="{Binding HAlign}"
+                      VerticalAlignment="{Binding VAlign}" />
+    </DataTemplate>
+
+    <!-- ================= 分组 ================= -->
+    <DataTemplate DataType="{x:Type vm:GroupElement}">
+        <Border Background="{StaticResource CardBgBrush}"
+                BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
+                CornerRadius="12" Padding="16,13,16,13" Margin="0,0,0,12">
+            <StackPanel>
+                <TextBlock Text="{Binding Title}" FontSize="12.5" FontWeight="SemiBold"
+                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"
+                           Visibility="{Binding HasTitle, Converter={StaticResource BoolVis}}" />
+                <ItemsControl ItemsSource="{Binding Children}" />
+            </StackPanel>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:BandElement}">
+        <Border Background="{Binding Background}" CornerRadius="10"
+                Padding="14,11,14,11" Margin="0,0,0,10">
+            <StackPanel>
+                <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="SemiBold"
+                           Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"
+                           Visibility="{Binding HasTitle, Converter={StaticResource BoolVis}}" />
+                <ItemsControl ItemsSource="{Binding Children}" />
+            </StackPanel>
+        </Border>
+    </DataTemplate>
+
+    <!-- ================= 表单行 ================= -->
+    <DataTemplate DataType="{x:Type vm:FieldRowElement}">
+        <Grid Margin="0,3,0,3" vw:GridSpec.Cols="{Binding ColsSpec}" vw:GridSpec.Rows="Auto">
+            <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12.5" TextAlignment="Right"
+                       Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"
+                       Margin="{Binding LabelMargin}"
+                       Visibility="{Binding HasLabel, Converter={StaticResource BoolVis}}" />
+            <ContentControl Grid.Column="1" Content="{Binding Control}" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="2" Text="{Binding Unit}" FontSize="12"
+                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"
+                       Margin="{Binding UnitMargin}"
+                       Visibility="{Binding HasUnit, Converter={StaticResource BoolVis}}" />
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:FillRowElement}">
+        <Grid Margin="0,2,0,2" vw:GridSpec.Cols="{Binding ColsSpec}" vw:GridSpec.Rows="Auto">
+            <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12"
+                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"
+                       Visibility="{Binding HasLabel, Converter={StaticResource BoolVis}}" />
+            <ContentControl Grid.Column="1" Content="{Binding Control}" HorizontalAlignment="Stretch"
+                            VerticalAlignment="Center" />
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:TwoColPair}">
+        <Grid vw:GridSpec.Cols="*,24,*" vw:GridSpec.Rows="Auto">
+            <ContentControl Grid.Column="0" Content="{Binding Left}" />
+            <ContentControl Grid.Column="2" Content="{Binding Right}" />
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:TwoColElement}">
+        <ItemsControl ItemsSource="{Binding Pairs}" Margin="{Binding Margin}" />
+    </DataTemplate>
+
+    <!-- ================= 输入控件 ================= -->
+    <DataTemplate DataType="{x:Type vm:NumberElement}">
+        <TextBox Text="{Binding Text, UpdateSourceTrigger=LostFocus}"
+                 Width="{Binding Width}" Height="{Binding Height}"
+                 IsReadOnly="{Binding IsReadOnly}"
+                 HorizontalContentAlignment="Right"
+                 Margin="{Binding Margin}"
+                 HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}">
+            <TextBox.Style>
+                <Style TargetType="TextBox" BasedOn="{StaticResource FieldTextBox}">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Compact}" Value="True">
+                            <Setter Property="Padding" Value="4,1,4,1" />
+                            <Setter Property="FontSize" Value="11.5" />
+                            <Setter Property="Template" Value="{StaticResource CompactTextBoxTemplate}" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBox.Style>
+        </TextBox>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:TextInputElement}">
+        <TextBox Text="{Binding Text, UpdateSourceTrigger=LostFocus}"
+                 Width="{Binding Width}" Height="{Binding Height}"
+                 IsReadOnly="{Binding IsReadOnly}"
+                 HorizontalContentAlignment="Left"
+                 Margin="{Binding Margin}"
+                 HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}">
+            <TextBox.Style>
+                <Style TargetType="TextBox" BasedOn="{StaticResource FieldTextBox}">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Compact}" Value="True">
+                            <Setter Property="Padding" Value="4,1,4,1" />
+                            <Setter Property="FontSize" Value="11.5" />
+                            <Setter Property="Template" Value="{StaticResource CompactTextBoxTemplate}" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBox.Style>
+        </TextBox>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:ComboElement}">
+        <ComboBox Style="{StaticResource FieldComboBox}"
+                  ItemsSource="{Binding Items}"
+                  SelectedIndex="{Binding SelectedIndex}"
+                  Width="{Binding Width}"
+                  Margin="{Binding Margin}"
+                  HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}" />
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:CheckElement}">
+        <CheckBox Content="{Binding Label}"
+                  IsChecked="{Binding IsChecked}"
+                  FontSize="12.5"
+                  Foreground="{StaticResource TextPrimaryBrush}"
+                  VerticalContentAlignment="Center"
+                  Margin="{Binding Margin}"
+                  Visibility="{Binding BoxVisible, Converter={StaticResource BoolVis}}" />
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:SwitchElement}">
+        <ToggleButton Style="{StaticResource SwitchToggle}"
+                      IsChecked="{Binding IsChecked}"
+                      Margin="{Binding Margin}"
+                      HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}" />
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:RadioElement}">
+        <RadioButton Content="{Binding Label}"
+                     IsChecked="{Binding IsChecked}"
+                     GroupName="{Binding GroupName}"
+                     FontSize="12.5"
+                     Foreground="{StaticResource TextPrimaryBrush}"
+                     Margin="{Binding Margin}"
+                     VerticalContentAlignment="Center" />
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:ButtonElement}">
+        <Button Content="{Binding Text}"
+                Command="{Binding Command}"
+                Style="{Binding StyleKey, Converter={StaticResource StyleKey}}"
+                FontSize="{Binding FontSize}"
+                FontWeight="{Binding FontWeight}"
+                Padding="{Binding Padding}"
+                Width="{Binding Width}" Height="{Binding Height}"
+                Margin="{Binding Margin}"
+                Background="{Binding Background, Converter={StaticResource UnsetIfNull}}"
+                Foreground="{Binding Foreground, Converter={StaticResource UnsetIfNull}}"
+                BorderBrush="{Binding BorderBrush, Converter={StaticResource UnsetIfNull}}"
+                BorderThickness="{Binding BorderThickness, Converter={StaticResource UnsetIfNull}}"
+                HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}"
+                Cursor="Hand" />
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:SliderElement}">
+        <Slider Minimum="{Binding Min}" Maximum="{Binding Max}" Value="{Binding Value}"
+                Width="{Binding Width}" VerticalAlignment="Center" Margin="{Binding Margin}" />
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:SliderRowElement}">
+        <Grid Margin="0,4,0,4" vw:GridSpec.Cols="*,Auto" vw:GridSpec.Rows="Auto">
+            <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12.5"
+                       Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <TextBlock Text="{Binding ValueText}" FontSize="12.5" Width="46" TextAlignment="Right"
+                           Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                <Slider Minimum="{Binding Min}" Maximum="{Binding Max}" Value="{Binding Value}"
+                        Width="300" VerticalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+    </DataTemplate>
+
+    <!-- ================= 指示灯 / 显示框 ================= -->
+    <DataTemplate DataType="{x:Type vm:LampElement}">
+        <Border Width="{Binding Size}" Height="{Binding Size}"
+                Background="{Binding Fill}" CornerRadius="{Binding Rad}"
+                Margin="{Binding Margin}" VerticalAlignment="Center" />
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:ClickLampElement}">
+        <Border Width="{Binding Size}" Height="{Binding Size}"
+                Background="{Binding Fill}" CornerRadius="{Binding Rad}"
+                Margin="{Binding Margin}" Cursor="Hand" VerticalAlignment="Center">
+            <Border.InputBindings>
+                <MouseBinding MouseAction="LeftClick" Command="{Binding ToggleCommand}" />
+            </Border.InputBindings>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:LiveLampElement}">
+        <Border Width="{Binding Size}" Height="{Binding Size}"
+                Background="{Binding Fill}" CornerRadius="{Binding Rad}"
+                Margin="{Binding Margin}" VerticalAlignment="Center" />
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:DisplayElement}">
+        <Border Background="{Binding Background}"
+                BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
+                CornerRadius="6" Padding="8,4,8,4"
+                Width="{Binding Width}" Height="{Binding Height}"
+                Margin="{Binding Margin}"
+                HorizontalAlignment="{Binding HAlign}" VerticalAlignment="Center">
+            <TextBlock Text="{Binding Text}" FontSize="{Binding FontSize}" Foreground="{Binding Foreground}"
+                       TextAlignment="{Binding Align}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:LiveElement}">
+        <Border Background="{Binding Background}"
+                BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
+                CornerRadius="6" Padding="8,4,8,4"
+                Width="{Binding Width}" Height="{Binding Height}"
+                Margin="{Binding Margin}"
+                HorizontalAlignment="{Binding HAlign}" VerticalAlignment="Center">
+            <TextBlock Text="{Binding Value}" FontSize="{Binding FontSize}" Foreground="{Binding Foreground}"
+                       TextAlignment="{Binding Align}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+    </DataTemplate>
+
+    <!-- ================= 表格 / 矩阵 ================= -->
+    <DataTemplate DataType="{x:Type vm:CellElement}">
+        <Border Background="{Binding Background, Converter={StaticResource UnsetIfNull}}"
+                BorderBrush="{Binding BorderBrush, Converter={StaticResource UnsetIfNull}}"
+                BorderThickness="{Binding BorderThickness}"
+                Padding="{Binding Padding}"
+                Width="{Binding Width}" Height="{Binding Height}"
+                HorizontalAlignment="Stretch">
+            <ContentControl Content="{Binding Content}" VerticalAlignment="Center" HorizontalAlignment="Stretch" />
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:MatrixRow}">
+        <StackPanel Orientation="Horizontal">
+            <ContentControl Content="{Binding Head}" />
+            <ItemsControl ItemsSource="{Binding Cells}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+        </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:MatrixElement}">
+        <StackPanel Margin="{Binding Margin}" HorizontalAlignment="Left">
+            <ItemsControl ItemsSource="{Binding Header}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+            <ItemsControl ItemsSource="{Binding Rows}" />
+        </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:CellRow}">
+        <ItemsControl ItemsSource="{Binding Cells}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+        </ItemsControl>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:CellGridElement}">
+        <ItemsControl ItemsSource="{Binding Rows}" Margin="{Binding Margin}" HorizontalAlignment="Left" />
+    </DataTemplate>
+
+    <!-- ================= 图形 ================= -->
+    <DataTemplate DataType="{x:Type vm:RectItem}">
+        <Border Width="{Binding W}" Height="{Binding H}"
+                Background="{Binding Fill, Converter={StaticResource UnsetIfNull}}"
+                BorderBrush="{Binding Stroke, Converter={StaticResource UnsetIfNull}}"
+                BorderThickness="{Binding StrokeThickness, Converter={StaticResource NumThickness}}"
+                CornerRadius="{Binding Radius, Converter={StaticResource NumCorner}}">
+            <TextBlock Text="{Binding Text}" FontSize="{Binding TextSize}"
+                       Foreground="{Binding TextColor, Converter={StaticResource UnsetIfNull}}"
+                       FontWeight="{Binding TextWeight}"
+                       TextWrapping="Wrap" TextAlignment="Center"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:EllipseItem}">
+        <Ellipse Width="{Binding W}" Height="{Binding H}"
+                 Fill="{Binding Fill, Converter={StaticResource UnsetIfNull}}" />
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:TextItem}">
+        <TextBlock Text="{Binding Text}" FontSize="{Binding TextSize}"
+                   Foreground="{Binding Foreground, Converter={StaticResource UnsetIfNull}}"
+                   Width="{Binding TextWidth}" TextAlignment="{Binding Align}" TextWrapping="Wrap" />
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:CanvasElement}">
+        <ItemsControl ItemsSource="{Binding Items}"
+                      Width="{Binding CanvasWidth}" Height="{Binding CanvasHeight}"
+                      Margin="{Binding Margin}" HorizontalAlignment="Left">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <Canvas />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemContainerStyle>
+                <Style TargetType="ContentPresenter">
+                    <Setter Property="Canvas.Left" Value="{Binding Left}" />
+                    <Setter Property="Canvas.Top" Value="{Binding Top}" />
+                </Style>
+            </ItemsControl.ItemContainerStyle>
+        </ItemsControl>
+    </DataTemplate>
+
+    <!-- ================= 标签页 ================= -->
+    <DataTemplate DataType="{x:Type vm:TabsElement}">
+        <StackPanel Margin="{Binding Margin}">
+            <ItemsControl ItemsSource="{Binding Tabs}" Margin="0,0,0,10">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Content="{Binding Title}" Command="{Binding SelectCommand}" Margin="0,0,6,0">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource TabButton}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                            <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+                                            <Setter Property="Foreground" Value="White" />
+                                            <Setter Property="FontWeight" Value="SemiBold" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <ContentControl Content="{Binding SelectedContent}" />
+        </StackPanel>
+    </DataTemplate>
+
+</ResourceDictionary>
