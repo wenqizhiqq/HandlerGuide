@@ -1,3 +1,9 @@
+<!-- ============================================================================
+     Views/MainWindow.xaml — 主窗口布局（苹果风格外壳）
+     项目：HandlerGuide（EXCEED9000 控制软件界面复刻）
+     职责：顶栏（交通灯/标题/用户等级/说明书/关于）
+           + 命令中心工具条 + 页面主体（固定标题 + 滚动内容）+ 底部实时状态条。
+     ============================================================================ -->
 <Window x:Class="HandlerGuide.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"

@@ -1,3 +1,9 @@
+<!-- ============================================================================
+     HandlerGuide.csproj — 项目文件（net8.0-windows / WPF）
+     项目：HandlerGuide（EXCEED9000 高速分选机控制软件界面复刻 · 苹果风格）
+     说明：无 .NET 8 运行时时靠 RollForward=Major 在 .NET 10 运行；
+           手册 .docx 设为 CopyToOutputDirectory 供运行时加载。
+     ============================================================================ -->
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>

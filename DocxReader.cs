@@ -1,3 +1,9 @@
+// ============================================================================
+//  DocxReader.cs — 原生 docx 解析（无第三方依赖）
+//  项目：HandlerGuide（EXCEED9000 控制软件界面复刻）
+//  职责：用 System.IO.Compression + System.Xml 解析手册 .docx，
+//        提取段落（保留 run 格式）/ 表格 / 图片，供「说明书」页复用。
+// ============================================================================
 using System;
 using System.Collections.Generic;
 using System.IO;

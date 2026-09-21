@@ -1,3 +1,8 @@
+<!-- ============================================================================
+     InputBox.xaml — 通用输入对话框（密码 / 文本）
+     项目：HandlerGuide（EXCEED9000 控制软件界面复刻）
+     职责：用户等级切换等场景的密码 / 文本输入弹窗。
+     ============================================================================ -->
 <Window x:Class="HandlerGuide.InputBox"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"

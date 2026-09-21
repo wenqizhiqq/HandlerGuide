@@ -1,3 +1,8 @@
+<!-- ============================================================================
+     App.xaml — 应用程序定义（WPF 入口）
+     项目：HandlerGuide（EXCEED9000 高速分选机控制软件界面复刻 · 苹果风格）
+     职责：指定启动窗口 MainWindow，合并 AppleStyles / Elements 等资源字典。
+     ============================================================================ -->
 <Application x:Class="HandlerGuide.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"

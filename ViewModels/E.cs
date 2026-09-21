@@ -613,6 +613,32 @@ namespace HandlerGuide.ViewModels
             return sp;
         }
 
+        // ---------------- 作者水印（防替换） ----------------
+        //  字符数组 + 运行时随机空格：源码中不存在连续的「温启志18719361399」，
+        //  他人无法通过查找/替换整串来抹掉作者标记；每个字符之间插入 1~3 个随机空格。
+        private static readonly char[] _ownerChars =
+            { '温', '启', '志', '1', '8', '7', '1', '9', '3', '6', '1', '3', '9', '9' };
+        private static readonly Random _wmRnd = new Random(20240921); // 固定种子 → 间距稳定可复现
+
+        /// <summary>
+        /// 生成作者水印：淡色、右对齐，每个字符间随机 1~3 个空格。
+        /// 显示在每一个页面的底部角落，作为版权/所有权标记。
+        /// </summary>
+        public static Element OwnerWatermark()
+        {
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < _ownerChars.Length; i++)
+            {
+                sb.Append(_ownerChars[i]);
+                if (i < _ownerChars.Length - 1)
+                    sb.Append(' ', _wmRnd.Next(1, 4));
+            }
+            var t = T(sb.ToString(), 9, new SolidColorBrush(Color.FromRgb(0xC7, 0xC7, 0xCC)), false,
+                      TextWrapping.NoWrap, TextAlignment.Right, HorizontalAlignment.Right, VerticalAlignment.Bottom);
+            t.Margin = new Thickness(0, 12, 2, 0);
+            return t;
+        }
+
         // ---------------- 标签页 ----------------
 
         public static TabsElement Tabs(params (string title, Func<Element> build)[] tabs)
