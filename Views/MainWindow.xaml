@@ -99,7 +99,8 @@
                                         <ToggleButton.Template>
                                             <ControlTemplate TargetType="ToggleButton">
                                                 <Border x:Name="bd" Background="Transparent" CornerRadius="9"
-                                                        Padding="10,5" BorderThickness="1" BorderBrush="Transparent">
+                                                        Padding="10,5" BorderThickness="1" BorderBrush="Transparent"
+                                                        TextElement.Foreground="{StaticResource TextPrimaryBrush}">
                                                     <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                                                 </Border>
                                                 <ControlTemplate.Triggers>
@@ -107,23 +108,24 @@
                                                         <Setter TargetName="bd" Property="Background" Value="#E8F1FF" />
                                                     </Trigger>
                                                     <DataTrigger Binding="{Binding IsOpen}" Value="True">
-                                                        <Setter TargetName="bd" Property="Background" Value="#DCE9FB" />
+                                                        <Setter TargetName="bd" Property="Background" Value="{StaticResource AccentBrush}" />
+                                                        <Setter TargetName="bd" Property="TextElement.Foreground" Value="White" />
+                                                        <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding IsGroupActive}" Value="True">
-                                                        <Setter TargetName="bd" Property="Background" Value="#DCE9FB" />
+                                                        <Setter TargetName="bd" Property="Background" Value="{StaticResource AccentBrush}" />
+                                                        <Setter TargetName="bd" Property="TextElement.Foreground" Value="White" />
+                                                        <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
                                                     </DataTrigger>
                                                 </ControlTemplate.Triggers>
                                             </ControlTemplate>
                                         </ToggleButton.Template>
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Icon}" FontSize="17" Margin="0,0,7,0"
-                                                       VerticalAlignment="Center"
-                                                       Foreground="{StaticResource TextPrimaryBrush}" />
+                                                       VerticalAlignment="Center" />
                                             <StackPanel VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Line1}" FontSize="11.5"
-                                                           Foreground="{StaticResource TextPrimaryBrush}" />
+                                                <TextBlock Text="{Binding Line1}" FontSize="11.5" />
                                                 <TextBlock Text="{Binding Line2}" FontSize="11.5"
-                                                           Foreground="{StaticResource TextPrimaryBrush}"
                                                            Visibility="{Binding HasLine2, Converter={StaticResource BoolVis}}" />
                                             </StackPanel>
                                         </StackPanel>

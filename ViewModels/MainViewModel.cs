@@ -40,7 +40,9 @@ namespace HandlerGuide.ViewModels
 
         public bool HasItems => Items.Count > 0;
         public bool IsOpen { get => _open; set => Set(ref _open, value); }
-        public bool IsGroupActive => Direct != null && Direct.IsActive;
+        private bool _groupActive;
+        /// <summary>当组内任一页面（Direct 或子项）为当前页时高亮工具条按钮。</summary>
+        public bool IsGroupActive { get => _groupActive; set => Set(ref _groupActive, value); }
 
         /// <summary>工具条按钮上的两行文字。</summary>
         public string Line1 => Name.Length > 4 ? Name.Substring(0, 2) : Name;
@@ -105,7 +107,12 @@ namespace HandlerGuide.ViewModels
         public void Navigate(PageVm page)
         {
             if (page == null) return;
-            foreach (var g in Groups) { g.IsOpen = false; g.Notify(nameof(ToolGroupVm.IsGroupActive)); }
+            foreach (var g in Groups)
+            {
+                g.IsOpen = false;
+                g.IsGroupActive = ReferenceEquals(g.Direct, page) || g.Items.Any(p => ReferenceEquals(p, page));
+                g.Notify(nameof(ToolGroupVm.IsGroupActive));
+            }
             foreach (var p in AllPages) p.IsActive = ReferenceEquals(p, page);
             CurrentPage = page;
         }
