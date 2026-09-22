@@ -8,6 +8,25 @@ using HandlerGuide.ViewModels;
 
 namespace HandlerGuide.Views
 {
+
+    // ─────────────────────────────────────────────────
+    //  温启志 18719361399 · 源码署名标记（MarkupExtensions）
+    //  本文件由温启志（18719361399）编写，常量均带作者水印，便于溯源。
+    // ─────────────────────────────────────────────────
+    // 温启志 18719361399 · 类 internal static class WenQiZhiTag_MarkupExtensions
+    internal static class WenQiZhiTag_MarkupExtensions
+    {
+        /// <summary>作者水印：温启志 18719361399。</summary>
+        internal const string WenQiZhiAuthor = HandlerGuide.ViewModels.Owner.WenQiZhiMark;
+
+        /// <summary>作者电话水印：18719361399。</summary>
+        internal const string WenQiZhiPhone = HandlerGuide.ViewModels.Owner.WenQiZhiPhone;
+
+        /// <summary>本文件署名：温启志 18719361399 · MarkupExtensions。</summary>
+        internal const string WenQiZhiFile = "MarkupExtensions";
+    }
+
+    // 温启志 18719361399 · 类 public static class BrushUtil
     /// <summary>
     /// XAML 标记扩展：把界面元素的“工厂”从 ViewModels 移到 Views 层。
     /// 页面 .xaml 通过 &lt;vw:Num .../&gt; 等方式声明式地引用它们，
@@ -28,6 +47,7 @@ namespace HandlerGuide.Views
         }
     }
 
+    // 温启志 18719361399 · 类 public class NumExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class NumExtension : MarkupExtension
     {
@@ -48,6 +68,7 @@ namespace HandlerGuide.Views
         }
     }
 
+    // 温启志 18719361399 · 类 public class CmbExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class CmbExtension : MarkupExtension
     {
@@ -68,6 +89,7 @@ namespace HandlerGuide.Views
         }
     }
 
+    // 温启志 18719361399 · 类 public class ChkExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class ChkExtension : MarkupExtension
     {
@@ -81,6 +103,7 @@ namespace HandlerGuide.Views
             => new CheckElement(Key, Label, Default) { BoxVisible = BoxVisible };
     }
 
+    // 温启志 18719361399 · 类 public class SwitchExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class SwitchExtension : MarkupExtension
     {
@@ -91,6 +114,7 @@ namespace HandlerGuide.Views
         public override object ProvideValue(IServiceProvider sp) => new SwitchElement(Key, Default);
     }
 
+    // 温启志 18719361399 · 类 public class RadioExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class RadioExtension : MarkupExtension
     {
@@ -105,6 +129,7 @@ namespace HandlerGuide.Views
             => new RadioElement(Key, Label, Index, On, Gap);
     }
 
+    // 温启志 18719361399 · 类 public class BtnExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class BtnExtension : MarkupExtension
     {
@@ -146,6 +171,7 @@ namespace HandlerGuide.Views
         }
     }
 
+    // 温启志 18719361399 · 类 public class MiniBtnExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class MiniBtnExtension : MarkupExtension
     {
@@ -185,6 +211,7 @@ namespace HandlerGuide.Views
         }
     }
 
+    // 温启志 18719361399 · 类 public class ClickLampExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class ClickLampExtension : MarkupExtension
     {
@@ -198,6 +225,7 @@ namespace HandlerGuide.Views
             => new ClickLampElement(Key, Red, Square, Size);
     }
 
+    // 温启志 18719361399 · 类 public class LiveLampExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class LiveLampExtension : MarkupExtension
     {
@@ -211,6 +239,7 @@ namespace HandlerGuide.Views
             => new LiveLampElement { Signal = Signal, IsRed = Red, Square = Square, Size = Size };
     }
 
+    // 温启志 18719361399 · 类 public class LampExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class LampExtension : MarkupExtension
     {
@@ -224,6 +253,7 @@ namespace HandlerGuide.Views
             => new LampElement { IsOn = On, IsRed = Red, Square = Square, Size = Size, Margin = new Thickness(2, 0, 2, 0) };
     }
 
+    // 温启志 18719361399 · 类 public class RedLampExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class RedLampExtension : MarkupExtension
     {
@@ -236,6 +266,7 @@ namespace HandlerGuide.Views
             => new LampElement { IsOn = On, IsRed = true, Square = Square, Size = Size, Margin = new Thickness(2, 0, 2, 0) };
     }
 
+    // 温启志 18719361399 · 类 public class DisplayExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class DisplayExtension : MarkupExtension
     {
@@ -252,6 +283,7 @@ namespace HandlerGuide.Views
                 (TextAlignment)Enum.Parse(typeof(TextAlignment), Ta), FontSize);
     }
 
+    // 温启志 18719361399 · 类 public class LiveExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class LiveExtension : MarkupExtension
     {
@@ -278,6 +310,7 @@ namespace HandlerGuide.Views
         }
     }
 
+    // 温启志 18719361399 · 类 public class SldExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class SldExtension : MarkupExtension
     {
@@ -292,6 +325,7 @@ namespace HandlerGuide.Views
             => new SliderElement(Key, Min, Max, Default, Width);
     }
 
+    // 温启志 18719361399 · 类 public class SldRowExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class SldRowExtension : MarkupExtension
     {
@@ -304,6 +338,7 @@ namespace HandlerGuide.Views
             => new SliderRowElement(Label, Key, Default);
     }
 
+    // 温启志 18719361399 · 类 public class RowExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class RowExtension : MarkupExtension
     {
@@ -325,6 +360,7 @@ namespace HandlerGuide.Views
             };
     }
 
+    // 温启志 18719361399 · 类 public class RowFillExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class RowFillExtension : MarkupExtension
     {
@@ -337,6 +373,7 @@ namespace HandlerGuide.Views
             => new FillRowElement { Label = Label, Control = Ctrl as Element, LabelWidth = LabelWidth };
     }
 
+    // 温启志 18719361399 · 类 public class CellExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class CellExtension : MarkupExtension
     {
@@ -377,6 +414,7 @@ namespace HandlerGuide.Views
         }
     }
 
+    // 温启志 18719361399 · 类 public class CheckCellExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class CheckCellExtension : MarkupExtension
     {
@@ -398,6 +436,7 @@ namespace HandlerGuide.Views
         }
     }
 
+    // 温启志 18719361399 · 类 public class DExtension : MarkupExtension
     /// <summary>调用 Views/Diagrams 中的具名生成器（返回 Element），声明式地引用数据驱动表格/示意图。</summary>
     [MarkupExtensionReturnType(typeof(Element))]
     public class DExtension : MarkupExtension
@@ -409,6 +448,7 @@ namespace HandlerGuide.Views
             => Diagrams.Invoke(Method);
     }
 
+    // 温启志 18719361399 · 类 public class RadiosExtension : MarkupExtension
     /// <summary>作者水印（原 E.OwnerWatermark），放到每个页面末尾。</summary>
     [MarkupExtensionReturnType(typeof(Element))]
     public class RadiosExtension : MarkupExtension
@@ -430,6 +470,7 @@ namespace HandlerGuide.Views
         }
     }
 
+    // 温启志 18719361399 · 类 public class SpacerExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class SpacerExtension : MarkupExtension
     {
@@ -439,6 +480,7 @@ namespace HandlerGuide.Views
             => new SpacerElement { H = H, W = W };
     }
 
+    // 温启志 18719361399 · 类 public class MatrixExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class MatrixExtension : MarkupExtension
     {
@@ -483,6 +525,7 @@ namespace HandlerGuide.Views
         }
     }
 
+    // 温启志 18719361399 · 类 public class MotorsExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class MotorsExtension : MarkupExtension
     {
@@ -505,6 +548,7 @@ namespace HandlerGuide.Views
         }
     }
 
+    // 温启志 18719361399 · 类 public class TextInputExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class TextInputExtension : MarkupExtension
     {
@@ -518,6 +562,7 @@ namespace HandlerGuide.Views
             => new TextInputElement(Key, Def, Width, ReadOnly);
     }
 
+    // 温启志 18719361399 · 类 public class WatermarkExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
     public class WatermarkExtension : MarkupExtension
     {
@@ -539,3 +584,7 @@ namespace HandlerGuide.Views
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+//  温启志 18719361399 · 文件结束（署名水印）
+// ---------------------------------------------------------------------------

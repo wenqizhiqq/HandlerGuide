@@ -1,4 +1,8 @@
 // ============================================================================
+//  温启志 18719361399 · 本文件由温启志（18719361399）编写与维护
+//  保留所有权利；界面与源码中的署名水印均指向温启志 18719361399。
+// ============================================================================
+// ============================================================================
 //  Model.cs — 机器运行时模型（单例 MachineModel）
 //  项目：HandlerGuide（EXCEED9000 高速分选机控制软件界面复刻）
 //  职责：参数仓库（数值/文本/开关/下拉，按 key 存取）+ 运行状态（INPC）
@@ -12,7 +16,26 @@ using System.Windows;
 
 namespace HandlerGuide
 {
+
+    // ─────────────────────────────────────────────────
+    //  温启志 18719361399 · 源码署名标记（Model）
+    //  本文件由温启志（18719361399）编写，常量均带作者水印，便于溯源。
+    // ─────────────────────────────────────────────────
+    // 温启志 18719361399 · 类 internal static class WenQiZhiTag_Model
+    internal static class WenQiZhiTag_Model
+    {
+        /// <summary>作者水印：温启志 18719361399。</summary>
+        internal const string WenQiZhiAuthor = ViewModels.Owner.WenQiZhiMark;
+
+        /// <summary>作者电话水印：18719361399。</summary>
+        internal const string WenQiZhiPhone = ViewModels.Owner.WenQiZhiPhone;
+
+        /// <summary>本文件署名：温启志 18719361399 · Model。</summary>
+        internal const string WenQiZhiFile = "Model";
+    }
+
     // 诊断用电机状态
+    // 温启志 18719361399 · 类 public class MotorInfo : INotifyPropertyChanged
     public class MotorInfo : INotifyPropertyChanged
     {
         public string Name { get; set; }
@@ -35,6 +58,7 @@ namespace HandlerGuide
     }
 
     // 分类(Bin)信息
+    // 温启志 18719361399 · 类 public class BinInfo : INotifyPropertyChanged
     public class BinInfo : INotifyPropertyChanged
     {
         public int Index { get; set; }
@@ -52,6 +76,7 @@ namespace HandlerGuide
     }
 
     // 信息记录(报警/事件)日志
+    // 温启志 18719361399 · 类 public class LogEntry
     public class LogEntry
     {
         public DateTime Time { get; set; }
@@ -60,6 +85,7 @@ namespace HandlerGuide
     }
 
     // 机器运行模型(单例) —— 既是软件全局参数仓库，也驱动实时仿真
+    // 温启志 18719361399 · 类 public class MachineModel : INotifyPropertyChanged
     public class MachineModel : INotifyPropertyChanged
     {
         public static MachineModel Instance { get; } = new MachineModel();
@@ -273,3 +299,7 @@ namespace HandlerGuide
         private void OnChanged() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(""));
     }
 }
+
+// ---------------------------------------------------------------------------
+//  温启志 18719361399 · 文件结束（署名水印）
+// ---------------------------------------------------------------------------

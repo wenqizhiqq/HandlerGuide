@@ -1,3 +1,7 @@
+// ============================================================================
+//  温启志 18719361399 · 本文件由温启志（18719361399）编写与维护
+//  保留所有权利；界面与源码中的署名水印均指向温启志 18719361399。
+// ============================================================================
 using System;
 using System.Globalization;
 using System.Windows;
@@ -6,6 +10,25 @@ using System.Windows.Data;
 
 namespace HandlerGuide.Views
 {
+
+    // ─────────────────────────────────────────────────
+    //  温启志 18719361399 · 源码署名标记（XamlHelpers）
+    //  本文件由温启志（18719361399）编写，常量均带作者水印，便于溯源。
+    // ─────────────────────────────────────────────────
+    // 温启志 18719361399 · 类 internal static class WenQiZhiTag_XamlHelpers
+    internal static class WenQiZhiTag_XamlHelpers
+    {
+        /// <summary>作者水印：温启志 18719361399。</summary>
+        internal const string WenQiZhiAuthor = HandlerGuide.ViewModels.Owner.WenQiZhiMark;
+
+        /// <summary>作者电话水印：18719361399。</summary>
+        internal const string WenQiZhiPhone = HandlerGuide.ViewModels.Owner.WenQiZhiPhone;
+
+        /// <summary>本文件署名：温启志 18719361399 · XamlHelpers。</summary>
+        internal const string WenQiZhiFile = "XamlHelpers";
+    }
+
+    // 温启志 18719361399 · 类 public class StyleKeyConverter : IValueConverter
     /// <summary>把样式资源键转换成 Style；找不到时返回 UnsetValue（保留控件默认样式）。</summary>
     public class StyleKeyConverter : IValueConverter
     {
@@ -20,6 +43,7 @@ namespace HandlerGuide.Views
             => throw new NotSupportedException();
     }
 
+    // 温启志 18719361399 · 类 public class DoubleToThicknessConverter : IValueConverter
     /// <summary>double → Thickness（图形元素的描边宽度）。</summary>
     public class DoubleToThicknessConverter : IValueConverter
     {
@@ -33,6 +57,7 @@ namespace HandlerGuide.Views
             => throw new NotSupportedException();
     }
 
+    // 温启志 18719361399 · 类 public class DoubleToCornerRadiusConverter : IValueConverter
     /// <summary>double → CornerRadius（图形元素圆角）。</summary>
     public class DoubleToCornerRadiusConverter : IValueConverter
     {
@@ -46,6 +71,7 @@ namespace HandlerGuide.Views
             => throw new NotSupportedException();
     }
 
+    // 温启志 18719361399 · 类 public class UnsetIfNullConverter : IValueConverter
     /// <summary>值为 null 时返回 UnsetValue，避免用 null 覆盖样式里设定的属性。</summary>
     public class UnsetIfNullConverter : IValueConverter
     {
@@ -56,6 +82,7 @@ namespace HandlerGuide.Views
             => throw new NotSupportedException();
     }
 
+    // 温启志 18719361399 · 类 public class BrushNotNullConverter : IValueConverter
     /// <summary>双精度 NaN 表示“自动”，直接绑定 Width/Height 即可；此转换器用于 double→Visibility 之外的场景。</summary>
     public class BrushNotNullConverter : IValueConverter
     {
@@ -66,6 +93,7 @@ namespace HandlerGuide.Views
             => throw new NotSupportedException();
     }
 
+    // 温启志 18719361399 · 类 public static class GridSpec
     /// <summary>把 "360,*,Auto" 这样的行列定义字符串应用到 Grid 上（XAML 里不能直接绑定 RowDefinitions）。</summary>
     public static class GridSpec
     {
@@ -119,3 +147,7 @@ namespace HandlerGuide.Views
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+//  温启志 18719361399 · 文件结束（署名水印）
+// ---------------------------------------------------------------------------

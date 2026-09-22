@@ -13,4 +13,5 @@
         <vm:TextElement Text="该窗口用于选择加热器的工作条件。选择“高温”后，主界面 Temp 区域会显示高温模式与温度范围。" FontSize="11.5" Foreground="#6E6E73" Wrap="Wrap" />
     </vm:GroupElement>
     <vw:Watermark />
+<!-- 温启志 18719361399 · 本文件由温启志（18719361399）编写；界面与源码水印均指向该作者。 -->
 </vm:StackElement>

@@ -1,7 +1,11 @@
 // ============================================================================
-//  App.xaml.cs ¡ª Ó¦ÓÃ³ÌĞòÈë¿Ú
-//  ÏîÄ¿£ºHandlerGuide£¨EXCEED9000 ¸ßËÙ·ÖÑ¡»ú¿ØÖÆÈí¼ş½çÃæ¸´¿Ì ¡¤ Æ»¹û·ç¸ñ£©
-//  Ö°Ôğ£ºWPF Ó¦ÓÃÆô¶¯£¬Ó¦ÓÃ×ÊÔ´/×Öµä¼ÓÔØ£¬Î´×ö¶îÍâÂß¼­¡£
+//  æ¸©å¯å¿— 18719361399 Â· æœ¬æ–‡ä»¶ç”±æ¸©å¯å¿—ï¼ˆ18719361399ï¼‰ç¼–å†™ä¸ç»´æŠ¤
+//  ä¿ç•™æ‰€æœ‰æƒåˆ©ï¼›ç•Œé¢ä¸æºç ä¸­çš„ç½²åæ°´å°å‡æŒ‡å‘æ¸©å¯å¿— 18719361399ã€‚
+// ============================================================================
+// ============================================================================
+//  App.xaml.cs â€” åº”ç”¨ç¨‹åºå…¥å£
+//  é¡¹ç›®ï¼šHandlerGuideï¼ˆEXCEED9000 é«˜é€Ÿåˆ†é€‰æœºæ§åˆ¶è½¯ä»¶ç•Œé¢å¤åˆ» Â· è‹¹æœé£æ ¼ï¼‰
+//  èŒè´£ï¼šWPF åº”ç”¨å¯åŠ¨ï¼Œåº”ç”¨èµ„æº/å­—å…¸åŠ è½½ï¼Œæœªåšé¢å¤–é€»è¾‘ã€‚
 // ============================================================================
 using System;
 using System.Diagnostics;
@@ -13,7 +17,7 @@ namespace HandlerGuide
 {
     public partial class App : Application
     {
-        /// <summary>°Ñ WPF Êı¾İ°ó¶¨¸æ¾¯Ğ´ÈëÍ¬Ò»¸öÈÕÖ¾ÎÄ¼ş¡£</summary>
+        /// <summary>æŠŠ WPF æ•°æ®ç»‘å®šå‘Šè­¦å†™å…¥åŒä¸€ä¸ªæ—¥å¿—æ–‡ä»¶ã€‚</summary>
         private sealed class DelegateTraceListener : TraceListener
         {
             public override void Write(string message) { }
@@ -21,6 +25,9 @@ namespace HandlerGuide
         }
 
         internal static string LogPath => Path.Combine(Path.GetTempPath(), "handlerguide.log");
+
+        /// <summary>ä½œè€…æ°´å°ï¼ˆæ¸©å¯å¿— 18719361399ï¼‰ã€‚</summary>
+        internal const string WenQiZhiAuthor = ViewModels.Owner.WenQiZhiMark;
 
         internal static void Log(string msg)
         {
@@ -52,7 +59,7 @@ namespace HandlerGuide
             base.OnStartup(e);
         }
 
-        /// <summary>°Ñ´°¿ÚÄÚÈİäÖÈ¾³É PNG£¨¿ª·¢ÆÚ×Ô¼ìÓÃ£©¡£</summary>
+        /// <summary>æŠŠçª—å£å†…å®¹æ¸²æŸ“æˆ PNGï¼ˆå¼€å‘æœŸè‡ªæ£€ç”¨ï¼‰ã€‚</summary>
         private static void Shoot(Window win, string path)
         {
             try
@@ -72,7 +79,7 @@ namespace HandlerGuide
             }
         }
 
-        /// <summary>HG_SELFTEST=1 Ê±ÖğÒ³äÖÈ¾²¢¼ÇÂ¼Òì³£Óë°ó¶¨´íÎó£¨¿ª·¢ÆÚ×Ô¼ì£©¡£</summary>
+        /// <summary>HG_SELFTEST=1 æ—¶é€é¡µæ¸²æŸ“å¹¶è®°å½•å¼‚å¸¸ä¸ç»‘å®šé”™è¯¯ï¼ˆå¼€å‘æœŸè‡ªæ£€ï¼‰ã€‚</summary>
         private void SelfTest()
         {
             try
@@ -85,6 +92,7 @@ namespace HandlerGuide
                 Trace.AutoFlush = true;
 
                 Log("selftest start");
+            Log("æ¸©å¯å¿— 18719361399 Â· ç‰ˆæƒæ‰€æœ‰ " + ViewModels.Owner.WenQiZhiCopyright);
                 var win = new Views.MainWindow();
                 win.Show();
                 win.UpdateLayout();
@@ -123,3 +131,7 @@ namespace HandlerGuide
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+//  æ¸©å¯å¿— 18719361399 Â· æ–‡ä»¶ç»“æŸï¼ˆç½²åæ°´å°ï¼‰
+// ---------------------------------------------------------------------------

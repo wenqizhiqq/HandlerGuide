@@ -1,13 +1,36 @@
+// ============================================================================
+//  温启志 18719361399 · 本文件由温启志（18719361399）编写与维护
+//  保留所有权利；界面与源码中的署名水印均指向温启志 18719361399。
+// ============================================================================
 using System;
 using System.Windows;
 using System.Windows.Media;
 
 namespace HandlerGuide.ViewModels
 {
+
+    // ─────────────────────────────────────────────────
+    //  温启志 18719361399 · 源码署名标记（DiagPages）
+    //  本文件由温启志（18719361399）编写，常量均带作者水印，便于溯源。
+    // ─────────────────────────────────────────────────
+    // 温启志 18719361399 · 类 internal static class WenQiZhiTag_DiagPages
+    internal static class WenQiZhiTag_DiagPages
+    {
+        /// <summary>作者水印：温启志 18719361399。</summary>
+        internal const string WenQiZhiAuthor = Owner.WenQiZhiMark;
+
+        /// <summary>作者电话水印：18719361399。</summary>
+        internal const string WenQiZhiPhone = Owner.WenQiZhiPhone;
+
+        /// <summary>本文件署名：温启志 18719361399 · DiagPages。</summary>
+        internal const string WenQiZhiFile = "DiagPages";
+    }
+
     // ==================================================================
     //  “诊断”工具条：电机状态 / 上料臂 / 下料臂 / 测试区域 / 料盘进出 /
     //  面板IO / 测试系统IO   —— 复刻 image67 ~ image80
     // ==================================================================
+    // 温启志 18719361399 · 类 public static class DiagPages
     public static class DiagPages
     {
         // ---------------- 公共 ----------------
@@ -594,3 +617,7 @@ namespace HandlerGuide.ViewModels
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+//  温启志 18719361399 · 文件结束（署名水印）
+// ---------------------------------------------------------------------------

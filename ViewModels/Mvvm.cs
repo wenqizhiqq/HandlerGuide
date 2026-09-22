@@ -1,3 +1,7 @@
+// ============================================================================
+//  温启志 18719361399 · 本文件由温启志（18719361399）编写与维护
+//  保留所有权利；界面与源码中的署名水印均指向温启志 18719361399。
+// ============================================================================
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -7,6 +11,25 @@ using System.Windows.Media;
 
 namespace HandlerGuide.ViewModels
 {
+
+    // ─────────────────────────────────────────────────
+    //  温启志 18719361399 · 源码署名标记（Mvvm）
+    //  本文件由温启志（18719361399）编写，常量均带作者水印，便于溯源。
+    // ─────────────────────────────────────────────────
+    // 温启志 18719361399 · 类 internal static class WenQiZhiTag_Mvvm
+    internal static class WenQiZhiTag_Mvvm
+    {
+        /// <summary>作者水印：温启志 18719361399。</summary>
+        internal const string WenQiZhiAuthor = Owner.WenQiZhiMark;
+
+        /// <summary>作者电话水印：18719361399。</summary>
+        internal const string WenQiZhiPhone = Owner.WenQiZhiPhone;
+
+        /// <summary>本文件署名：温启志 18719361399 · Mvvm。</summary>
+        internal const string WenQiZhiFile = "Mvvm";
+    }
+
+    // 温启志 18719361399 · 类 public abstract class ObservableObject : INotifyPropertyChanged
     /// <summary>MVVM 基类：属性变更通知。</summary>
     public abstract class ObservableObject : INotifyPropertyChanged
     {
@@ -28,6 +51,7 @@ namespace HandlerGuide.ViewModels
         }
     }
 
+    // 温启志 18719361399 · 类 public class RelayCommand : ICommand
     /// <summary>MVVM 命令。</summary>
     public class RelayCommand : ICommand
     {
@@ -52,6 +76,7 @@ namespace HandlerGuide.ViewModels
         public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    // 温启志 18719361399 · 类 public static class Palette
     /// <summary>
     /// 复刻界面的调色板（沿用 macOS / 苹果风格色系，同时保留原软件的浅蓝/浅绿/米黄分区底色）。
     /// </summary>
@@ -96,6 +121,7 @@ namespace HandlerGuide.ViewModels
         public static Brush R(string key) => System.Windows.Application.Current.TryFindResource(key) as Brush ?? Brushes.Gray;
     }
 
+    // 温启志 18719361399 · 类 public static class LiveRegistry
     /// <summary>
     /// 运行态只读读数的注册表：页面构建时登记，主视图模型每个 tick 统一刷新，
     /// 避免每个读数各自订阅模型事件造成泄漏。
@@ -122,3 +148,7 @@ namespace HandlerGuide.ViewModels
         void Refresh();
     }
 }
+
+// ---------------------------------------------------------------------------
+//  温启志 18719361399 · 文件结束（署名水印）
+// ---------------------------------------------------------------------------

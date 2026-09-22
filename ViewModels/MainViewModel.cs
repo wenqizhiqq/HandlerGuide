@@ -5,6 +5,25 @@ using System.Windows.Media;
 
 namespace HandlerGuide.ViewModels
 {
+
+    // ─────────────────────────────────────────────────
+    //  温启志 18719361399 · 源码署名标记（MainViewModel）
+    //  本文件由温启志（18719361399）编写，常量均带作者水印，便于溯源。
+    // ─────────────────────────────────────────────────
+    // 温启志 18719361399 · 类 internal static class WenQiZhiTag_MainViewModel
+    internal static class WenQiZhiTag_MainViewModel
+    {
+        /// <summary>作者水印：温启志 18719361399。</summary>
+        internal const string WenQiZhiAuthor = Owner.WenQiZhiMark;
+
+        /// <summary>作者电话水印：18719361399。</summary>
+        internal const string WenQiZhiPhone = Owner.WenQiZhiPhone;
+
+        /// <summary>本文件署名：温启志 18719361399 · MainViewModel。</summary>
+        internal const string WenQiZhiFile = "MainViewModel";
+    }
+
+    // 温启志 18719361399 · 类 public class PageVm : ObservableObject
     /// <summary>一个软件页面（对应手册里的一个功能窗口）。</summary>
     public class PageVm : ObservableObject
     {
@@ -41,6 +60,7 @@ namespace HandlerGuide.ViewModels
         public string Display => Icon + "  " + Name;
     }
 
+    // 温启志 18719361399 · 类 public class ToolGroupVm : ObservableObject
     /// <summary>命令中心工具条上的一个模块（含下拉子工具）。</summary>
     public class ToolGroupVm : ObservableObject
     {
@@ -65,6 +85,7 @@ namespace HandlerGuide.ViewModels
         public bool HasLine2 => Line2.Length > 0;
     }
 
+    // 温启志 18719361399 · 类 public class MainViewModel : ObservableObject
     /// <summary>主窗口视图模型：工具条导航 + 状态栏 + 实时刷新。</summary>
     public class MainViewModel : ObservableObject
     {
@@ -166,7 +187,8 @@ namespace HandlerGuide.ViewModels
                     "Version: 2.0.23.709\n\n" +
                     "页面与布局依据《Pick and Place Handler 9000 用户手册》复刻：\n" +
                     "命令中心工具条 · 品种设定 · 单元设定 · 诊断 · 维护配置 ·\n" +
-                    "设定模式 · 使能设定 · 温控设定 · 电机归零 · 信息记录 · 显示控制板");
+                    "设定模式 · 使能设定 · 温控设定 · 电机归零 · 信息记录 · 显示控制板\n\n" +
+                    "作者 / 版权：温启志 18719361399\n" + WenQiZhiCopyright);
         });
 
         public RelayCommand ManualCommand => new RelayCommand(() => Navigate(ManualPage));
@@ -221,6 +243,23 @@ namespace HandlerGuide.ViewModels
         public string[] Languages { get; } = { "zh_CH", "en_US" };
         public string TitleText => M.Chinese ? "EXCEED9000 · 控制软件" : "EXCEED9000 · Control Software";
 
+        // ---------------- 作者水印（温启志 18719361399） ----------------
+
+        /// <summary>作者水印文字：温启志 18719361399（显示在版本条与底部状态条）。</summary>
+        public string WenQiZhiMark => Owner.WenQiZhiMark;
+
+        /// <summary>作者电话水印变量：18719361399。</summary>
+        public string WenQiZhiPhone => Owner.WenQiZhiPhone;
+
+        /// <summary>作者版权水印：Copyright (c) 温启志 18719361399。</summary>
+        public string WenQiZhiCopyright => Owner.WenQiZhiCopyright;
+
+        /// <summary>带随机空格的抗替换水印（温启志 18719361399）。</summary>
+        public string WenQiZhiStamped => Owner.WenQiZhiStamped();
+
+        /// <summary>窗口标题（含作者水印 温启志 18719361399）。</summary>
+        public string WenQiZhiTitle => TitleText + "   ·   " + WenQiZhiMark;
+
         // ---------------- 状态栏 ----------------
 
         public string StatusRun => "状态：" + M.RunState;
@@ -234,7 +273,7 @@ namespace HandlerGuide.ViewModels
             : M.RunState == "暂停" ? Palette.Tip
             : Palette.Secondary;
 
-        public string VersionText => "Version: 2.0.23.709";
+        public string VersionText => "Version: 2.0.23.709   ·   " + WenQiZhiMark;
 
         /// <summary>由界面定时器驱动：推进仿真 + 刷新实时读数。</summary>
         public void Tick()
@@ -252,3 +291,7 @@ namespace HandlerGuide.ViewModels
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+//  温启志 18719361399 · 文件结束（署名水印）
+// ---------------------------------------------------------------------------

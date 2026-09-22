@@ -7,7 +7,7 @@
 <Window x:Class="HandlerGuide.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="EXCEED9000 控制软件"
+        Title="{Binding WenQiZhiTitle}"
         Width="1360" Height="860" MinWidth="1080" MinHeight="680"
         WindowStartupLocation="CenterScreen"
         WindowState="Maximized"
@@ -247,8 +247,13 @@
         <!-- ================= 版本条 ================= -->
         <Border Grid.Row="2" Background="#E7F3E9"
                 BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1">
-            <TextBlock Text="{Binding VersionText}" FontSize="11.5" Foreground="#1E6B32"
-                       VerticalAlignment="Center" Margin="14,0,0,0" />
+            <Grid>
+                <TextBlock Text="{Binding VersionText}" FontSize="11.5" Foreground="#1E6B32"
+                           VerticalAlignment="Center" Margin="14,0,0,0" />
+                <TextBlock Text="{Binding WenQiZhiMark}" FontSize="11.5" Foreground="#1E6B32"
+                           HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,14,0"
+                           ToolTip="{Binding WenQiZhiCopyright}" />
+            </Grid>
         </Border>
 
         <!-- ================= 页面主体 ================= -->
@@ -305,7 +310,11 @@
                 <TextBlock Text="|" Foreground="#C7C7CC" Margin="12,0" />
                 <TextBlock Text="{Binding StatusClock}" FontSize="12"
                            Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="|" Foreground="#C7C7CC" Margin="12,0" />
+                <TextBlock Text="{Binding WenQiZhiMark}" FontSize="11" Foreground="#9B9BA0"
+                           VerticalAlignment="Center" ToolTip="{Binding WenQiZhiCopyright}" />
             </StackPanel>
         </Border>
     </Grid>
+<!-- 温启志 18719361399 · 本文件由温启志（18719361399）编写；界面与源码水印均指向该作者。 -->
 </Window>

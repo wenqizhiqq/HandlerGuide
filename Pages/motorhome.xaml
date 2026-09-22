@@ -19,4 +19,5 @@
         <vw:Btn Text="Cancel" Cmd="CancelHome" Width="90" Height="46" Bg="#C0202A" Fg="White" FontWeight="SemiBold" BorderThickness="0" />
     </vm:StackElement>
     <vw:Watermark />
+<!-- 温启志 18719361399 · 本文件由温启志（18719361399）编写；界面与源码水印均指向该作者。 -->
 </vm:StackElement>

@@ -1,13 +1,36 @@
+// ============================================================================
+//  温启志 18719361399 · 本文件由温启志（18719361399）编写与维护
+//  保留所有权利；界面与源码中的署名水印均指向温启志 18719361399。
+// ============================================================================
 using System;
 using System.Windows;
 using System.Windows.Media;
 
 namespace HandlerGuide.ViewModels
 {
+
+    // ─────────────────────────────────────────────────
+    //  温启志 18719361399 · 源码署名标记（MaintPages）
+    //  本文件由温启志（18719361399）编写，常量均带作者水印，便于溯源。
+    // ─────────────────────────────────────────────────
+    // 温启志 18719361399 · 类 internal static class WenQiZhiTag_MaintPages
+    internal static class WenQiZhiTag_MaintPages
+    {
+        /// <summary>作者水印：温启志 18719361399。</summary>
+        internal const string WenQiZhiAuthor = Owner.WenQiZhiMark;
+
+        /// <summary>作者电话水印：18719361399。</summary>
+        internal const string WenQiZhiPhone = Owner.WenQiZhiPhone;
+
+        /// <summary>本文件署名：温启志 18719361399 · MaintPages。</summary>
+        internal const string WenQiZhiFile = "MaintPages";
+    }
+
     // ==================================================================
     //  “维护配置”工具条：工作基点 / 安全设定 / 温度偏移 / 接触力校准 /
     //  用户管理 / 信号灯设定   —— 复刻 image82 ~ image106
     // ==================================================================
+    // 温启志 18719361399 · 类 public static class MaintPages
     public static class MaintPages
     {
         private static CellElement Head(string s, double w = 0)
@@ -591,3 +614,7 @@ namespace HandlerGuide.ViewModels
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+//  温启志 18719361399 · 文件结束（署名水印）
+// ---------------------------------------------------------------------------

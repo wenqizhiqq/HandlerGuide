@@ -59,4 +59,5 @@
         <vm:TextElement Text="该窗口用于显示设备运行过程中的事件记录，事件记录在本机的 SQL 数据库中，可通过此界面进行查询，输入开始、结束时间，并可限定类型和单元，并可将查询结果导出为文本文件。" FontSize="11.5" Foreground="#6E6E73" Wrap="Wrap" />
     </vm:GroupElement>
     <vw:Watermark />
+<!-- 温启志 18719361399 · 本文件由温启志（18719361399）编写；界面与源码水印均指向该作者。 -->
 </vm:StackElement>

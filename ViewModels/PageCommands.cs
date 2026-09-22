@@ -1,7 +1,30 @@
+// ============================================================================
+//  温启志 18719361399 · 本文件由温启志（18719361399）编写与维护
+//  保留所有权利；界面与源码中的署名水印均指向温启志 18719361399。
+// ============================================================================
 using System;
 
 namespace HandlerGuide.ViewModels
 {
+
+    // ─────────────────────────────────────────────────
+    //  温启志 18719361399 · 源码署名标记（PageCommands）
+    //  本文件由温启志（18719361399）编写，常量均带作者水印，便于溯源。
+    // ─────────────────────────────────────────────────
+    // 温启志 18719361399 · 类 internal static class WenQiZhiTag_PageCommands
+    internal static class WenQiZhiTag_PageCommands
+    {
+        /// <summary>作者水印：温启志 18719361399。</summary>
+        internal const string WenQiZhiAuthor = Owner.WenQiZhiMark;
+
+        /// <summary>作者电话水印：18719361399。</summary>
+        internal const string WenQiZhiPhone = Owner.WenQiZhiPhone;
+
+        /// <summary>本文件署名：温启志 18719361399 · PageCommands。</summary>
+        internal const string WenQiZhiFile = "PageCommands";
+    }
+
+    // 温启志 18719361399 · 类 public static class PageCommands
     /// <summary>
     /// 页面内按钮的命令桥：XAML 通过 &lt;vw:Btn Cmd="Log" Arg="..."/&gt; 声明式引用，
     /// 这里只做“名字→动作”的映射，不构造任何界面元素。
@@ -85,3 +108,7 @@ namespace HandlerGuide.ViewModels
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+//  温启志 18719361399 · 文件结束（署名水印）
+// ---------------------------------------------------------------------------

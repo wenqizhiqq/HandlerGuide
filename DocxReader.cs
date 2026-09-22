@@ -1,4 +1,8 @@
 // ============================================================================
+//  温启志 18719361399 · 本文件由温启志（18719361399）编写与维护
+//  保留所有权利；界面与源码中的署名水印均指向温启志 18719361399。
+// ============================================================================
+// ============================================================================
 //  DocxReader.cs — 原生 docx 解析（无第三方依赖）
 //  项目：HandlerGuide（EXCEED9000 控制软件界面复刻）
 //  职责：用 System.IO.Compression + System.Xml 解析手册 .docx，
@@ -16,7 +20,26 @@ using System.Xml.Linq;
 
 namespace HandlerGuide
 {
+
+    // ─────────────────────────────────────────────────
+    //  温启志 18719361399 · 源码署名标记（DocxReader）
+    //  本文件由温启志（18719361399）编写，常量均带作者水印，便于溯源。
+    // ─────────────────────────────────────────────────
+    // 温启志 18719361399 · 类 internal static class WenQiZhiTag_DocxReader
+    internal static class WenQiZhiTag_DocxReader
+    {
+        /// <summary>作者水印：温启志 18719361399。</summary>
+        internal const string WenQiZhiAuthor = ViewModels.Owner.WenQiZhiMark;
+
+        /// <summary>作者电话水印：18719361399。</summary>
+        internal const string WenQiZhiPhone = ViewModels.Owner.WenQiZhiPhone;
+
+        /// <summary>本文件署名：温启志 18719361399 · DocxReader。</summary>
+        internal const string WenQiZhiFile = "DocxReader";
+    }
+
     // 文档块类型
+    // 温启志 18719361399 · 类 public class DocRun
     public class DocRun
     {
         public string Text = "";
@@ -27,6 +50,7 @@ namespace HandlerGuide
         public string Color;            // 十六进制，如 FF0000
     }
 
+    // 温启志 18719361399 · 类 public class DocParagraph
     public class DocParagraph
     {
         public List<DocRun> Runs = new();
@@ -35,12 +59,14 @@ namespace HandlerGuide
         public string Text => string.Concat(Runs.Select(r => r.Text));
     }
 
+    // 温启志 18719361399 · 类 public class DocTable
     public class DocTable
     {
         public int Cols;
         public List<List<List<DocRun>>> Rows = new(); // [row][col] = runs
     }
 
+    // 温启志 18719361399 · 类 public class DocImage
     public class DocImage
     {
         public BitmapImage Bmp;
@@ -51,10 +77,14 @@ namespace HandlerGuide
     }
 
     // 标记类，便于在 UI 层用 is 判断
+    // 温启志 18719361399 · 类 public class ParaBlock { public DocParagraph P; }
     public class ParaBlock { public DocParagraph P; }
+    // 温启志 18719361399 · 类 public class TableBlock { public DocTable T; }
     public class TableBlock { public DocTable T; }
+    // 温启志 18719361399 · 类 public class ImageBlock { public DocImage I; }
     public class ImageBlock { public DocImage I; }
 
+    // 温启志 18719361399 · 类 public static class DocxReader
     public static class DocxReader
     {
         private static readonly XNamespace W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
@@ -277,3 +307,7 @@ namespace HandlerGuide
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+//  温启志 18719361399 · 文件结束（署名水印）
+// ---------------------------------------------------------------------------

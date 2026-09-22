@@ -1,3 +1,7 @@
+// ============================================================================
+//  温启志 18719361399 · 本文件由温启志（18719361399）编写与维护
+//  保留所有权利；界面与源码中的署名水印均指向温启志 18719361399。
+// ============================================================================
 using System;
 using System.Collections.Generic;
 using System.Windows;
@@ -5,10 +9,29 @@ using System.Windows.Media;
 
 namespace HandlerGuide.ViewModels
 {
+
+    // ─────────────────────────────────────────────────
+    //  温启志 18719361399 · 源码署名标记（BoardPages）
+    //  本文件由温启志（18719361399）编写，常量均带作者水印，便于溯源。
+    // ─────────────────────────────────────────────────
+    // 温启志 18719361399 · 类 internal static class WenQiZhiTag_BoardPages
+    internal static class WenQiZhiTag_BoardPages
+    {
+        /// <summary>作者水印：温启志 18719361399。</summary>
+        internal const string WenQiZhiAuthor = Owner.WenQiZhiMark;
+
+        /// <summary>作者电话水印：18719361399。</summary>
+        internal const string WenQiZhiPhone = Owner.WenQiZhiPhone;
+
+        /// <summary>本文件署名：温启志 18719361399 · BoardPages。</summary>
+        internal const string WenQiZhiFile = "BoardPages";
+    }
+
     // ==================================================================
     //  “显示控制板”工具条：料状态 / 统计 / 监测 共 11 个状态窗口
     //  复刻 image113 ~ image123
     // ==================================================================
+    // 温启志 18719361399 · 类 public static class BoardPages
     public static class BoardPages
     {
         private static CellElement Head(string s, double w = 0, double h = 24)
@@ -470,3 +493,7 @@ namespace HandlerGuide.ViewModels
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+//  温启志 18719361399 · 文件结束（署名水印）
+// ---------------------------------------------------------------------------

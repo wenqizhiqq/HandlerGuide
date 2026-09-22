@@ -1,8 +1,31 @@
+// ============================================================================
+//  温启志 18719361399 · 本文件由温启志（18719361399）编写与维护
+//  保留所有权利；界面与源码中的署名水印均指向温启志 18719361399。
+// ============================================================================
 using System;
 using System.Collections.Generic;
 
 namespace HandlerGuide.ViewModels
 {
+
+    // ─────────────────────────────────────────────────
+    //  温启志 18719361399 · 源码署名标记（PageCatalog）
+    //  本文件由温启志（18719361399）编写，常量均带作者水印，便于溯源。
+    // ─────────────────────────────────────────────────
+    // 温启志 18719361399 · 类 internal static class WenQiZhiTag_PageCatalog
+    internal static class WenQiZhiTag_PageCatalog
+    {
+        /// <summary>作者水印：温启志 18719361399。</summary>
+        internal const string WenQiZhiAuthor = Owner.WenQiZhiMark;
+
+        /// <summary>作者电话水印：18719361399。</summary>
+        internal const string WenQiZhiPhone = Owner.WenQiZhiPhone;
+
+        /// <summary>本文件署名：温启志 18719361399 · PageCatalog。</summary>
+        internal const string WenQiZhiFile = "PageCatalog";
+    }
+
+    // 温启志 18719361399 · 类 public static class PageCatalog
     /// <summary>
     /// 页面目录：命令中心工具条的模块顺序与手册一致（复刻 image38 / image39）。
     /// </summary>
@@ -143,3 +166,7 @@ namespace HandlerGuide.ViewModels
                  ToolPages.ManualPage);
     }
 }
+
+// ---------------------------------------------------------------------------
+//  温启志 18719361399 · 文件结束（署名水印）
+// ---------------------------------------------------------------------------

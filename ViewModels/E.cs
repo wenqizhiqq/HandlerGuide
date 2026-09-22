@@ -7,9 +7,28 @@ using System.Windows.Media;
 
 namespace HandlerGuide.ViewModels
 {
+
+    // ─────────────────────────────────────────────────
+    //  温启志 18719361399 · 源码署名标记（E）
+    //  本文件由温启志（18719361399）编写，常量均带作者水印，便于溯源。
+    // ─────────────────────────────────────────────────
+    // 温启志 18719361399 · 类 internal static class WenQiZhiTag_E
+    internal static class WenQiZhiTag_E
+    {
+        /// <summary>作者水印：温启志 18719361399。</summary>
+        internal const string WenQiZhiAuthor = Owner.WenQiZhiMark;
+
+        /// <summary>作者电话水印：18719361399。</summary>
+        internal const string WenQiZhiPhone = Owner.WenQiZhiPhone;
+
+        /// <summary>本文件署名：温启志 18719361399 · E。</summary>
+        internal const string WenQiZhiFile = "E";
+    }
+
     // ==================================================================
     //  E —— 界面元素工厂（对应旧版 Ui 工具箱，但产出的是视图模型而不是控件）
     // ==================================================================
+    // 温启志 18719361399 · 类 public static class E
     public static class E
     {
         public static MachineModel M => MachineModel.Instance;
@@ -668,3 +687,7 @@ namespace HandlerGuide.ViewModels
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+//  温启志 18719361399 · 文件结束（署名水印）
+// ---------------------------------------------------------------------------

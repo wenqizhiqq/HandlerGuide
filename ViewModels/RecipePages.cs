@@ -1,3 +1,7 @@
+// ============================================================================
+//  温启志 18719361399 · 本文件由温启志（18719361399）编写与维护
+//  保留所有权利；界面与源码中的署名水印均指向温启志 18719361399。
+// ============================================================================
 using System;
 using System.Linq;
 using System.Windows;
@@ -5,10 +9,29 @@ using System.Windows.Media;
 
 namespace HandlerGuide.ViewModels
 {
+
+    // ─────────────────────────────────────────────────
+    //  温启志 18719361399 · 源码署名标记（RecipePages）
+    //  本文件由温启志（18719361399）编写，常量均带作者水印，便于溯源。
+    // ─────────────────────────────────────────────────
+    // 温启志 18719361399 · 类 internal static class WenQiZhiTag_RecipePages
+    internal static class WenQiZhiTag_RecipePages
+    {
+        /// <summary>作者水印：温启志 18719361399。</summary>
+        internal const string WenQiZhiAuthor = Owner.WenQiZhiMark;
+
+        /// <summary>作者电话水印：18719361399。</summary>
+        internal const string WenQiZhiPhone = Owner.WenQiZhiPhone;
+
+        /// <summary>本文件署名：温启志 18719361399 · RecipePages。</summary>
+        internal const string WenQiZhiFile = "RecipePages";
+    }
+
     // ==================================================================
     //  “品种设定”工具条：品种维护 / 测试模式 / 料盘 / 测试臂 / 测试接口 /
     //  Bin设定 / 温度 / 视觉 / 清洁盘
     // ==================================================================
+    // 温启志 18719361399 · 类 public static class RecipePages
     public static class RecipePages
     {
         private static string[] SiteCols => new[] { "a", "b", "c", "d", "e", "f", "g", "h" };
@@ -536,3 +559,7 @@ namespace HandlerGuide.ViewModels
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+//  温启志 18719361399 · 文件结束（署名水印）
+// ---------------------------------------------------------------------------

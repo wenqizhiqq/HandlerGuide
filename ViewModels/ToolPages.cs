@@ -1,3 +1,7 @@
+// ============================================================================
+//  温启志 18719361399 · 本文件由温启志（18719361399）编写与维护
+//  保留所有权利；界面与源码中的署名水印均指向温启志 18719361399。
+// ============================================================================
 using System;
 using System.Linq;
 using System.Windows;
@@ -6,7 +10,26 @@ using System.Windows.Media;
 
 namespace HandlerGuide.ViewModels
 {
+
+    // ─────────────────────────────────────────────────
+    //  温启志 18719361399 · 源码署名标记（ToolPages）
+    //  本文件由温启志（18719361399）编写，常量均带作者水印，便于溯源。
+    // ─────────────────────────────────────────────────
+    // 温启志 18719361399 · 类 internal static class WenQiZhiTag_ToolPages
+    internal static class WenQiZhiTag_ToolPages
+    {
+        /// <summary>作者水印：温启志 18719361399。</summary>
+        internal const string WenQiZhiAuthor = Owner.WenQiZhiMark;
+
+        /// <summary>作者电话水印：18719361399。</summary>
+        internal const string WenQiZhiPhone = Owner.WenQiZhiPhone;
+
+        /// <summary>本文件署名：温启志 18719361399 · ToolPages。</summary>
+        internal const string WenQiZhiFile = "ToolPages";
+    }
+
     // 命令中心工具条上的直达页面（复刻 image107 ~ image112）+ 语言 / 键盘 / 关闭 / 说明书
+    // 温启志 18719361399 · 类 public static class ToolPages
     public static class ToolPages
     {
         // ---------------- 模式设定 (image107 / image108) ----------------
@@ -303,3 +326,7 @@ namespace HandlerGuide.ViewModels
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+//  温启志 18719361399 · 文件结束（署名水印）
+// ---------------------------------------------------------------------------

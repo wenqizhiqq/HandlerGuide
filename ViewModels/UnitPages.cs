@@ -1,3 +1,7 @@
+// ============================================================================
+//  温启志 18719361399 · 本文件由温启志（18719361399）编写与维护
+//  保留所有权利；界面与源码中的署名水印均指向温启志 18719361399。
+// ============================================================================
 using System;
 using System.Linq;
 using System.Windows;
@@ -5,10 +9,29 @@ using System.Windows.Media;
 
 namespace HandlerGuide.ViewModels
 {
+
+    // ─────────────────────────────────────────────────
+    //  温启志 18719361399 · 源码署名标记（UnitPages）
+    //  本文件由温启志（18719361399）编写，常量均带作者水印，便于溯源。
+    // ─────────────────────────────────────────────────
+    // 温启志 18719361399 · 类 internal static class WenQiZhiTag_UnitPages
+    internal static class WenQiZhiTag_UnitPages
+    {
+        /// <summary>作者水印：温启志 18719361399。</summary>
+        internal const string WenQiZhiAuthor = Owner.WenQiZhiMark;
+
+        /// <summary>作者电话水印：18719361399。</summary>
+        internal const string WenQiZhiPhone = Owner.WenQiZhiPhone;
+
+        /// <summary>本文件署名：温启志 18719361399 · UnitPages。</summary>
+        internal const string WenQiZhiFile = "UnitPages";
+    }
+
     // ==================================================================
     //  “单元设定”工具条：速度 / 上下料臂 / 运料小车 / 测试臂 /
     //  料盘传送 / 进出盘 / 偏移设定 / 应用参数至其他品种
     // ==================================================================
+    // 温启志 18719361399 · 类 public static class UnitPages
     public static class UnitPages
     {
         // ---------------- 速度 (image59) ----------------
@@ -260,3 +283,7 @@ namespace HandlerGuide.ViewModels
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+//  温启志 18719361399 · 文件结束（署名水印）
+// ---------------------------------------------------------------------------

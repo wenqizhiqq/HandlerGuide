@@ -1,3 +1,7 @@
+// ============================================================================
+//  温启志 18719361399 · 本文件由温启志（18719361399）编写与维护
+//  保留所有权利；界面与源码中的署名水印均指向温启志 18719361399。
+// ============================================================================
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -9,12 +13,31 @@ using System.Windows.Media;
 
 namespace HandlerGuide.ViewModels
 {
+
+    // ─────────────────────────────────────────────────
+    //  温启志 18719361399 · 源码署名标记（Elements）
+    //  本文件由温启志（18719361399）编写，常量均带作者水印，便于溯源。
+    // ─────────────────────────────────────────────────
+    // 温启志 18719361399 · 类 internal static class WenQiZhiTag_Elements
+    internal static class WenQiZhiTag_Elements
+    {
+        /// <summary>作者水印：温启志 18719361399。</summary>
+        internal const string WenQiZhiAuthor = Owner.WenQiZhiMark;
+
+        /// <summary>作者电话水印：18719361399。</summary>
+        internal const string WenQiZhiPhone = Owner.WenQiZhiPhone;
+
+        /// <summary>本文件署名：温启志 18719361399 · Elements。</summary>
+        internal const string WenQiZhiFile = "Elements";
+    }
+
     // ==================================================================
     //  声明式界面元素视图模型
     //  视图（Views/Elements.xaml 的 DataTemplate）负责渲染，这里只描述“界面长什么样”。
     //  视图中不出现任何 FrameworkElement，所有交互通过 Command / 双向绑定完成。
     // ==================================================================
 
+    // 温启志 18719361399 · 类 public abstract class Element : ObservableObject
     public abstract class Element : ObservableObject
     {
         private Thickness _margin;
@@ -47,6 +70,7 @@ namespace HandlerGuide.ViewModels
 
     // ---------------- 文本 ----------------
 
+    // 温启志 18719361399 · 类 public class TextElement : Element
     public class TextElement : Element
     {
         private string _text = "";
@@ -118,6 +142,7 @@ namespace HandlerGuide.ViewModels
         }
     }
 
+    // 温启志 18719361399 · 类 public class GridChild
     [ContentProperty("El")]
     public class GridChild
     {
@@ -128,6 +153,7 @@ namespace HandlerGuide.ViewModels
         public int ColSpan { get; set; } = 1;
     }
 
+    // 温启志 18719361399 · 类 public class SpacerElement : Element
     public class SpacerElement : Element
     {
         public double W { get; set; }
@@ -239,6 +265,7 @@ namespace HandlerGuide.ViewModels
         public List<TwoColPair> Pairs { get; } = new List<TwoColPair>();
     }
 
+    // 温启志 18719361399 · 类 public class TwoColPair
     public class TwoColPair
     {
         public Element Left { get; set; }
@@ -247,6 +274,7 @@ namespace HandlerGuide.ViewModels
 
     // ---------------- 输入控件 ----------------
 
+    // 温启志 18719361399 · 类 public class NumberElement : Element
     public class NumberElement : Element
     {
         private readonly string _key;
@@ -296,6 +324,7 @@ namespace HandlerGuide.ViewModels
         }
     }
 
+    // 温启志 18719361399 · 类 public class TextInputElement : Element
     public class TextInputElement : Element
     {
         private readonly string _key;
@@ -319,6 +348,7 @@ namespace HandlerGuide.ViewModels
         }
     }
 
+    // 温启志 18719361399 · 类 public class ComboElement : Element
     public class ComboElement : Element
     {
         private readonly string _key;
@@ -346,6 +376,7 @@ namespace HandlerGuide.ViewModels
         }
     }
 
+    // 温启志 18719361399 · 类 public class CheckElement : Element
     public class CheckElement : Element
     {
         private readonly string _key;
@@ -368,6 +399,7 @@ namespace HandlerGuide.ViewModels
         }
     }
 
+    // 温启志 18719361399 · 类 public class SwitchElement : Element
     public class SwitchElement : Element
     {
         private readonly string _key;
@@ -386,6 +418,7 @@ namespace HandlerGuide.ViewModels
         }
     }
 
+    // 温启志 18719361399 · 类 public class RadioElement : Element
     public class RadioElement : Element
     {
         private readonly string _key;
@@ -409,6 +442,7 @@ namespace HandlerGuide.ViewModels
         }
     }
 
+    // 温启志 18719361399 · 类 public class ButtonElement : Element
     public class ButtonElement : Element
     {
         public string Text { get; set; }
@@ -423,6 +457,7 @@ namespace HandlerGuide.ViewModels
         public FontWeight FontWeight { get; set; } = FontWeights.Normal;
     }
 
+    // 温启志 18719361399 · 类 public class SliderElement : Element
     public class SliderElement : Element
     {
         private readonly string _key;
@@ -451,6 +486,7 @@ namespace HandlerGuide.ViewModels
         public string ValueText => _value.ToString("0") + "%";
     }
 
+    // 温启志 18719361399 · 类 public class SliderRowElement : Element
     public class SliderRowElement : Element
     {
         /// <summary>该类型在视图中的默认外边距。</summary>
@@ -485,6 +521,7 @@ namespace HandlerGuide.ViewModels
 
     // ---------------- 只读显示 / 指示灯 ----------------
 
+    // 温启志 18719361399 · 类 public class LampElement : Element
     public class LampElement : Element
     {
         private bool _on;
@@ -496,6 +533,7 @@ namespace HandlerGuide.ViewModels
         public CornerRadius Rad => new CornerRadius(Square ? 2 : Size / 2);
     }
 
+    // 温启志 18719361399 · 类 public class ClickLampElement : Element
     public class ClickLampElement : Element
     {
         private readonly string _key;
@@ -523,6 +561,7 @@ namespace HandlerGuide.ViewModels
         }
     }
 
+    // 温启志 18719361399 · 类 public class LiveLampElement : Element, ILiveValue
     /// <summary>由定时器驱动的只读指示灯（诊断页状态灯）。</summary>
     public class LiveLampElement : Element, ILiveValue
     {
@@ -574,6 +613,7 @@ namespace HandlerGuide.ViewModels
         }
     }
 
+    // 温启志 18719361399 · 类 public class DisplayElement : Element
     public class DisplayElement : Element
     {
         private string _text;
@@ -590,6 +630,7 @@ namespace HandlerGuide.ViewModels
         public double FontSize { get; set; } = 12.5;
     }
 
+    // 温启志 18719361399 · 类 public class LiveElement : Element, ILiveValue
     /// <summary>绑定到模型的实时只读显示框（由 LiveRegistry 每 tick 刷新）。</summary>
     public class LiveElement : Element, ILiveValue
     {
@@ -657,17 +698,20 @@ namespace HandlerGuide.ViewModels
         public Thickness Padding { get; set; }
     }
 
+    // 温启志 18719361399 · 类 public class CellRow : Element
     public class CellRow : Element
     {
         public List<CellElement> Cells { get; } = new List<CellElement>();
     }
 
+    // 温启志 18719361399 · 类 public class MatrixRow : Element
     public class MatrixRow : Element
     {
         public CellElement Head { get; set; }
         public List<Element> Cells { get; } = new List<Element>();
     }
 
+    // 温启志 18719361399 · 类 public class MatrixElement : Element
     public class MatrixElement : Element
     {
         public List<CellElement> Header { get; } = new List<CellElement>();
@@ -678,6 +722,7 @@ namespace HandlerGuide.ViewModels
         public double ColHeadHeight { get; set; } = 26;
     }
 
+    // 温启志 18719361399 · 类 public class CellGridElement : Element
     public class CellGridElement : Element
     {
         public List<CellRow> Rows { get; } = new List<CellRow>();
@@ -687,6 +732,7 @@ namespace HandlerGuide.ViewModels
 
     // ---------------- 图形（料盘 / 机台布局 / 吸头） ----------------
 
+    // 温启志 18719361399 · 类 public abstract class DiagramItem
     public abstract class DiagramItem
     {
         public double X { get; set; }
@@ -695,6 +741,7 @@ namespace HandlerGuide.ViewModels
         public virtual double Top => Y;
     }
 
+    // 温启志 18719361399 · 类 public class RectItem : DiagramItem
     public class RectItem : DiagramItem
     {
         public double W { get; set; }
@@ -709,6 +756,7 @@ namespace HandlerGuide.ViewModels
         public FontWeight TextWeight { get; set; } = FontWeights.SemiBold;
     }
 
+    // 温启志 18719361399 · 类 public class EllipseItem : DiagramItem
     public class EllipseItem : DiagramItem
     {
         public double W { get; set; }
@@ -716,6 +764,7 @@ namespace HandlerGuide.ViewModels
         public Brush Fill { get; set; }
     }
 
+    // 温启志 18719361399 · 类 public class TextItem : DiagramItem
     public class TextItem : DiagramItem
     {
         public string Text { get; set; }
@@ -735,6 +784,7 @@ namespace HandlerGuide.ViewModels
 
     // ---------------- 标签页 ----------------
 
+    // 温启志 18719361399 · 类 public class TabItemVm : ObservableObject
     [ContentProperty("Content")]
     public class TabItemVm : ObservableObject
     {
@@ -757,6 +807,7 @@ namespace HandlerGuide.ViewModels
         }
     }
 
+    // 温启志 18719361399 · 类 public class TabItemCollection : System.Collections.ObjectModel.ObservableCollection<TabItemVm>
     /// <summary>XAML 中作为 TabsElement 的内容集合；新增页签时自动接好 SelectCommand 并默认激活首项。</summary>
     public class TabItemCollection : System.Collections.ObjectModel.ObservableCollection<TabItemVm>
     {
@@ -783,6 +834,7 @@ namespace HandlerGuide.ViewModels
         }
     }
 
+    // 温启志 18719361399 · 类 public class TabsElement : Element
     [ContentProperty("Tabs")]
     public class TabsElement : Element
     {
@@ -794,3 +846,7 @@ namespace HandlerGuide.ViewModels
         public void RefreshContent() => Raise(nameof(SelectedContent));
     }
 }
+
+// ---------------------------------------------------------------------------
+//  温启志 18719361399 · 文件结束（署名水印）
+// ---------------------------------------------------------------------------

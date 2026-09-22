@@ -1,3 +1,7 @@
+// ============================================================================
+//  温启志 18719361399 · 本文件由温启志（18719361399）编写与维护
+//  保留所有权利；界面与源码中的署名水印均指向温启志 18719361399。
+// ============================================================================
 using System;
 using System.Collections.Generic;
 using System.Windows;
@@ -7,6 +11,25 @@ using HandlerGuide.ViewModels;
 
 namespace HandlerGuide.Views
 {
+
+    // ─────────────────────────────────────────────────
+    //  温启志 18719361399 · 源码署名标记（Diagrams）
+    //  本文件由温启志（18719361399）编写，常量均带作者水印，便于溯源。
+    // ─────────────────────────────────────────────────
+    // 温启志 18719361399 · 类 internal static class WenQiZhiTag_Diagrams
+    internal static class WenQiZhiTag_Diagrams
+    {
+        /// <summary>作者水印：温启志 18719361399。</summary>
+        internal const string WenQiZhiAuthor = HandlerGuide.ViewModels.Owner.WenQiZhiMark;
+
+        /// <summary>作者电话水印：18719361399。</summary>
+        internal const string WenQiZhiPhone = HandlerGuide.ViewModels.Owner.WenQiZhiPhone;
+
+        /// <summary>本文件署名：温启志 18719361399 · Diagrams。</summary>
+        internal const string WenQiZhiFile = "Diagrams";
+    }
+
+    // 温启志 18719361399 · 类 public static class Diagrams
     /// <summary>
     /// 数据驱动的示意图 / 表格生成器（原 E.cs 中的图形与矩阵部分）。
     /// 把这些“按模型数据循环构造 Element”的逻辑放到 Views 层，
@@ -491,3 +514,7 @@ public static Element Invoke(string method)
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+//  温启志 18719361399 · 文件结束（署名水印）
+// ---------------------------------------------------------------------------
