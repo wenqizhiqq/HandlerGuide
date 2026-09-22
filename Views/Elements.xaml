@@ -125,13 +125,13 @@
     <DataTemplate DataType="{x:Type vm:GroupElement}">
         <Border Background="{StaticResource CardBgBrush}"
                 BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
-                CornerRadius="12" Padding="16,13,16,13" Margin="{Binding EffectiveMargin}"
+                CornerRadius="10" Padding="14,5,14,5" Margin="{Binding EffectiveMargin}"
                 Width="{Binding Width}" Height="{Binding Height}"
                 HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}"
                 ToolTip="{Binding ToolTip}">
             <StackPanel>
                 <TextBlock Text="{Binding Title}" FontSize="12.5" FontWeight="SemiBold"
-                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"
+                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,5"
                            Visibility="{Binding HasTitle, Converter={StaticResource BoolVis}}" />
                 <ItemsControl ItemsSource="{Binding Children}" />
             </StackPanel>
@@ -140,13 +140,13 @@
 
     <DataTemplate DataType="{x:Type vm:BandElement}">
         <Border Background="{Binding Background}" CornerRadius="10"
-                Padding="14,11,14,11" Margin="{Binding EffectiveMargin}"
+                Padding="14,5,14,5" Margin="{Binding EffectiveMargin}"
                 Width="{Binding Width}" Height="{Binding Height}"
                 HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}"
                 ToolTip="{Binding ToolTip}">
             <StackPanel>
                 <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="SemiBold"
-                           Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"
+                           Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,5"
                            Visibility="{Binding HasTitle, Converter={StaticResource BoolVis}}" />
                 <ItemsControl ItemsSource="{Binding Children}" />
             </StackPanel>

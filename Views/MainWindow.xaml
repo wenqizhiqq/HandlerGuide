@@ -252,17 +252,18 @@
         </Border>
 
         <!-- ================= 页面主体 ================= -->
-        <Grid Grid.Row="3" Margin="20,16,20,8">
+        <Grid Grid.Row="3" Margin="12,10,12,6">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
-            <TextBlock Text="{Binding PageTitle}" FontSize="22" FontWeight="SemiBold"
+            <TextBlock Text="{Binding PageTitle}" FontSize="18" FontWeight="SemiBold"
                        Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap" />
             <TextBlock Grid.Row="1" Text="{Binding PageDesc}" FontSize="12.5" TextWrapping="Wrap"
-                       Foreground="{StaticResource TextSecondaryBrush}" Margin="0,6,0,12" />
-            <ScrollViewer Grid.Row="2" x:Name="PageScroll" VerticalScrollBarVisibility="Auto">
+                       Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,8" />
+            <ScrollViewer Grid.Row="2" x:Name="PageScroll" VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled" Padding="0,0,2,0">
                 <ContentControl Content="{Binding CurrentContent}">
                     <ContentControl.Style>
                         <Style TargetType="ContentControl">

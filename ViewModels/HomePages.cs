@@ -76,7 +76,7 @@ namespace HandlerGuide.ViewModels
                 E.MiniBtn("自动清洁", () => m.Log("信息", "自动清洁")),
                 E.MiniBtn("手动清洁", () => m.Log("信息", "手动清洁"))));
 
-            var leftBox = E.Box(E.Scroll(left), E.CardBg, null, 0, 12, new Thickness(14), new Thickness(0, 0, 12, 0));
+            var leftBox = E.Box(left, E.CardBg, null, 0, 12, new Thickness(10), new Thickness(0, 0, 12, 0));
             leftBox.VAlign = VerticalAlignment.Stretch;
             root.Add(leftBox, col: 0);
 
@@ -121,7 +121,7 @@ namespace HandlerGuide.ViewModels
                 new[] { "初始模式", "连续模式", "复测-初始模式", "复测-连续模式" }, 150), 74));
 
             mid.Children.Add(stats);
-            var midBox = E.Box(E.Scroll(mid), E.CardBg, null, 0, 12, new Thickness(14), new Thickness(0, 0, 12, 0));
+            var midBox = E.Box(mid, E.CardBg, null, 0, 12, new Thickness(10), new Thickness(0, 0, 12, 0));
             midBox.VAlign = VerticalAlignment.Stretch;
             root.Add(midBox, col: 1);
 
@@ -144,7 +144,7 @@ namespace HandlerGuide.ViewModels
                     cg.Add(E.Display("0/0", 58, E.BandGrey), i, 2);
             }
             right.Children.Add(cg);
-            var rightBox = E.Box(E.Scroll(right), E.CardBg, null, 0, 12, new Thickness(14));
+            var rightBox = E.Box(right, E.CardBg, null, 0, 12, new Thickness(10));
             rightBox.VAlign = VerticalAlignment.Stretch;
             root.Add(rightBox, col: 2);
 

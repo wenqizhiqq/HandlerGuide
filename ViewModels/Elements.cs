@@ -165,7 +165,7 @@ namespace HandlerGuide.ViewModels
         public class GroupElement : Element
     {
         /// <summary>该类型在视图中的默认外边距。</summary>
-        protected override Thickness DefaultMargin => new Thickness(0, 0, 0, 12);
+        protected override Thickness DefaultMargin => new Thickness(0, 0, 0, 6);
 
         public string Title { get; set; }
         public List<Element> Children { get; } = new List<Element>();
@@ -176,7 +176,7 @@ namespace HandlerGuide.ViewModels
         public class BandElement : Element
     {
         /// <summary>该类型在视图中的默认外边距。</summary>
-        protected override Thickness DefaultMargin => new Thickness(0, 0, 0, 10);
+        protected override Thickness DefaultMargin => new Thickness(0, 0, 0, 6);
 
         public string Title { get; set; }
         public Brush Background { get; set; }
@@ -190,7 +190,7 @@ namespace HandlerGuide.ViewModels
         public class FieldRowElement : Element
     {
         /// <summary>该类型在视图中的默认外边距。</summary>
-        protected override Thickness DefaultMargin => new Thickness(0, 3, 0, 3);
+        protected override Thickness DefaultMargin => new Thickness(0, 2, 0, 2);
 
         public string Label { get; set; }
         public Element Control { get; set; }
@@ -209,7 +209,7 @@ namespace HandlerGuide.ViewModels
         public class FillRowElement : Element
     {
         /// <summary>该类型在视图中的默认外边距。</summary>
-        protected override Thickness DefaultMargin => new Thickness(0, 2, 0, 2);
+        protected override Thickness DefaultMargin => new Thickness(0, 1, 0, 1);
 
         public string Label { get; set; }
         public Element Control { get; set; }
@@ -440,7 +440,7 @@ namespace HandlerGuide.ViewModels
     public class SliderRowElement : Element
     {
         /// <summary>该类型在视图中的默认外边距。</summary>
-        protected override Thickness DefaultMargin => new Thickness(0, 4, 0, 4);
+        protected override Thickness DefaultMargin => new Thickness(0, 2, 0, 2);
 
         private readonly string _key;
         private double _value;
