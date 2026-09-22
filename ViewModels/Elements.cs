@@ -198,11 +198,18 @@ namespace HandlerGuide.ViewModels
         public string Unit { get; set; }
         public double Gap { get; set; } = 10;
 
-        public string ColsSpec => LabelWidth.ToString(CultureInfo.InvariantCulture) + ",Auto,*";
+        public string ColsSpec => LabelWidth.ToString(CultureInfo.InvariantCulture) + ",Auto,Auto,*";
         public bool HasLabel => !string.IsNullOrEmpty(Label);
         public bool HasUnit => !string.IsNullOrEmpty(Unit);
         public Thickness LabelMargin => new Thickness(0, 0, Gap, 0);
         public Thickness UnitMargin => new Thickness(Gap, 0, 0, 0);
+
+        /// <summary>显式说明；为空时自动按 Label 到 ManualHints（说明书原文）里查。</summary>
+        public string Hint { get; set; }
+        public string ResolvedHint => !string.IsNullOrEmpty(Hint) ? Hint : ManualHints.For(Label);
+        public bool HasHint => !string.IsNullOrEmpty(ResolvedHint);
+        public Thickness HintMargin => new Thickness(12, 0, 0, 0);
+        public string EffectiveToolTip => !string.IsNullOrEmpty(ToolTip) ? ToolTip : ResolvedHint;
     }
 
 [ContentProperty("Control")]
@@ -215,8 +222,15 @@ namespace HandlerGuide.ViewModels
         public Element Control { get; set; }
         public double LabelWidth { get; set; } = 96;
 
-        public string ColsSpec => LabelWidth.ToString(CultureInfo.InvariantCulture) + ",*";
+        public string ColsSpec => LabelWidth.ToString(CultureInfo.InvariantCulture) + ",*,Auto";
         public bool HasLabel => !string.IsNullOrEmpty(Label);
+
+        /// <summary>显式说明；为空时自动按 Label 到 ManualHints（说明书原文）里查。</summary>
+        public string Hint { get; set; }
+        public string ResolvedHint => !string.IsNullOrEmpty(Hint) ? Hint : ManualHints.For(Label);
+        public bool HasHint => !string.IsNullOrEmpty(ResolvedHint);
+        public Thickness HintMargin => new Thickness(12, 0, 0, 0);
+        public string EffectiveToolTip => !string.IsNullOrEmpty(ToolTip) ? ToolTip : ResolvedHint;
     }
 
 [ContentProperty("Pairs")]
