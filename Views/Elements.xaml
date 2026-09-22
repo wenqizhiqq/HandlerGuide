@@ -155,41 +155,43 @@
 
     <!-- ================= 表单行 ================= -->
     <DataTemplate DataType="{x:Type vm:FieldRowElement}">
-        <Grid Margin="{Binding EffectiveMargin}" vw:GridSpec.Cols="{Binding ColsSpec}" vw:GridSpec.Rows="Auto"
+        <Grid Margin="{Binding EffectiveMargin}" vw:GridSpec.Cols="{Binding ColsSpec}" vw:GridSpec.Rows="Auto,Auto"
                 Width="{Binding Width}" Height="{Binding Height}"
                       HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}"
                       ToolTip="{Binding EffectiveToolTip}">
-            <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12.5" TextAlignment="Right"
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Label}" FontSize="12.5" TextAlignment="Right"
                        Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"
                        Margin="{Binding LabelMargin}"
                        Visibility="{Binding HasLabel, Converter={StaticResource BoolVis}}" />
-            <ContentControl Grid.Column="1" Content="{Binding Control}" VerticalAlignment="Center" />
-            <TextBlock Grid.Column="2" Text="{Binding Unit}" FontSize="12"
+            <ContentControl Grid.Row="0" Grid.Column="1" Content="{Binding Control}" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Unit}" FontSize="12"
                        Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"
                        Margin="{Binding UnitMargin}"
                        Visibility="{Binding HasUnit, Converter={StaticResource BoolVis}}" />
-            <TextBlock Grid.Column="3" Text="{Binding ResolvedHint}" FontSize="10.5"
-                       Foreground="{StaticResource TextSecondaryBrush}" Opacity="0.9"
-                       VerticalAlignment="Center" Margin="{Binding HintMargin}"
-                       MaxWidth="320" TextTrimming="CharacterEllipsis"
+            <!-- 说明书原文：换行展示于控件下方，避免 MaxWidth 截断；无提示时此行高 0 -->
+            <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3"
+                       Text="{Binding ResolvedHint}" FontSize="10.5"
+                       Foreground="{StaticResource TextSecondaryBrush}" Opacity="0.85"
+                       TextWrapping="Wrap" Margin="0,2,0,0"
                        Visibility="{Binding HasHint, Converter={StaticResource BoolVis}}" />
         </Grid>
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type vm:FillRowElement}">
-        <Grid Margin="{Binding EffectiveMargin}" vw:GridSpec.Cols="{Binding ColsSpec}" vw:GridSpec.Rows="Auto"
+        <Grid Margin="{Binding EffectiveMargin}" vw:GridSpec.Cols="{Binding ColsSpec}" vw:GridSpec.Rows="Auto,Auto"
                 Width="{Binding Width}" Height="{Binding Height}"
                      HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}"
                      ToolTip="{Binding EffectiveToolTip}">
-            <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12"
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Label}" FontSize="12"
                        Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"
                        Visibility="{Binding HasLabel, Converter={StaticResource BoolVis}}" />
-            <ContentControl Grid.Column="1" Content="{Binding Control}" HorizontalAlignment="Stretch"
+            <ContentControl Grid.Row="0" Grid.Column="1" Content="{Binding Control}" HorizontalAlignment="Stretch"
                             VerticalAlignment="Center" />
-            <TextBlock Grid.Column="2" Text="{Binding ResolvedHint}" FontSize="10.5"
-                       Foreground="{StaticResource TextSecondaryBrush}" Opacity="0.9"
-                       VerticalAlignment="Center" Margin="{Binding HintMargin}"
-                       MaxWidth="320" TextTrimming="CharacterEllipsis"
+            <!-- 说明书原文：换行展示于控件下方，避免 MaxWidth 截断；无提示时此行高 0 -->
+            <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                       Text="{Binding ResolvedHint}" FontSize="10.5"
+                       Foreground="{StaticResource TextSecondaryBrush}" Opacity="0.85"
+                       TextWrapping="Wrap" Margin="0,2,0,0"
                        Visibility="{Binding HasHint, Converter={StaticResource BoolVis}}" />
         </Grid>
     </DataTemplate>

@@ -414,11 +414,11 @@ namespace HandlerGuide.ViewModels
                         "3点：分为 2 个范围，目标温度小于基点#2时根据基点#1和#2计算，大于基点#2时根据基点#2和#3计算。",
                         11.5, E.Sec, false, TextWrapping.Wrap)),
                 E.Group("基点设定（要求 基点#1 < 基点#2 < 基点#3）",
-                    E.Grid().Cols("150", "112", "150", "112", "150", "112")
-                        .Add(E.Row("基点#1", E.Num("mt_b1", 25, 96), 100), 0, 0)
-                        .Add(E.Row("基点#2", E.Num("mt_b2", 60, 96), 100), 0, 2)
-                        .Add(E.Row("基点#3", E.Num("mt_b3", 95, 96), 100), 0, 4)
-                        .Add(E.Row("基点#4", E.Num("mt_b4", 125, 96), 100), 1, 0)),
+                    E.Grid().Cols("210", "210", "210")
+                        .Add(E.Row("基点#1", E.Num("mt_b1", 25, 96), 92), 0, 0)
+                        .Add(E.Row("基点#2", E.Num("mt_b2", 60, 96), 92), 0, 1)
+                        .Add(E.Row("基点#3", E.Num("mt_b3", 95, 96), 92), 0, 2)
+                        .Add(E.Row("基点#4", E.Num("mt_b4", 125, 96), 92), 1, 0)),
                 E.Group("目标区域偏移值", E.Scroll(g, 380, System.Windows.Controls.ScrollBarVisibility.Disabled,
                     System.Windows.Controls.ScrollBarVisibility.Auto)),
                 E.H(E.MiniBtn("恢复", null), E.Btn("应用", () => E.M.Log("信息", "温度偏移参数已应用"))));
