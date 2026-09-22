@@ -10,7 +10,7 @@ namespace HandlerGuide.ViewModels
         public static Element MainScreen()
         {
             var m = E.M;
-            var root = E.Grid().Cols("360", "*", "276").Rows("*");
+            var root = E.Grid().Cols("460", "*", "260").Rows("*");
             root.VAlign = VerticalAlignment.Stretch;
 
             // ---------------- 左列 ----------------

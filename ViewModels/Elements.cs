@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Markup;
 using System.Windows.Media;
 
 namespace HandlerGuide.ViewModels
@@ -59,33 +60,45 @@ namespace HandlerGuide.ViewModels
 
     // ---------------- 布局容器 ----------------
 
-    public class StackElement : Element
+[ContentProperty("Children")]
+        public class StackElement : Element
     {
         public Orientation Orientation { get; set; } = Orientation.Vertical;
         public List<Element> Children { get; } = new List<Element>();
     }
 
-    public class WrapElement : Element
+[ContentProperty("Children")]
+        public class WrapElement : Element
     {
         public List<Element> Children { get; } = new List<Element>();
     }
 
+    [ContentProperty("Children")]
     /// <summary>等宽多列栅格。</summary>
-    public class ColsElement : Element
+        public class ColsElement : Element
     {
         public int Columns { get; set; } = 1;
         public List<Element> Children { get; } = new List<Element>();
     }
 
+    [ContentProperty("Children")]
     /// <summary>显式行列定义的栅格（对应原代码里手写的 Grid）。</summary>
-    public class GridElement : Element
+        public class GridElement : Element
     {
-        private readonly List<string> _cols = new List<string>();
-        private readonly List<string> _rows = new List<string>();
+        private List<string> _cols = new List<string>();
+        private List<string> _rows = new List<string>();
         public List<GridChild> Children { get; } = new List<GridChild>();
 
-        public string ColsSpec => _cols.Count == 0 ? "*" : string.Join(",", _cols);
-        public string RowsSpec => _rows.Count == 0 ? "Auto" : string.Join(",", _rows);
+        public string ColsSpec
+        {
+            get => _cols.Count == 0 ? "*" : string.Join(",", _cols);
+            set { _cols = (value ?? "*").Split(',').Select(s => s.Trim()).Where(s => s.Length > 0).ToList(); Raise(nameof(ColsSpec)); }
+        }
+        public string RowsSpec
+        {
+            get => _rows.Count == 0 ? "Auto" : string.Join(",", _rows);
+            set { _rows = (value ?? "Auto").Split(',').Select(s => s.Trim()).Where(s => s.Length > 0).ToList(); Raise(nameof(RowsSpec)); }
+        }
 
         public GridElement Col(string spec) { _cols.Add(spec); Raise(nameof(ColsSpec)); return this; }
         public GridElement Row(string spec) { _rows.Add(spec); Raise(nameof(RowsSpec)); return this; }
@@ -105,6 +118,7 @@ namespace HandlerGuide.ViewModels
         }
     }
 
+    [ContentProperty("El")]
     public class GridChild
     {
         public Element El { get; set; }
@@ -120,7 +134,8 @@ namespace HandlerGuide.ViewModels
         public double H { get; set; }
     }
 
-    public class BoxElement : Element
+[ContentProperty("Child")]
+        public class BoxElement : Element
     {
         public Element Child { get; set; }
         public Brush Background { get; set; }
@@ -135,7 +150,8 @@ namespace HandlerGuide.ViewModels
         public RelayCommand Command { get; set; }
     }
 
-    public class ScrollElement : Element
+[ContentProperty("Content")]
+        public class ScrollElement : Element
     {
         public Element Content { get; set; }
         public double ViewHeight { get; set; } = double.NaN;
@@ -145,7 +161,8 @@ namespace HandlerGuide.ViewModels
 
     // ---------------- 分组 ----------------
 
-    public class GroupElement : Element
+[ContentProperty("Children")]
+        public class GroupElement : Element
     {
         /// <summary>该类型在视图中的默认外边距。</summary>
         protected override Thickness DefaultMargin => new Thickness(0, 0, 0, 12);
@@ -155,7 +172,8 @@ namespace HandlerGuide.ViewModels
         public bool HasTitle => !string.IsNullOrEmpty(Title);
     }
 
-    public class BandElement : Element
+[ContentProperty("Children")]
+        public class BandElement : Element
     {
         /// <summary>该类型在视图中的默认外边距。</summary>
         protected override Thickness DefaultMargin => new Thickness(0, 0, 0, 10);
@@ -168,7 +186,8 @@ namespace HandlerGuide.ViewModels
 
     // ---------------- 表单行 ----------------
 
-    public class FieldRowElement : Element
+[ContentProperty("Control")]
+        public class FieldRowElement : Element
     {
         /// <summary>该类型在视图中的默认外边距。</summary>
         protected override Thickness DefaultMargin => new Thickness(0, 3, 0, 3);
@@ -186,7 +205,8 @@ namespace HandlerGuide.ViewModels
         public Thickness UnitMargin => new Thickness(Gap, 0, 0, 0);
     }
 
-    public class FillRowElement : Element
+[ContentProperty("Control")]
+        public class FillRowElement : Element
     {
         /// <summary>该类型在视图中的默认外边距。</summary>
         protected override Thickness DefaultMargin => new Thickness(0, 2, 0, 2);
@@ -199,7 +219,8 @@ namespace HandlerGuide.ViewModels
         public bool HasLabel => !string.IsNullOrEmpty(Label);
     }
 
-    public class TwoColElement : Element
+[ContentProperty("Pairs")]
+        public class TwoColElement : Element
     {
         public List<TwoColPair> Pairs { get; } = new List<TwoColPair>();
     }
@@ -491,15 +512,33 @@ namespace HandlerGuide.ViewModels
     /// <summary>由定时器驱动的只读指示灯（诊断页状态灯）。</summary>
     public class LiveLampElement : Element, ILiveValue
     {
-        private readonly Func<MachineModel, bool> _get;
+        private Func<MachineModel, bool> _get;
+        private string _signal;
         private bool _on;
 
+        public LiveLampElement() { }
         public LiveLampElement(Func<MachineModel, bool> get, bool isRed, bool square, double size)
         {
             _get = get; IsRed = isRed; Square = square; Size = size;
             Margin = new Thickness(2, 0, 2, 0);
             LiveRegistry.Register(this);
             Refresh();
+        }
+
+        /// <summary>XAML 用：通过命名信号从 LiveSignals 注册表取谓词。</summary>
+        public string Signal
+        {
+            get => _signal;
+            set
+            {
+                _signal = value;
+                if (!string.IsNullOrEmpty(value) && LiveSignals.TryGet(value, out var f))
+                {
+                    _get = f;
+                    LiveRegistry.Register(this);
+                    Refresh();
+                }
+            }
         }
 
         public bool IsRed { get; set; }
@@ -516,7 +555,7 @@ namespace HandlerGuide.ViewModels
 
         public void Refresh()
         {
-            try { IsOn = _get(MachineModel.Instance); }
+            try { IsOn = _get != null ? _get(MachineModel.Instance) : false; }
             catch { IsOn = false; }
         }
     }
@@ -540,16 +579,40 @@ namespace HandlerGuide.ViewModels
     /// <summary>绑定到模型的实时只读显示框（由 LiveRegistry 每 tick 刷新）。</summary>
     public class LiveElement : Element, ILiveValue
     {
-        private readonly Func<MachineModel, object> _get;
-        private readonly string _fmt;
+        private Func<MachineModel, object> _get;
+        private string _fmt;
+        private string _signal;
         private string _value = "";
 
+        public LiveElement() { }
         public LiveElement(Func<MachineModel, object> get, string fmt, double w, Brush bg, Brush fg, double fs)
         {
             _get = get; _fmt = fmt; Width = w > 0 ? w : double.NaN;
             Background = bg; Foreground = fg; FontSize = fs;
             LiveRegistry.Register(this);
             Refresh();
+        }
+
+        /// <summary>XAML 用：通过命名信号从 LiveValues 注册表取数值源。</summary>
+        public string Signal
+        {
+            get => _signal;
+            set
+            {
+                _signal = value;
+                if (!string.IsNullOrEmpty(value) && LiveValues.TryGet(value, out var f))
+                {
+                    _get = f;
+                    LiveRegistry.Register(this);
+                    Refresh();
+                }
+            }
+        }
+
+        public string Format
+        {
+            get => _fmt;
+            set { _fmt = value; Refresh(); }
         }
 
         public string Value { get => _value; private set => Set(ref _value, value); }
@@ -561,7 +624,7 @@ namespace HandlerGuide.ViewModels
         public void Refresh()
         {
             object raw;
-            try { raw = _get(MachineModel.Instance); }
+            try { raw = _get != null ? _get(MachineModel.Instance) : null; }
             catch { raw = null; }
             string s = _fmt != null ? string.Format(CultureInfo.InvariantCulture, _fmt, raw) : (raw?.ToString() ?? "");
             Value = s;
@@ -570,7 +633,8 @@ namespace HandlerGuide.ViewModels
 
     // ---------------- 表格 / 矩阵 ----------------
 
-    public class CellElement : Element
+[ContentProperty("Content")]
+        public class CellElement : Element
     {
         public Element Content { get; set; }
         public Brush Background { get; set; }
@@ -647,7 +711,8 @@ namespace HandlerGuide.ViewModels
         public TextAlignment Align { get; set; } = TextAlignment.Center;
     }
 
-    public class CanvasElement : Element
+[ContentProperty("Items")]
+        public class CanvasElement : Element
     {
         public double CanvasWidth { get; set; } = 300;
         public double CanvasHeight { get; set; } = 200;
@@ -656,11 +721,13 @@ namespace HandlerGuide.ViewModels
 
     // ---------------- 标签页 ----------------
 
+    [ContentProperty("Content")]
     public class TabItemVm : ObservableObject
     {
         private bool _active;
         private Element _content;
 
+        public TabItemVm() { }
         public TabItemVm(string title, Func<Element> build) { Title = title; Build = build; }
 
         public string Title { get; set; }
@@ -676,9 +743,39 @@ namespace HandlerGuide.ViewModels
         }
     }
 
+    /// <summary>XAML 中作为 TabsElement 的内容集合；新增页签时自动接好 SelectCommand 并默认激活首项。</summary>
+    public class TabItemCollection : System.Collections.ObjectModel.ObservableCollection<TabItemVm>
+    {
+        public TabsElement Parent { get; set; }
+
+        protected override void InsertItem(int index, TabItemVm item)
+        {
+            base.InsertItem(index, item);
+            if (item.SelectCommand == null)
+                item.SelectCommand = new RelayCommand(() =>
+                {
+                    foreach (var x in this) x.IsActive = ReferenceEquals(x, item);
+                    Parent?.RefreshContent();
+                });
+            if (Count == 1) item.IsActive = true;
+        }
+
+        protected override void RemoveItem(int index)
+        {
+            var it = this[index];
+            base.RemoveItem(index);
+            if (it != null && it.IsActive && Count > 0) this[0].IsActive = true;
+            Parent?.RefreshContent();
+        }
+    }
+
+    [ContentProperty("Tabs")]
     public class TabsElement : Element
     {
-        public List<TabItemVm> Tabs { get; } = new List<TabItemVm>();
+        public TabItemCollection Tabs { get; } = new TabItemCollection();
+
+        public TabsElement() { Tabs.Parent = this; }
+
         public Element SelectedContent => Tabs.FirstOrDefault(t => t.IsActive)?.Content;
         public void RefreshContent() => Raise(nameof(SelectedContent));
     }

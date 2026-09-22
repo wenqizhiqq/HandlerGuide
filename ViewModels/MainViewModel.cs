@@ -23,15 +23,16 @@ namespace HandlerGuide.ViewModels
         /// <summary>固定屏页面（如主界面）：内容填满视口高度，底部条贴底。</summary>
         public bool Fill { get; set; }
 
-        /// <summary>页面内容（首次访问时构建并缓存，并在末尾追加作者水印）。</summary>
+        /// <summary>页面内容（首次访问时构建并缓存；优先加载 Views/Pages/{id}.xaml）。</summary>
         public Element Content => _content ?? (_content = MakeContent());
 
         private Element MakeContent()
         {
+            var fromXaml = PageLoader.Load(Id);
+            if (fromXaml != null) return fromXaml;
             var body = Build != null ? Build() : new StackElement();
-            var wrap = E.V(body, E.OwnerWatermark());
-            wrap.VAlign = System.Windows.VerticalAlignment.Stretch;
-            return wrap;
+            body.VAlign = System.Windows.VerticalAlignment.Stretch;
+            return body;
         }
 
         public string Display => Icon + "  " + Name;

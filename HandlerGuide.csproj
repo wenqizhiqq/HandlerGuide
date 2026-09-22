@@ -34,4 +34,13 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- 页面 XAML：声明式界面定义，运行时由 PageLoader 用 XamlReader 解析。
+         必须排除默认的 Page（BAML）编译，改为原样复制到输出目录的 Pages\ 下。 -->
+    <Page Remove="Pages\**\*.xaml" />
+    <Content Include="Pages\**\*.xaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

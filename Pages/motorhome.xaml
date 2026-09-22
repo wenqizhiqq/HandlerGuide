@@ -1,0 +1,22 @@
+<vm:StackElement xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:vm="clr-namespace:HandlerGuide.ViewModels;assembly=HandlerGuide"
+                 xmlns:vw="clr-namespace:HandlerGuide.Views;assembly=HandlerGuide">
+    <vm:TextElement Text="伺服电机归零选择" FontSize="13" Foreground="#1D1D1F" FontWeight="SemiBold" />
+    <vm:SpacerElement H="6" />
+    <vm:TextElement Text="勾选需要归零的电机（或按区域选择），点击 OK 开始归零过程。归零过程中安全门打开或按下停止按钮会中断复位过程。" FontSize="11.5" Foreground="#6E6E73" Wrap="Wrap" />
+    <vm:SpacerElement H="8" />
+    <vm:ScrollElement Height="380">
+        <vw:Motors />
+    </vm:ScrollElement>
+    <vm:StackElement Orientation="Horizontal">
+        <vm:StackElement>
+            <vw:MiniBtn Text="全选" Cmd="SelectAll" />
+            <vw:MiniBtn Text="全不选" Cmd="DeselectAll" />
+        </vm:StackElement>
+        <vm:SpacerElement W="20" />
+        <vw:Btn Text="OK" Cmd="Home" Width="90" Height="46" Bg="#1E8E3E" Fg="White" FontWeight="SemiBold" BorderThickness="0" />
+        <vw:Btn Text="Cancel" Cmd="CancelHome" Width="90" Height="46" Bg="#C0202A" Fg="White" FontWeight="SemiBold" BorderThickness="0" />
+    </vm:StackElement>
+    <vw:Watermark />
+</vm:StackElement>

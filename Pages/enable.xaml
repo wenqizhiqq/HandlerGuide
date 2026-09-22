@@ -1,0 +1,36 @@
+<vm:StackElement xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:vm="clr-namespace:HandlerGuide.ViewModels;assembly=HandlerGuide"
+                 xmlns:vw="clr-namespace:HandlerGuide.Views;assembly=HandlerGuide">
+    <vm:TextElement Text="使能设定" FontSize="13" Foreground="#1D1D1F" FontWeight="SemiBold" />
+    <vm:SpacerElement H="6" />
+    <vm:TextElement Text="该窗口用于设定设备各个部分的使能是否打开。测试臂 A/B 使能：设定测试臂上用于吸料的 Nest 是否使用，设定为失效状态时，上料臂就不会往对应吸料 Nest 的小车位置放料。" FontSize="11.5" Foreground="#6E6E73" Wrap="Wrap" />
+    <vm:SpacerElement H="8" />
+    <vm:GroupElement Title="单元使能">
+        <vm:StackElement Orientation="Horizontal">
+            <vm:StackElement>
+                <vw:Chk Key="en_loader" Label="上料臂" Default="True" />
+                <vw:Chk Key="en_unloader" Label="下料臂" Default="True" />
+                <vw:Chk Key="en_cart" Label="运料小车" Default="True" />
+                <vw:Chk Key="en_transfer" Label="料盘传送" Default="True" />
+            </vm:StackElement>
+            <vm:StackElement Margin="40,0,0,0">
+                <vw:Chk Key="en_heat" Label="加热" Default="True" />
+                <vw:Chk Key="en_vis" Label="视觉" Default="True" />
+                <vw:Chk Key="en_clean" Label="清洁盘" Default="True" />
+                <vw:Chk Key="en_rotator" Label="旋转台" Default="True" />
+            </vm:StackElement>
+        </vm:StackElement>
+    </vm:GroupElement>
+    <vm:GroupElement Title="测试臂A使能">
+        <vw:Matrix Prefix="en_armA" Cols="a,b,c,d,e,f,g,h" Rows="A,B" Cw="44" Rh="30" Def="True" />
+    </vm:GroupElement>
+    <vm:GroupElement Title="测试臂B使能">
+        <vw:Matrix Prefix="en_armB" Cols="a,b,c,d,e,f,g,h" Rows="A,B" Cw="44" Rh="30" Def="True" />
+    </vm:GroupElement>
+    <vm:StackElement Orientation="Horizontal">
+        <vw:MiniBtn Text="恢复" />
+        <vw:Btn Text="应用" Cmd="Log" Arg="使能设定已应用" />
+    </vm:StackElement>
+    <vw:Watermark />
+</vm:StackElement>

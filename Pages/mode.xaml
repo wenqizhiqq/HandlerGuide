@@ -1,0 +1,79 @@
+<vm:StackElement xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:vm="clr-namespace:HandlerGuide.ViewModels;assembly=HandlerGuide"
+                 xmlns:vw="clr-namespace:HandlerGuide.Views;assembly=HandlerGuide">
+
+    <vm:TextElement Text="工作模式设定" FontSize="13" Foreground="#1D1D1F" FontWeight="SemiBold" />
+    <vm:SpacerElement H="8" />
+
+    <vm:StackElement Orientation="Horizontal">
+        <vm:TextElement Text="运行模式" FontSize="12.5" Foreground="#1D1D1F" Margin="0,0,10,0" />
+        <vw:Cmb Key="mode_sel" Width="200"
+                OptionsText="正常模式（Normal）|练习模式（Exercise）|空跑模式（Dry1）|空跑模式2（Dry2）|清除模式|维护模式" />
+    </vm:StackElement>
+
+    <vm:SpacerElement H="6" />
+    <vw:Chk Key="mode_ic_chk" Label="启用料的相关检查" Default="True" />
+    <vw:Chk Key="mode_tray_chk" Label="启用料盘的相关检查" Default="True" />
+    <vm:SpacerElement H="4" />
+
+    <vm:GroupElement Title="随机生成">
+        <vw:Chk Key="mode_random" Label="随机生成" />
+        <vm:FieldRowElement Label="测试时间" LabelWidth="80">
+            <vm:StackElement Orientation="Horizontal">
+                <vw:Num Key="mode_rtime" Default="500" Width="90" />
+                <vm:TextElement Text="ms" FontSize="12" Foreground="#6E6E73" Margin="8,0,0,0" />
+            </vm:StackElement>
+        </vm:FieldRowElement>
+        <vm:FieldRowElement Label="良品率" LabelWidth="80">
+            <vm:StackElement Orientation="Horizontal">
+                <vw:Num Key="mode_ryield" Default="100" Width="90" />
+                <vm:TextElement Text="%" FontSize="12" Foreground="#6E6E73" Margin="8,0,0,0" />
+            </vm:StackElement>
+        </vm:FieldRowElement>
+    </vm:GroupElement>
+
+    <vm:StackElement Orientation="Horizontal">
+        <vw:Btn Text="应用" Cmd="Log" Arg="工作模式：正常模式" />
+    </vm:StackElement>
+
+    <vm:GroupElement Title="工作模式说明">
+        <vm:StackElement>
+            <vm:TextElement Text="正常模式（Normal）" FontSize="12.5" Foreground="#1D1D1F" FontWeight="SemiBold" />
+            <vm:TextElement Text="设备正常生产工作模式，正常取放产品并从测试系统接收测试结果，根据结果对产品进行分类。"
+                            FontSize="11.5" Foreground="#6E6E73" Wrap="Wrap" Margin="0,2,0,8" />
+        </vm:StackElement>
+        <vm:StackElement>
+            <vm:TextElement Text="练习模式（Exercise）" FontSize="12.5" Foreground="#1D1D1F" FontWeight="SemiBold" />
+            <vm:TextElement Text="设备正常取放产品，测试结果可选择从测试系统接收或者由程序自动随机生成。"
+                            FontSize="11.5" Foreground="#6E6E73" Wrap="Wrap" Margin="0,2,0,8" />
+        </vm:StackElement>
+        <vm:StackElement>
+            <vm:TextElement Text="空跑模式（Dry1）" FontSize="12.5" Foreground="#1D1D1F" FontWeight="SemiBold" />
+            <vm:TextElement Text="设备中放入料盘，不用放入产品，设备仿真取放产品进行运动，测试结果可选择从测试系统接收或由程序自动随机生成。"
+                            FontSize="11.5" Foreground="#6E6E73" Wrap="Wrap" Margin="0,2,0,8" />
+        </vm:StackElement>
+        <vm:StackElement>
+            <vm:TextElement Text="空跑模式2（Dry2）" FontSize="12.5" Foreground="#1D1D1F" FontWeight="SemiBold" />
+            <vm:TextElement Text="运行状态同空跑模式，只是料盘不更换，上料盘空后自动置满，下料盘满后自动置空。"
+                            FontSize="11.5" Foreground="#6E6E73" Wrap="Wrap" Margin="0,2,0,8" />
+        </vm:StackElement>
+        <vm:StackElement>
+            <vm:TextElement Text="清除模式" FontSize="12.5" Foreground="#1D1D1F" FontWeight="SemiBold" />
+            <vm:TextElement Text="切换为该模式时不再执行测试动作，将设备内所有 IC 清出机器，适用于测试过程中测试机出现异常的情况。"
+                            FontSize="11.5" Foreground="#6E6E73" Wrap="Wrap" Margin="0,2,0,8" />
+        </vm:StackElement>
+        <vm:StackElement>
+            <vm:TextElement Text="维护模式" FontSize="12.5" Foreground="#1D1D1F" FontWeight="SemiBold" />
+            <vm:TextElement Text="切换为该模式时，“开始运行”按钮失效，设备将无法启动。"
+                            FontSize="11.5" Foreground="#6E6E73" Wrap="Wrap" Margin="0,2,0,8" />
+        </vm:StackElement>
+    </vm:GroupElement>
+
+    <vm:GroupElement Title="附注">
+        <vm:TextElement Text="系统默认当前用户切换到操作员时，工作模式自动切换到正常模式。"
+                        FontSize="11.5" Foreground="#6E6E73" Wrap="Wrap" />
+    </vm:GroupElement>
+
+    <vw:Watermark />
+</vm:StackElement>
