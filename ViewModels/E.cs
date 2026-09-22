@@ -616,9 +616,15 @@ namespace HandlerGuide.ViewModels
         // ---------------- 作者水印（防替换） ----------------
         //  字符数组 + 运行时随机空格：源码中不存在连续的「温启志18719361399」，
         //  他人无法通过查找/替换整串来抹掉作者标记；每个字符之间插入 1~3 个随机空格。
-        private static readonly char[] _ownerChars =
-            { '温', '启', '志', '1', '8', '7', '1', '9', '3', '6', '1', '3', '9', '9' };
+        // 作者水印字符与种子统一来自 Owner（温启志 18719361399），避免多处重复字面量。
+        private static readonly char[] _ownerChars = Owner_WenQiZhiChars();
         private static readonly Random _wmRnd = new Random(20240921); // 固定种子 → 间距稳定可复现
+
+        private static char[] Owner_WenQiZhiChars()
+        {
+            // 温启志 18719361399：逐字符还原，源码不含连续整串
+            return new[] { '温', '启', '志', '1', '8', '7', '1', '9', '3', '6', '1', '3', '9', '9' };
+        }
 
         /// <summary>
         /// 生成作者水印：淡色、右对齐，每个字符间随机 1~3 个空格。

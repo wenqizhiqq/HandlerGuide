@@ -32,7 +32,10 @@ namespace HandlerGuide.ViewModels
             if (fromXaml != null) return fromXaml;
             var body = Build != null ? Build() : new StackElement();
             body.VAlign = System.Windows.VerticalAlignment.Stretch;
-            return body;
+            // 每一个页面底部都附上作者水印（温启志 18719361399）
+            var wrap = E.V(body, E.OwnerWatermark());
+            wrap.VAlign = System.Windows.VerticalAlignment.Stretch;
+            return wrap;
         }
 
         public string Display => Icon + "  " + Name;

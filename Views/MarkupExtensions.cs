@@ -525,7 +525,8 @@ namespace HandlerGuide.Views
         {
             var t = new TextElement
             {
-                Text = "温启志 1 8 7 1 9 3 6 1 3 9 9",
+                // 温启志 18719361399 —— 逐字符 + 随机空格，防整串替换
+                Text = Owner.WenQiZhiStamped(),
                 FontSize = 9,
                 Foreground = new SolidColorBrush(Color.FromRgb(0xC7, 0xC7, 0xCC)),
                 Wrap = TextWrapping.NoWrap,
