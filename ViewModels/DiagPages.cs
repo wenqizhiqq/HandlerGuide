@@ -155,8 +155,7 @@ namespace HandlerGuide.ViewModels
             }
 
             return E.V(
-                E.T("本模块显示设备内部所有位置控制电机的状态。", 11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(6),
+                
                 E.Scroll(g, 430, System.Windows.Controls.ScrollBarVisibility.Auto,
                     System.Windows.Controls.ScrollBarVisibility.Auto),
                 E.Spacer(6),

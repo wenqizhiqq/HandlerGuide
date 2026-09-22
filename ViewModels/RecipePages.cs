@@ -30,10 +30,7 @@ namespace HandlerGuide.ViewModels
             }
 
             return E.V(
-                E.T("品种维护", 13, E.P, true),
-                E.Spacer(6),
-                E.T("该模块完成对品种的新建、删除、更名、复制、导入、导出，当前正在使用中的品种为灰底、黄色字体。", 11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(10),
+                
                 E.Row("品种名", E.Text("rc_name", "NewRecipe", 220), 90),
                 E.Spacer(6),
                 E.H(
@@ -88,10 +85,7 @@ namespace HandlerGuide.ViewModels
             }
 
             return E.V(
-                E.T("测试模式", 13, E.P, true),
-                E.Spacer(6),
-                E.T("本模块完成对测试座布局信息、测试系统通道映射、浮动检查传感器及测试小车工作模式的设定。该模块的设定最好在机器中无料的情况下进行。", 11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(10),
+                
                 E.Grid().Cols("300", "*")
                     .Add(E.Group("测试座布局",
                         E.Scroll(layout, 300),
@@ -217,10 +211,7 @@ namespace HandlerGuide.ViewModels
             };
 
             return E.V(
-                E.T("测试臂设定", 13, E.P, true),
-                E.Spacer(6),
-                E.T("本模块定义测试臂的取放高度位置及测试的高度位置，而且可定义测试下压柔性气缸的压力。", 11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(10),
+                
                 E.Grid().Cols("*", "24", "*")
                     .Add(E.Group("高度位置",
                         E.Row("吸取位", E.Num("ta_pick", 0, 100), 90, "mm"),
@@ -265,10 +256,7 @@ namespace HandlerGuide.ViewModels
         {
             var m = E.M;
             return E.V(
-                E.T("测试接口", 13, E.P, true),
-                E.Spacer(6),
-                E.T("本模块定义与测试系统连接方式及参数。本机提供四种与测试系统连接方式：TTL 电平的数字 IO、GPIB、RS232、TCP。", 11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(10),
+                
                 E.Group("接口方式",
                     E.Radios("ti_type", new[] { "TTL", "GPIB", "RS232", "TCP" }, false),
                     E.Spacer(6),
@@ -338,10 +326,7 @@ namespace HandlerGuide.ViewModels
                 E.H(E.Btn("应用", () => m.Log("信息", "Bin 良率卡控已应用"))));
 
             return E.V(
-                E.T("Bin设定", 13, E.P, true),
-                E.Spacer(6),
-                E.T("本模块定义下料臂根据测试结果对产品进行分类的方法。控制系统能识别从测试系统传送过来的 Soft Bin(1~15)—GPIB 方式，Soft Bin(1~16)—TTL 方式。", 11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(8),
+                
                 E.Tabs(
                     ("Online", () => page("on")),
                     ("Online-Retest", () => page("onr")),

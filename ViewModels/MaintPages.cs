@@ -131,8 +131,7 @@ namespace HandlerGuide.ViewModels
             arm.Add(Label("", 28), 4, 6);
 
             return E.V(
-                E.T("设定测试区域的各个电机工作的基准点。", 11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(8),
+                
                 E.Group("运料小车(mm)", car),
                 E.Group("Gate基点(以第一列为基准)", gate),
                 E.Group("测试臂(mm)", arm),
@@ -258,8 +257,7 @@ namespace HandlerGuide.ViewModels
             }
 
             return E.V(
-                E.T("设定料盘传送臂在各个位置的工作基点。", 11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(8),
+                
                 E.Group("料盘传送臂", g),
                 E.H(E.MiniBtn("恢复", null), E.Btn("应用", () => E.M.Log("信息", "料盘传送臂工作基点已应用"))),
                 E.Group("说明",
@@ -583,8 +581,7 @@ namespace HandlerGuide.ViewModels
             }
 
             return E.V(
-                E.T("该窗口可定义在不同情况下信号灯的状态。", 11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(10),
+                
                 E.Group("信号灯定义", g),
                 E.H(E.Btn("应用", () => E.M.Log("信息", "信号灯设定已应用"))),
                 E.Group("说明",

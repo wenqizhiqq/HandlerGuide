@@ -165,7 +165,7 @@ namespace HandlerGuide.ViewModels
         public class GroupElement : Element
     {
         /// <summary>该类型在视图中的默认外边距。</summary>
-        protected override Thickness DefaultMargin => new Thickness(0, 0, 0, 6);
+        protected override Thickness DefaultMargin => new Thickness(0, 0, 0, 2);
 
         public string Title { get; set; }
         public List<Element> Children { get; } = new List<Element>();
@@ -176,7 +176,7 @@ namespace HandlerGuide.ViewModels
         public class BandElement : Element
     {
         /// <summary>该类型在视图中的默认外边距。</summary>
-        protected override Thickness DefaultMargin => new Thickness(0, 0, 0, 6);
+        protected override Thickness DefaultMargin => new Thickness(0, 0, 0, 2);
 
         public string Title { get; set; }
         public Brush Background { get; set; }

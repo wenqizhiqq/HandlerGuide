@@ -54,9 +54,7 @@ namespace HandlerGuide.ViewModels
         public static Element BoardTestArea()
         {
             return E.V(
-                E.T("显示机器运行过程中的实时状态，可实时查看 Load Arm、Shuttle A/B Entry/Exit、Test Hand #1/#2、Offload Arm 中的 IC 分布情况。",
-                    11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(10),
+                
                 E.H(
                     Region("Load Arm", 1, 2, 18, 18),
                     Region("Shuttle A Entry", 8, 2, 18, 18),
@@ -87,8 +85,7 @@ namespace HandlerGuide.ViewModels
             }
 
             return E.V(
-                E.T("入料区域窗口显示入料盘和清洁盘上的 IC 状态。", 11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(10),
+                
                 E.H(
                     Region("Loader | 0", 8, 20, 15, 15),
                     Region("CleanPlate", 1, 2, 26, 26),
@@ -104,8 +101,7 @@ namespace HandlerGuide.ViewModels
         public static Element BoardOutArea()
         {
             return E.V(
-                E.T("该窗口用于显示 6 个出料盘（固定盘 Fix1~3 与自动盘 Auto1~3）的料信息。", 11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(10),
+                
                 E.H(Region("Fix1 | 0", 8, 20, 15, 15), Region("Fix2 | 0", 8, 20, 15, 15), Region("Fix3 | 0", 8, 20, 15, 15)),
                 E.H(Region("Auto1 | 0", 8, 20, 15, 15), Region("Auto2 | 0", 8, 20, 15, 15), Region("Auto3 | 0", 8, 20, 15, 15)),
                 E.Group("图例",
@@ -156,8 +152,7 @@ namespace HandlerGuide.ViewModels
                     E.T("（" + title + "统计视图，按各部分分别进行统计。）", 11.5, E.Sec, false, TextWrapping.Wrap));
 
             return E.V(
-                E.T("批次数据统计窗口显示数据清除以后设备所处理的产品的数量，按照各个部分分别进行统计。", 11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(10),
+                
                 E.Tabs(("Counter", counterTab),
                        ("UPH/Tray", () => simpleTab("UPH/Tray")),
                        ("Timer", () => simpleTab("Timer"))),
@@ -191,9 +186,7 @@ namespace HandlerGuide.ViewModels
             }
 
             return E.V(
-                E.T("该窗口根据测试结果按照测试臂及测试位分别详细显示各个位置的统计信息：好品数 / 处理数或者良品率。可通过双击窗口标题来切换数字 / 百分比显示方式。",
-                    11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(10),
+                
                 E.Group("测试工位统计-Site", E.Scroll(g, 300,
                     System.Windows.Controls.ScrollBarVisibility.Auto,
                     System.Windows.Controls.ScrollBarVisibility.Auto)),
@@ -249,9 +242,7 @@ namespace HandlerGuide.ViewModels
             }
 
             return E.V(
-                E.T("测试位分类统计窗口显示测试系统返回的测试结果在测试位及测试臂各个具体位置的分布情况，便于分析测试结果及测试区域各个部分工作情况，判断是否需要更换测试座、Nest 或调整测试参数。",
-                    11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(10),
+                
                 E.Scroll(g, 460, System.Windows.Controls.ScrollBarVisibility.Auto,
                     System.Windows.Controls.ScrollBarVisibility.Auto),
                 E.T("附注：双击窗口标题可在数字 / 百分比两种显示风格间切换。", 11.5, E.Sec));
@@ -327,9 +318,7 @@ namespace HandlerGuide.ViewModels
             }
 
             return E.V(
-                E.T("该窗口显示温度控制器各通道的状态。灰色背景表示不进行检查，绿色背景表示在范围内，红色背景表示高于设定范围，蓝色背景表示低于设定范围，暗色背景表示通讯错误。",
-                    11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(10),
+                
                 E.Group("Temperature @610", E.Scroll(g, 460,
                     System.Windows.Controls.ScrollBarVisibility.Disabled,
                     System.Windows.Controls.ScrollBarVisibility.Auto)));
@@ -353,8 +342,7 @@ namespace HandlerGuide.ViewModels
             ((StackElement)fix3).Children[1].Margin = new Thickness(0, 0, 3, 3);
 
             return E.V(
-                E.T("用于显示当前的 BIN 分类设定。", 11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(10),
+                
                 E.H(fix1, fix2, fix3),
                 E.H(cell("TrayAuto1", E.HeadGreen, "01", Palette.OnGreen),
                     cell("TrayAuto2", E.HeadGreen, "04 06 17 18\n19 20 21 22\n23 24 25 26\n27 28 29 30\n31 32", Palette.OnRed),
@@ -473,8 +461,7 @@ namespace HandlerGuide.ViewModels
                         E.MiniBtn("导出", null))));
 
             return E.V(
-                E.T("该窗口统计 Jam 报警发生的次数，可以按照批次 / 累计 / 开机后统计，并分区域显示，可用于分析设备运行状态。", 11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(10),
+                
                 E.Group("报警日志统计", toolbar),
                 E.Spacer(8),
                 E.Scroll(g, 380, System.Windows.Controls.ScrollBarVisibility.Auto,

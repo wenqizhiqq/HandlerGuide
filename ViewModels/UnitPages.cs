@@ -33,10 +33,7 @@ namespace HandlerGuide.ViewModels
             }
 
             return E.V(
-                E.T("速度设定", 13, E.P, true),
-                E.Spacer(6),
-                E.T("本模块定义各个区域电机工作的速度 / 加速度的比率。设定方法：在对话框下部选择欲改变的部分，调整速度比率、加速度比率，按[应用]确认生效。", 11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(10),
+                
                 E.Group("", head),
                 E.Group("", rows),
                 E.H(E.MiniBtn("恢复"), E.Btn("应用", () => m.Log("信息", "速度设定已应用"))));
@@ -83,10 +80,7 @@ namespace HandlerGuide.ViewModels
         {
             var m = E.M;
             return E.V(
-                E.T("运料小车设定", 13, E.P, true),
-                E.Spacer(6),
-                E.T("设定测试区域运料小车工作参数。", 11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(10),
+                
                 E.Grid().Cols("*", "24", "*")
                     .Add(E.Group("震动小车",
                         E.Chk("uc_shake", "震动小车（浮动传感器检测到料未放置妥帖时自动震动）", true),
@@ -115,10 +109,7 @@ namespace HandlerGuide.ViewModels
         {
             var m = E.M;
             return E.V(
-                E.T("测试臂设定", 13, E.P, true),
-                E.Spacer(6),
-                E.T("设定测试臂工作的参数。", 11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(10),
+                
                 E.Group("计时器",
                     E.Row("真空检查时间", E.Num("ut_vacchk", 25, 90, "0"), 130, "ms"),
                     E.Row("真空释放时间", E.Num("ut_vacrel", 100, 90, "0"), 130, "ms"),
@@ -147,10 +138,7 @@ namespace HandlerGuide.ViewModels
         {
             var m = E.M;
             return E.V(
-                E.T("料盘传送设定", 13, E.P, true),
-                E.Spacer(6),
-                E.T("定义料盘搬运臂机构工作的延时 / 超时等时间的设定。", 11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(10),
+                
                 E.Group("抓盘 / 放盘确认",
                     E.Row("真空检查时间 / 抓盘确认时间", E.Num("uf_grab", 200, 100, "0"), 220, "ms"),
                     E.Row("真空释放时间 / 放盘确认时间", E.Num("uf_release", 200, 100, "0"), 220, "ms"),
@@ -166,10 +154,7 @@ namespace HandlerGuide.ViewModels
         {
             var m = E.M;
             return E.V(
-                E.T("进出盘设定", 13, E.P, true),
-                E.Spacer(6),
-                E.T("定义上下料自动换盘机构工作时的延时 / 超时等时间相关的设定。", 11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(10),
+                
                 E.Grid().Cols("*", "24", "*")
                     .Add(E.Group("检测与超时",
                         E.Row("料盘存在检查时间", E.Num("ui_exist", 300, 100, "0"), 160, "ms"),
@@ -258,10 +243,7 @@ namespace HandlerGuide.ViewModels
                 items.Children.Add(E.Chk("uao_" + r, r, r != m.Recipe));
 
             return E.V(
-                E.T("应用参数至其他品种", 13, E.P, true),
-                E.Spacer(6),
-                E.T("把当前品种的单元参数批量应用到其它品种。请选择目标品种后点击[应用]。", 11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(10),
+                
                 E.Group("当前品种", E.Display(m.Recipe, 240, E.BandGreen, E.P, TextAlignment.Center, 13)),
                 E.Group("选择单元参数", E.V(
                     E.Chk("uao_speed", "速度", true),

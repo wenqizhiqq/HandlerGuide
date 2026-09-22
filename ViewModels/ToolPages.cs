@@ -70,10 +70,7 @@ namespace HandlerGuide.ViewModels
                          E.Chk("en_clean", "清洁盘", true), E.Chk("en_rotator", "旋转台", true))));
 
             return E.V(
-                E.T("使能设定", 13, E.P, true),
-                E.Spacer(6),
-                E.T("该窗口用于设定设备各个部分的使能是否打开。测试臂 A/B 使能：设定测试臂上用于吸料的 Nest 是否使用，设定为失效状态时，上料臂就不会往对应吸料 Nest 的小车位置放料。", 11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(8),
+                
                 units,
                 block("测试臂A使能", "en_armA"),
                 block("测试臂B使能", "en_armB"),
@@ -134,10 +131,7 @@ namespace HandlerGuide.ViewModels
             cancel.BorderThickness = new Thickness(0);
 
             return E.V(
-                E.T("伺服电机归零选择", 13, E.P, true),
-                E.Spacer(6),
-                E.T("勾选需要归零的电机（或按区域选择），点击 OK 开始归零过程。归零过程中安全门打开或按下停止按钮会中断复位过程。", 11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(8),
+                
                 E.Scroll(rows, 380),
                 E.H(
                     E.V(E.MiniBtn("全选", () => { foreach (var mo in m.Motors) m.SetToggle("mh_" + mo.Name, true); m.Log("信息", "已全选电机"); }),
