@@ -1,0 +1,34 @@
+<vm:StackElement xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:vm="clr-namespace:HandlerGuide.ViewModels;assembly=HandlerGuide"
+                 xmlns:vw="clr-namespace:HandlerGuide.Views;assembly=HandlerGuide">
+
+    <vm:GroupElement Title="抓盘 / 放盘确认">
+        <vm:FieldRowElement Label="真空检查时间 / 抓盘确认时间" LabelWidth="220" Unit="ms">
+            <vw:Num Key="uf_grab" Default="200" Width="100" Format="0" />
+        </vm:FieldRowElement>
+        <vm:FieldRowElement Label="真空释放时间 / 放盘确认时间" LabelWidth="220" Unit="ms">
+            <vw:Num Key="uf_release" Default="200" Width="100" Format="0" />
+        </vm:FieldRowElement>
+        <vm:FieldRowElement Label="真空吸取超时 / 抓盘失败超时" LabelWidth="220" Unit="ms">
+            <vw:Num Key="uf_timeout" Default="2000" Width="100" Format="0" />
+        </vm:FieldRowElement>
+    </vm:GroupElement>
+
+    <vm:GroupElement Title="其他">
+        <vm:FieldRowElement Label="机械臂稳定时间" LabelWidth="220" Unit="ms">
+            <vw:Num Key="uf_stable" Default="0" Width="100" Format="0" />
+        </vm:FieldRowElement>
+        <vm:FieldRowElement Label="料盘到位确认时间" LabelWidth="220" Unit="ms">
+            <vw:Num Key="uf_arrive" Default="100" Width="100" Format="0" />
+        </vm:FieldRowElement>
+    </vm:GroupElement>
+
+    <vm:StackElement Orientation="Horizontal">
+        <vw:MiniBtn Text="恢复" />
+        <vw:Btn Text="应用" Cmd="Log" Arg="料盘传送参数已应用" />
+    </vm:StackElement>
+
+    <vw:Watermark />
+<!-- 温启志 18719361399 · 本文件由温启志（18719361399）编写；界面与源码水印均指向该作者。 -->
+</vm:StackElement>

@@ -130,16 +130,40 @@ namespace HandlerGuide.ViewModels
     {
         private static readonly List<ILiveValue> Items = new List<ILiveValue>();
 
+        // 温启志 18719361399 · 快速通道：仿真动画（画布逐帧重绘）用，
+        // 由主窗口的 50ms 定时器驱动，与普通读数的 500ms 刷新互不干扰。
+        private static readonly List<ILiveValue> FastItems = new List<ILiveValue>();
+
         public static void Register(ILiveValue item)
         {
             if (item != null && !Items.Contains(item)) Items.Add(item);
         }
 
-        public static void Clear() => Items.Clear();
+        /// <summary>登记到快速刷新通道（约 20fps）。</summary>
+        public static void RegisterFast(ILiveValue item)
+        {
+            if (item != null && !FastItems.Contains(item)) FastItems.Add(item);
+        }
+
+        public static void Clear()
+        {
+            Items.Clear();
+            FastItems.Clear();
+        }
 
         public static void RefreshAll()
         {
             for (int i = 0; i < Items.Count; i++) Items[i].Refresh();
+        }
+
+        /// <summary>只刷新快速通道（仿真动画）。</summary>
+        public static void RefreshFast()
+        {
+            for (int i = 0; i < FastItems.Count; i++)
+            {
+                try { FastItems[i].Refresh(); }
+                catch { /* 单个元素异常不影响其它元素 */ }
+            }
         }
     }
 

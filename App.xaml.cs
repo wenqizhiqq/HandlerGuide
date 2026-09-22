@@ -21,8 +21,17 @@ namespace HandlerGuide
         private sealed class DelegateTraceListener : TraceListener
         {
             public override void Write(string message) { }
-            public override void WriteLine(string message) => Log("BIND " + message);
+            public override void WriteLine(string message)
+            {
+                // 绑定告警必须计数：页面 XAML 解析失败会被绑定引擎吞掉，
+                // 只表现为“Content 取不到值”，此时 bad 仍是 0，界面却是空白。
+                _bindWarnings++;
+                Log("BIND " + message);
+            }
         }
+
+        /// <summary>自检期间累计的绑定告警条数（&gt;0 说明有页面没能真正渲染出来）。</summary>
+        private static int _bindWarnings;
 
         internal static string LogPath => Path.Combine(Path.GetTempPath(), "handlerguide.log");
 
@@ -90,6 +99,7 @@ namespace HandlerGuide
                 bind.Listeners.Add(new DelegateTraceListener());
                 bind.Switch.Level = SourceLevels.Warning;
                 Trace.AutoFlush = true;
+                _bindWarnings = 0;
 
                 Log("selftest start");
             Log("温启志 18719361399 · 版权所有 " + ViewModels.Owner.WenQiZhiCopyright);
@@ -109,6 +119,10 @@ namespace HandlerGuide
                 {
                     try
                     {
+                        // 显式取一次 Content：XAML 解析异常会在这里抛出并被计入 bad，
+                        // 否则它会被 ContentControl 的绑定吞掉，只留一条 BIND 告警。
+                        var content = p.Content;
+                        if (content == null) throw new InvalidOperationException("页面内容为空（构建返回 null）");
                         vm.Navigate(p);
                         win.UpdateLayout();
                         if (shotDir != null) Shoot(win, Path.Combine(shotDir, p.Id + ".png"));
@@ -120,13 +134,96 @@ namespace HandlerGuide
                         Log("PAGE FAIL " + p.Id + " : " + ex.GetType().Name + " " + ex.Message);
                     }
                 }
-                Log("selftest done ok=" + ok + " bad=" + bad);
+                Log("selftest done ok=" + ok + " bad=" + bad + " bind=" + _bindWarnings);
                 Trace.Flush();
                 win.Close();
+
+                MotionSelfTest();
             }
             catch (Exception ex)
             {
                 Log("selftest crash: " + ex);
+            }
+        }
+
+        /// <summary>
+        /// 运动控制无头自检：驱动仿真卡跑完整演示节拍，校验
+        /// 「物理积分 / 软限位不越界 / 共享导轨间隙 / 互锁拒绝计数」。
+        /// </summary>
+        private static void MotionSelfTest()
+        {
+            try
+            {
+                var m = Motion.MotionManager.Instance;
+                m.Connect();
+                Log("motion: card=" + m.CardName + " sim=" + m.IsSim
+                    + " axes=" + m.Axes.Count + " in=" + m.Inputs.Count + " out=" + m.Outputs.Count);
+
+                m.ResetEStop();
+                m.ClearAlarm();
+                m.StartDemo();
+
+                // 40 秒仿真（步长 50ms），足够跑完 22 步节拍并循环多轮；
+                // 过程中持续跟踪共享导轨的最小间距（防撞的核心指标）。
+                double minGap = double.MaxValue;
+                for (int i = 0; i < 800; i++)
+                {
+                    m.Tick(0.05);
+                    if (i % 4 != 0) continue;
+                    foreach (var rail in new[] { "ARM_X", "SHUTTLE" })
+                    {
+                        var lst = new System.Collections.Generic.List<Motion.AxisConfig>();
+                        foreach (var a in m.Axes) if (a.RailId == rail) lst.Add(a);
+                        for (int x = 0; x < lst.Count; x++)
+                            for (int y = x + 1; y < lst.Count; y++)
+                                minGap = Math.Min(minGap,
+                                    Math.Abs(m.Position(lst[x].Index) - m.Position(lst[y].Index)));
+                    }
+                }
+
+                // 1) 所有轴都不得越过软限位
+                int outOfLimit = 0;
+                double worst = 0;
+                foreach (var a in m.Axes)
+                {
+                    double p = m.Position(a.Index);
+                    double lo = Math.Min(a.MinMm, a.MaxMm), hi = Math.Max(a.MinMm, a.MaxMm);
+                    if (p < lo - 0.5 || p > hi + 0.5)
+                    {
+                        outOfLimit++;
+                        worst = Math.Max(worst, Math.Max(lo - p, p - hi));
+                    }
+                }
+
+                // 2) 互锁必须真的拦下过越界指令
+                bool limitRejected = !m.SafetyCheck(4, 5000).Accepted;
+
+                Log("motion selftest: cycles=" + m.DemoCycles + " step=" + m.DemoStepText
+                    + " moves=" + m.MoveCount + " rejects=" + m.RejectCount
+                    + " outOfLimit=" + outOfLimit + " worstOver=" + worst.ToString("0.###")
+                    + " minRailGap=" + (minGap == double.MaxValue ? -1 : Math.Round(minGap, 1))
+                    + " limitGuard=" + limitRejected
+                    + " alarm=" + m.AnyAlarm());
+
+                // 3) 打印最常见的拒绝原因（去重后取前 5 条）
+                var seen = new System.Collections.Generic.Dictionary<string, int>();
+                foreach (var r in m.RecentRejects)
+                {
+                    string key = r.Length > 70 ? r.Substring(0, 70) : r;
+                    seen[key] = seen.TryGetValue(key, out var c) ? c + 1 : 1;
+                }
+                int shown = 0;
+                foreach (var kv in seen)
+                {
+                    Log("motion reject[" + kv.Value + "] " + kv.Key);
+                    if (++shown >= 5) break;
+                }
+
+                m.StopDemo();
+            }
+            catch (Exception ex)
+            {
+                Log("motion selftest FAIL " + ex);
             }
         }
     }

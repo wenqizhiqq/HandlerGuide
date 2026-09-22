@@ -48,7 +48,14 @@ namespace HandlerGuide.ViewModels
         private Element MakeContent()
         {
             var fromXaml = PageLoader.Load(Id);
-            if (fromXaml != null) return fromXaml;
+            if (fromXaml != null)
+            {
+                // Element.VAlign 默认是 Center：XAML 根不显式撑满的话，
+                // 整页内容会在视口里垂直居中，顶部留出一大块空白。
+                // C# 分支本来就有这行，XAML 分支必须保持一致。
+                fromXaml.VAlign = System.Windows.VerticalAlignment.Stretch;
+                return fromXaml;
+            }
             var body = Build != null ? Build() : new StackElement();
             body.VAlign = System.Windows.VerticalAlignment.Stretch;
             // 每一个页面底部都附上作者水印（温启志 18719361399）
@@ -104,6 +111,9 @@ namespace HandlerGuide.ViewModels
 
         public MainViewModel()
         {
+            // 先注册运动页的具名实时信号（静态构造函数不会因方法组引用而触发）
+            MotionPages.EnsureRegistered();
+
             Groups = PageCatalog.Toolbar(this);
             HomePage = PageCatalog.Home(this);
             ManualPage = PageCatalog.Manual(this);
@@ -116,6 +126,10 @@ namespace HandlerGuide.ViewModels
                 AllPages.AddRange(g.Items);
             }
             _selectedUserLevel = M.UserLevel;
+
+            // 运动控制卡：优先探测雷赛 LTDMC.dll / DMC 硬件，失败自动降级为内置仿真卡。
+            Motion.MotionManager.Instance.Connect();
+
             Navigate(HomePage);
         }
 
@@ -279,6 +293,8 @@ namespace HandlerGuide.ViewModels
         public void Tick()
         {
             M.Tick();
+            // 运动控制卡：推进仿真物理、回写电机状态、跑安全演示节拍
+            Motion.MotionManager.Instance.Tick(0.5);
             M.TickClock();
             LiveRegistry.RefreshAll();
             Raise(nameof(StatusRun));
@@ -288,6 +304,16 @@ namespace HandlerGuide.ViewModels
             Raise(nameof(StatusPressure));
             Raise(nameof(StatusClock));
             Raise(nameof(StatusDot));
+        }
+
+        /// <summary>
+        /// 由主窗口 50ms 快速定时器驱动：只推进运动仿真与画布动画（约 20fps），
+        /// 与 500ms 的读数刷新分开，保证轨迹动画流畅又不拖慢界面。
+        /// </summary>
+        public void FastTick(double dt)
+        {
+            Motion.MotionManager.Instance.Tick(dt);
+            LiveRegistry.RefreshFast();
         }
     }
 }

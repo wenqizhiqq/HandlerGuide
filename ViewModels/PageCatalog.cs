@@ -108,6 +108,22 @@ namespace HandlerGuide.ViewModels
                 }
             });
 
+            list.Add(new ToolGroupVm
+            {
+                Name = "运动仿真",
+                Icon = "🎛️",
+                Desc = "雷赛运动控制卡（LTDMC.dll / DMC 系列）轴与 IO 的仿真、互锁与轨迹预览；无卡时自动降级为内置仿真卡。",
+                Items =
+                {
+                    D("motion_sim", "🎛️", "运动仿真",
+                      "轴点动 / 回零 / 停止、32 入 32 出 IO 监视与手动翻转、10 条安全互锁规则、共享走廊轨迹动画与安全演示节拍。",
+                      MotionPages.SimPage),
+                    D("motion_card", "🔧", "控制卡设置",
+                      "卡型探测与连接、每轴脉冲当量 / 软限位 / 速度曲线 / 回零位置下发，以及控制卡诊断计数。",
+                      MotionPages.CardPage)
+                }
+            });
+
             list.Add(new ToolGroupVm { Name = "设定模式", Icon = "🗂️", Desc = "设定当前设备的工作模式（正常 / 练习 / 空跑 / 清除 / 维护）。", Direct = D("mode", "🗂️", "设定模式", "设定当前设备的工作模式（正常 / 练习 / 空跑 / 清除 / 维护）。", ToolPages.ModePage) });
             list.Add(new ToolGroupVm { Name = "使能设定", Icon = "🎚️", Desc = "设定设备各部分（测试臂 Nest / 单元 / Site）的使能是否打开。", Direct = D("enable", "🎚️", "使能设定", "设定设备各部分（测试臂 Nest / 单元 / Site）的使能是否打开。", ToolPages.EnablePage) });
             list.Add(new ToolGroupVm { Name = "温控设定", Icon = "🌡️", Desc = "选择加热器的工作条件（室温 / 高温）。", Direct = D("tempctl", "🌡️", "温控设定", "选择加热器的工作条件（室温 / 高温）。", ToolPages.TempControlPage) });

@@ -39,6 +39,8 @@ namespace HandlerGuide.Views
     {
         private readonly MainViewModel _vm = new MainViewModel();
         private readonly DispatcherTimer _timer;
+        private readonly DispatcherTimer _fastTimer;
+        private DateTime _lastFast = DateTime.Now;
 
         /// <summary>供自检 / 测试访问视图模型。</summary>
         public MainViewModel Vm => _vm;
@@ -64,6 +66,20 @@ namespace HandlerGuide.Views
             _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
             _timer.Tick += (s, e) => _vm.Tick();
             _timer.Start();
+
+            // 运动仿真快速通道：约 20fps 推进梯形速度曲线与轨迹动画
+            _lastFast = DateTime.Now;
+            _fastTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+            _fastTimer.Tick += (s, e) =>
+            {
+                var now = DateTime.Now;
+                double dt = (now - _lastFast).TotalSeconds;
+                _lastFast = now;
+                if (dt <= 0 || dt > 0.5) dt = 0.05;
+                _vm.FastTick(dt);
+            };
+            _fastTimer.Start();
+
             _vm.Tick();
         }
 

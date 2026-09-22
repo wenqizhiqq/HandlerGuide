@@ -34,6 +34,23 @@
     <SolidColorBrush x:Key="TipBgBrush" Color="{StaticResource TipBg}" />
     <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource Success}" />
 
+    <!-- 状态色带 / 表头 / 单元格（与 Palette.Band*/Head*/Cell* 同值，供 XAML 页面按名引用） -->
+    <SolidColorBrush x:Key="BandBlueBrush" Color="#E8F1FF" />
+    <SolidColorBrush x:Key="BandGreenBrush" Color="#E6F7EC" />
+    <SolidColorBrush x:Key="BandAmberBrush" Color="#FFF4E0" />
+    <SolidColorBrush x:Key="BandGreyBrush" Color="#F0F0F3" />
+    <SolidColorBrush x:Key="BandRedBrush" Color="#FDEAE9" />
+    <SolidColorBrush x:Key="HeadBlueBrush" Color="#CFE3FB" />
+    <SolidColorBrush x:Key="HeadGreenBrush" Color="#CFEFD8" />
+    <SolidColorBrush x:Key="HeadAmberBrush" Color="#F5DCA8" />
+    <SolidColorBrush x:Key="HeadTealBrush" Color="#9FC5C9" />
+    <SolidColorBrush x:Key="HeadGreyBrush" Color="#D8D8DC" />
+    <SolidColorBrush x:Key="CellDarkBrush" Color="#4A4A50" />
+    <SolidColorBrush x:Key="LineGreyBrush" Color="#9A9AA0" />
+    <SolidColorBrush x:Key="OffDotBrush" Color="#C7C7CC" />
+    <SolidColorBrush x:Key="OnRedBrush" Color="#C0202A" />
+    <SolidColorBrush x:Key="OnGreenBrush" Color="#1E8E3E" />
+
     <!-- 主按钮：蓝色实心圆角 -->
     <Style x:Key="PrimaryButton" TargetType="Button">
         <Setter Property="Background" Value="{StaticResource AccentBrush}" />
@@ -61,6 +78,12 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <!-- 危险按钮：红色底（急停 / 停止演示等破坏性操作） -->
+    <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+        <Setter Property="Background" Value="#C0202A" />
+        <Setter Property="Foreground" Value="White" />
     </Style>
 
     <!-- 次按钮：透明 + 蓝色文字 -->

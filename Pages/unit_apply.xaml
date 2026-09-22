@@ -1,0 +1,32 @@
+<vm:StackElement xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:vm="clr-namespace:HandlerGuide.ViewModels;assembly=HandlerGuide"
+                 xmlns:vw="clr-namespace:HandlerGuide.Views;assembly=HandlerGuide">
+
+    <vm:GroupElement Title="当前品种">
+        <vw:Live Signal="Recipe" Width="240" Bg="BandGreenBrush" Fg="TextPrimaryBrush" FontSize="13" />
+    </vm:GroupElement>
+
+    <vm:GroupElement Title="选择单元参数">
+        <vw:Chk Key="uao_speed" Label="速度" Default="True" />
+        <vw:Chk Key="uao_arm" Label="上下料臂" Default="True" />
+        <vw:Chk Key="uao_cart" Label="运料小车" Default="True" />
+        <vw:Chk Key="uao_testarm" Label="测试臂" Default="True" />
+        <vw:Chk Key="uao_transfer" Label="料盘传送" Default="True" />
+        <vw:Chk Key="uao_io" Label="进出盘" Default="True" />
+        <vw:Chk Key="uao_offset" Label="偏移设定" />
+    </vm:GroupElement>
+
+    <vm:GroupElement Title="目标品种">
+        <vw:Recipes Prefix="uao_" ExcludeCurrent="True" />
+    </vm:GroupElement>
+
+    <vm:StackElement Orientation="Horizontal">
+        <vw:MiniBtn Text="全选" Cmd="SelectAllRecipes" />
+        <vw:MiniBtn Text="全不选" Cmd="DeselectAllRecipes" />
+        <vw:Btn Text="应用" Cmd="Log" Arg="单元参数已应用到所选品种" />
+    </vm:StackElement>
+
+    <vw:Watermark />
+<!-- 温启志 18719361399 · 本文件由温启志（18719361399）编写；界面与源码水印均指向该作者。 -->
+</vm:StackElement>

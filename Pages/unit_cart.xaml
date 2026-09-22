@@ -1,0 +1,60 @@
+<vm:StackElement xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:vm="clr-namespace:HandlerGuide.ViewModels;assembly=HandlerGuide"
+                 xmlns:vw="clr-namespace:HandlerGuide.Views;assembly=HandlerGuide">
+
+    <vm:GridElement ColsSpec="*,24,*">
+        <vm:GridChild Col="0" Row="0">
+            <vm:GroupElement Title="震动小车">
+                <vw:Chk Key="uc_shake" Label="震动小车（浮动传感器检测到料未放置妥帖时自动震动）" Default="True" />
+                <vw:Chk Key="uc_force" Label="强制（无论浮动检查是否通过都触发震动）" />
+                <vm:FieldRowElement Label="次数" LabelWidth="90">
+                    <vw:Num Key="uc_n" Default="3" Width="90" Format="0" />
+                </vm:FieldRowElement>
+                <vm:FieldRowElement Label="加速" LabelWidth="90" Unit="ms">
+                    <vw:Num Key="uc_acc" Default="100" Width="90" Format="0" />
+                </vm:FieldRowElement>
+                <vm:FieldRowElement Label="振幅" LabelWidth="90" Unit="mm">
+                    <vw:Num Key="uc_amp" Default="2" Width="90" Format="0.###" />
+                </vm:FieldRowElement>
+                <vm:FieldRowElement Label="震动后等待" LabelWidth="90" Unit="ms">
+                    <vw:Num Key="uc_wait" Default="200" Width="90" Format="0" />
+                </vm:FieldRowElement>
+                <vm:FieldRowElement Label="器件浮动检查时间" LabelWidth="130" Unit="ms">
+                    <vw:Num Key="uc_float" Default="100" Width="90" Format="0" />
+                </vm:FieldRowElement>
+            </vm:GroupElement>
+        </vm:GridChild>
+
+        <vm:GridChild Col="2" Row="0">
+            <vm:GroupElement Title="检查">
+                <vw:Chk Key="uc_xchk" Label="小车X向检查（选装功能）" />
+                <vm:SpacerElement H="4" />
+                <vm:TextElement Text="Gate检查：Shuttle 出入口 Gate Sensor 检查" FontSize="12" Foreground="#1D1D1F" FontWeight="SemiBold" />
+                <vw:Chk Key="uc_gate_in" Label="入口横向" Default="True" />
+                <vw:Chk Key="uc_gate_outx" Label="出口横向" Default="True" />
+                <vw:Chk Key="uc_gate_outy" Label="出口纵向" Default="True" />
+                <vm:SpacerElement H="6" />
+                <vm:TextElement Text="纵向传感器选择" FontSize="12" Foreground="#1D1D1F" FontWeight="SemiBold" />
+                <vm:StackElement Orientation="Horizontal">
+                    <vm:TextElement Text="小车A" FontSize="12.5" Foreground="#1D1D1F" Margin="0,0,8,0" />
+                    <vw:Chk Key="uc_ar1" Label="R1" Default="True" />
+                    <vw:Chk Key="uc_ar2" Label="R2" Default="True" />
+                </vm:StackElement>
+                <vm:StackElement Orientation="Horizontal">
+                    <vm:TextElement Text="小车B" FontSize="12.5" Foreground="#1D1D1F" Margin="0,0,8,0" />
+                    <vw:Chk Key="uc_br1" Label="R1" Default="True" />
+                    <vw:Chk Key="uc_br2" Label="R2" Default="True" />
+                </vm:StackElement>
+            </vm:GroupElement>
+        </vm:GridChild>
+    </vm:GridElement>
+
+    <vm:StackElement Orientation="Horizontal">
+        <vw:MiniBtn Text="恢复" />
+        <vw:Btn Text="应用" Cmd="Log" Arg="运料小车参数已应用" />
+    </vm:StackElement>
+
+    <vw:Watermark />
+<!-- 温启志 18719361399 · 本文件由温启志（18719361399）编写；界面与源码水印均指向该作者。 -->
+</vm:StackElement>

@@ -1,0 +1,139 @@
+<vm:StackElement xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:vm="clr-namespace:HandlerGuide.ViewModels;assembly=HandlerGuide"
+                 xmlns:vw="clr-namespace:HandlerGuide.Views;assembly=HandlerGuide">
+
+    <vm:TextElement Text="上下料臂设定" FontSize="13" Foreground="#1D1D1F" FontWeight="SemiBold" />
+    <vm:SpacerElement H="8" />
+
+    <vm:TabsElement>
+        <vm:TabItemVm Title="上料">
+            <vm:StackElement>
+                <vm:GroupElement Title="吸料重试">
+                    <vm:FieldRowElement Label="取料重试次数" LabelWidth="130">
+                        <vw:Num Key="ua_retry_ld" Default="2" Width="90" Format="0" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="取料叠加深度" LabelWidth="130" Unit="mm">
+                        <vw:Num Key="ua_deep_ld" Default="0.5" Width="90" Format="0.###" />
+                    </vm:FieldRowElement>
+                    <vw:Chk Key="ua_autoskip_ld" Label="自动跳过（吸取次数超过设定数后自动跳过这颗料）" Default="True" />
+                    <vm:FieldRowElement Label="吸料失败自动跳过次数" LabelWidth="170">
+                        <vw:Num Key="ua_skipn_ld" Default="3" Width="90" Format="0" />
+                    </vm:FieldRowElement>
+                </vm:GroupElement>
+                <vm:GroupElement Title="计时器">
+                    <vm:FieldRowElement Label="真空检查时间" LabelWidth="130" Unit="ms">
+                        <vw:Num Key="ua_vacchk_ld" Default="25" Width="90" Format="0" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="真空释放时间" LabelWidth="130" Unit="ms">
+                        <vw:Num Key="ua_vacrel_ld" Default="100" Width="90" Format="0" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="真空吸取超时时间" LabelWidth="130" Unit="ms">
+                        <vw:Num Key="ua_vacto_ld" Default="500" Width="90" Format="0" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="机械臂稳定时间" LabelWidth="130" Unit="ms">
+                        <vw:Num Key="ua_stable_ld" Default="0" Width="90" Format="0" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="丢料检查时间" LabelWidth="130" Unit="ms">
+                        <vw:Num Key="ua_dropchk_ld" Default="100" Width="90" Format="0" />
+                    </vm:FieldRowElement>
+                </vm:GroupElement>
+                <vm:GroupElement Title="自动归零">
+                    <vm:FieldRowElement Label="吸头自动归零间隔" LabelWidth="130" Unit="次">
+                        <vw:Num Key="ua_homeint_ld" Default="0" Width="90" Format="0" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="当前IC间隔" LabelWidth="130" Unit="次">
+                        <vw:Num Key="ua_curint_ld" Default="0" Width="90" Format="0" ReadOnly="True" />
+                    </vm:FieldRowElement>
+                </vm:GroupElement>
+                <vm:GroupElement Title="二速缓降">
+                    <vw:Chk Key="ua_slow_ld" Label="二速缓降（吸头执行取料动作时按设定进行二级降速）" Default="True" />
+                    <vm:FieldRowElement Label="Speed" LabelWidth="130" Unit="%">
+                        <vw:Num Key="ua_slowspeed_ld" Default="50" Width="90" Format="0" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="Acc/Dec" LabelWidth="130" Unit="%">
+                        <vw:Num Key="ua_slowacc_ld" Default="50" Width="90" Format="0" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="Height" LabelWidth="130" Unit="mm">
+                        <vw:Num Key="ua_slowh_ld" Default="3" Width="90" Format="0.###" />
+                    </vm:FieldRowElement>
+                    <vw:Chk Key="ua_slowonly_ld" Label="仅上料盘有效" Default="True" />
+                </vm:GroupElement>
+                <vm:GroupElement Title="其他">
+                    <vw:Chk Key="ua_continue_ld" Label="换盘/上料臂丢料跳过后继续取料" />
+                    <vw:Chk Key="ua_same_ld" Label="下料与上料一致" />
+                </vm:GroupElement>
+                <vm:StackElement Orientation="Horizontal">
+                    <vw:MiniBtn Text="恢复" />
+                    <vw:Btn Text="应用" Cmd="Log" Arg="上下料臂参数已应用" />
+                </vm:StackElement>
+            </vm:StackElement>
+        </vm:TabItemVm>
+
+        <vm:TabItemVm Title="下料">
+            <vm:StackElement>
+                <vm:GroupElement Title="吸料重试">
+                    <vm:FieldRowElement Label="取料重试次数" LabelWidth="130">
+                        <vw:Num Key="ua_retry_ul" Default="2" Width="90" Format="0" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="取料叠加深度" LabelWidth="130" Unit="mm">
+                        <vw:Num Key="ua_deep_ul" Default="0.5" Width="90" Format="0.###" />
+                    </vm:FieldRowElement>
+                    <vw:Chk Key="ua_autoskip_ul" Label="自动跳过（吸取次数超过设定数后自动跳过这颗料）" Default="True" />
+                    <vm:FieldRowElement Label="吸料失败自动跳过次数" LabelWidth="170">
+                        <vw:Num Key="ua_skipn_ul" Default="3" Width="90" Format="0" />
+                    </vm:FieldRowElement>
+                </vm:GroupElement>
+                <vm:GroupElement Title="计时器">
+                    <vm:FieldRowElement Label="真空检查时间" LabelWidth="130" Unit="ms">
+                        <vw:Num Key="ua_vacchk_ul" Default="25" Width="90" Format="0" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="真空释放时间" LabelWidth="130" Unit="ms">
+                        <vw:Num Key="ua_vacrel_ul" Default="100" Width="90" Format="0" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="真空吸取超时时间" LabelWidth="130" Unit="ms">
+                        <vw:Num Key="ua_vacto_ul" Default="500" Width="90" Format="0" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="机械臂稳定时间" LabelWidth="130" Unit="ms">
+                        <vw:Num Key="ua_stable_ul" Default="0" Width="90" Format="0" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="丢料检查时间" LabelWidth="130" Unit="ms">
+                        <vw:Num Key="ua_dropchk_ul" Default="100" Width="90" Format="0" />
+                    </vm:FieldRowElement>
+                </vm:GroupElement>
+                <vm:GroupElement Title="自动归零">
+                    <vm:FieldRowElement Label="吸头自动归零间隔" LabelWidth="130" Unit="次">
+                        <vw:Num Key="ua_homeint_ul" Default="0" Width="90" Format="0" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="当前IC间隔" LabelWidth="130" Unit="次">
+                        <vw:Num Key="ua_curint_ul" Default="0" Width="90" Format="0" ReadOnly="True" />
+                    </vm:FieldRowElement>
+                </vm:GroupElement>
+                <vm:GroupElement Title="二速缓降">
+                    <vw:Chk Key="ua_slow_ul" Label="二速缓降（吸头执行取料动作时按设定进行二级降速）" Default="True" />
+                    <vm:FieldRowElement Label="Speed" LabelWidth="130" Unit="%">
+                        <vw:Num Key="ua_slowspeed_ul" Default="50" Width="90" Format="0" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="Acc/Dec" LabelWidth="130" Unit="%">
+                        <vw:Num Key="ua_slowacc_ul" Default="50" Width="90" Format="0" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="Height" LabelWidth="130" Unit="mm">
+                        <vw:Num Key="ua_slowh_ul" Default="3" Width="90" Format="0.###" />
+                    </vm:FieldRowElement>
+                    <vw:Chk Key="ua_slowonly_ul" Label="仅上料盘有效" Default="True" />
+                </vm:GroupElement>
+                <vm:GroupElement Title="其他">
+                    <vw:Chk Key="ua_continue_ul" Label="换盘/上料臂丢料跳过后继续取料" />
+                    <vw:Chk Key="ua_same_ul" Label="下料与上料一致" />
+                </vm:GroupElement>
+                <vm:StackElement Orientation="Horizontal">
+                    <vw:MiniBtn Text="恢复" />
+                    <vw:Btn Text="应用" Cmd="Log" Arg="上下料臂参数已应用" />
+                </vm:StackElement>
+            </vm:StackElement>
+        </vm:TabItemVm>
+    </vm:TabsElement>
+
+    <vw:Watermark />
+<!-- 温启志 18719361399 · 本文件由温启志（18719361399）编写；界面与源码水印均指向该作者。 -->
+</vm:StackElement>

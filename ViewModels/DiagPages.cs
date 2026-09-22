@@ -170,7 +170,7 @@ namespace HandlerGuide.ViewModels
                 g.Add(LampCell(E.Live(mm => mm.Motors[idx].Position, "0.000", 0, E.CardBg, E.P, 11)), r, 8);
                 g.Add(LampCell(E.Live(mm => mm.Motors[idx].Position, "0.000", 0, E.CardBg, E.P, 11)), r, 9);
                 g.Add(TextCell("UnHomed/Stop", E.CardBg), r, 10);
-                g.Add(LampCell(E.Live(mm => mm.Motors[idx].Torque, "0.0%", 0, E.CardBg, E.P, 11)), r, 11);
+                g.Add(LampCell(E.Live(mm => mm.Motors[idx].Torque, "0.0", 0, E.CardBg, E.P, 11)), r, 11);
                 g.Add(LampCell(E.ClickLamp("dm_ens_" + i, false, false, 13)), r, 12);
                 g.Add(LampCell(E.ClickLamp("dm_sp_" + i, false, false, 13)), r, 13);
                 g.Add(LampCell(E.ClickLamp("dm_sn_" + i, false, false, 13)), r, 14);

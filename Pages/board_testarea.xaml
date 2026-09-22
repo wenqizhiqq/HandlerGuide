@@ -1,0 +1,55 @@
+<vm:StackElement xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:vm="clr-namespace:HandlerGuide.ViewModels;assembly=HandlerGuide"
+                 xmlns:vw="clr-namespace:HandlerGuide.Views;assembly=HandlerGuide">
+
+    <vm:StackElement Orientation="Horizontal">
+        <vm:StackElement Margin="0,0,20,12">
+            <vm:TextElement Text="Load Arm" FontSize="12.5" Foreground="#1D1D1F" FontWeight="SemiBold" Align="Center" HAlign="Center" />
+            <vw:CellGrid Rows="2" Cols="1" Cw="18" Ch="18" />
+        </vm:StackElement>
+        <vm:StackElement Margin="0,0,20,12">
+            <vm:TextElement Text="Shuttle A Entry" FontSize="12.5" Foreground="#1D1D1F" FontWeight="SemiBold" Align="Center" HAlign="Center" />
+            <vw:CellGrid Rows="2" Cols="8" Cw="18" Ch="18" />
+        </vm:StackElement>
+        <vm:StackElement Margin="0,0,20,12">
+            <vm:TextElement Text="Test Hand #1" FontSize="12.5" Foreground="#1D1D1F" FontWeight="SemiBold" Align="Center" HAlign="Center" />
+            <vw:CellGrid Rows="2" Cols="1" Cw="18" Ch="18" />
+        </vm:StackElement>
+        <vm:StackElement Margin="0,0,20,12">
+            <vm:TextElement Text="Shuttle A Exit" FontSize="12.5" Foreground="#1D1D1F" FontWeight="SemiBold" Align="Center" HAlign="Center" />
+            <vw:CellGrid Rows="2" Cols="1" Cw="18" Ch="18" />
+        </vm:StackElement>
+        <vm:StackElement Margin="0,0,20,12">
+            <vm:TextElement Text="Offload Arm" FontSize="12.5" Foreground="#1D1D1F" FontWeight="SemiBold" Align="Center" HAlign="Center" />
+            <vw:CellGrid Rows="2" Cols="1" Cw="18" Ch="18" />
+        </vm:StackElement>
+    </vm:StackElement>
+
+    <vm:StackElement Orientation="Horizontal">
+        <vm:StackElement Margin="0,0,20,12">
+            <vm:TextElement Text="Shuttle B Entry" FontSize="12.5" Foreground="#1D1D1F" FontWeight="SemiBold" Align="Center" HAlign="Center" />
+            <vw:CellGrid Rows="2" Cols="8" Cw="18" Ch="18" />
+        </vm:StackElement>
+        <vm:StackElement Margin="0,0,20,12">
+            <vm:TextElement Text="Test Hand #2" FontSize="12.5" Foreground="#1D1D1F" FontWeight="SemiBold" Align="Center" HAlign="Center" />
+            <vw:CellGrid Rows="2" Cols="1" Cw="18" Ch="18" />
+        </vm:StackElement>
+        <vm:StackElement Margin="0,0,20,12">
+            <vm:TextElement Text="Shuttle B Exit" FontSize="12.5" Foreground="#1D1D1F" FontWeight="SemiBold" Align="Center" HAlign="Center" />
+            <vw:CellGrid Rows="2" Cols="1" Cw="18" Ch="18" />
+        </vm:StackElement>
+    </vm:StackElement>
+
+    <vm:GroupElement Title="图例">
+        <vm:StackElement Orientation="Horizontal">
+            <vm:TextElement Text="单元格白底无字：该位置没有料" FontSize="11.5" Foreground="#6E6E73" />
+            <vm:TextElement Text="　绿底：该位置有料" FontSize="11.5" Foreground="#6E6E73" />
+            <vm:TextElement Text="　数字：测试结果对应的 Bin#（NT 未测试 / ER 非法 Bin）" FontSize="11.5" Foreground="#6E6E73" />
+        </vm:StackElement>
+        <vm:TextElement Text="单元格背景红色表示为次品，绿色表示为好品，暗色背景表示使能关闭。" FontSize="11.5" Foreground="#6E6E73" />
+    </vm:GroupElement>
+
+    <vw:Watermark />
+<!-- 温启志 18719361399 · 本文件由温启志（18719361399）编写；界面与源码水印均指向该作者。 -->
+</vm:StackElement>

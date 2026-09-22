@@ -98,7 +98,14 @@ namespace HandlerGuide.ViewModels
                 case "UpdateLog":
                     m.Log("信息", "信息记录已更新");
                     break;
-                case "ExportLog":
+                case "SelectAllRecipes":
+                    foreach (var r in m.Recipes) m.SetToggle("uao_" + r, true);
+                    m.Log("信息", "已全选目标品种");
+                    break;
+                case "DeselectAllRecipes":
+                    foreach (var r in m.Recipes) m.SetToggle("uao_" + r, false);
+                    m.Log("信息", "已全不选目标品种");
+                    break;                case "ExportLog":
                     m.Log("信息", "信息记录已导出为文本文件");
                     break;
                 default:

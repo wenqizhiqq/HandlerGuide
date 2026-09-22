@@ -1,0 +1,51 @@
+<vm:StackElement xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:vm="clr-namespace:HandlerGuide.ViewModels;assembly=HandlerGuide"
+                 xmlns:vw="clr-namespace:HandlerGuide.Views;assembly=HandlerGuide">
+
+    <vm:GroupElement Title="信号灯定义">
+        <vm:GridElement ColsSpec="120,130,130,130,130" RowsSpec="Auto,Auto,Auto,Auto,Auto">
+            <vm:GridChild Col="0" Row="0"><vw:Cell Text="状态" Bg="HeadBlueBrush" Bold="True" Height="24" /></vm:GridChild>
+            <vm:GridChild Col="1" Row="0"><vw:Cell Text="红色" Bg="HeadBlueBrush" Bold="True" Height="24" /></vm:GridChild>
+            <vm:GridChild Col="2" Row="0"><vw:Cell Text="黄色" Bg="HeadBlueBrush" Bold="True" Height="24" /></vm:GridChild>
+            <vm:GridChild Col="3" Row="0"><vw:Cell Text="绿色" Bg="HeadBlueBrush" Bold="True" Height="24" /></vm:GridChild>
+            <vm:GridChild Col="4" Row="0"><vw:Cell Text="蜂鸣器" Bg="HeadBlueBrush" Bold="True" Height="24" /></vm:GridChild>
+
+            <vm:GridChild Col="0" Row="1"><vw:Cell Text="运行" Height="28" Ta="Left" Pad="4,1,4,1" /></vm:GridChild>
+            <vm:GridChild Col="1" Row="1"><vw:Cell Height="28"><vw:Cmb Key="ml_0_0" OptionsText="OFF|BLINK|ON" Width="120" Default="0" /></vw:Cell></vm:GridChild>
+            <vm:GridChild Col="2" Row="1"><vw:Cell Height="28"><vw:Cmb Key="ml_0_1" OptionsText="OFF|BLINK|ON" Width="120" Default="0" /></vw:Cell></vm:GridChild>
+            <vm:GridChild Col="3" Row="1"><vw:Cell Height="28"><vw:Cmb Key="ml_0_2" OptionsText="OFF|BLINK|ON" Width="120" Default="2" /></vw:Cell></vm:GridChild>
+            <vm:GridChild Col="4" Row="1"><vw:Cell Height="28"><vw:Cmb Key="ml_0_3" OptionsText="OFF|BLINK|ON" Width="120" Default="0" /></vw:Cell></vm:GridChild>
+
+            <vm:GridChild Col="0" Row="2"><vw:Cell Text="卡料" Height="28" Ta="Left" Pad="4,1,4,1" /></vm:GridChild>
+            <vm:GridChild Col="1" Row="2"><vw:Cell Height="28"><vw:Cmb Key="ml_1_0" OptionsText="OFF|BLINK|ON" Width="120" Default="1" /></vw:Cell></vm:GridChild>
+            <vm:GridChild Col="2" Row="2"><vw:Cell Height="28"><vw:Cmb Key="ml_1_1" OptionsText="OFF|BLINK|ON" Width="120" Default="0" /></vw:Cell></vm:GridChild>
+            <vm:GridChild Col="3" Row="2"><vw:Cell Height="28"><vw:Cmb Key="ml_1_2" OptionsText="OFF|BLINK|ON" Width="120" Default="0" /></vw:Cell></vm:GridChild>
+            <vm:GridChild Col="4" Row="2"><vw:Cell Height="28"><vw:Cmb Key="ml_1_3" OptionsText="OFF|BLINK|ON" Width="120" Default="2" /></vw:Cell></vm:GridChild>
+
+            <vm:GridChild Col="0" Row="3"><vw:Cell Text="暂停" Height="28" Ta="Left" Pad="4,1,4,1" /></vm:GridChild>
+            <vm:GridChild Col="1" Row="3"><vw:Cell Height="28"><vw:Cmb Key="ml_2_0" OptionsText="OFF|BLINK|ON" Width="120" Default="0" /></vw:Cell></vm:GridChild>
+            <vm:GridChild Col="2" Row="3"><vw:Cell Height="28"><vw:Cmb Key="ml_2_1" OptionsText="OFF|BLINK|ON" Width="120" Default="2" /></vw:Cell></vm:GridChild>
+            <vm:GridChild Col="3" Row="3"><vw:Cell Height="28"><vw:Cmb Key="ml_2_2" OptionsText="OFF|BLINK|ON" Width="120" Default="0" /></vw:Cell></vm:GridChild>
+            <vm:GridChild Col="4" Row="3"><vw:Cell Height="28"><vw:Cmb Key="ml_2_3" OptionsText="OFF|BLINK|ON" Width="120" Default="0" /></vw:Cell></vm:GridChild>
+
+            <vm:GridChild Col="0" Row="4"><vw:Cell Text="警告" Height="28" Ta="Left" Pad="4,1,4,1" /></vm:GridChild>
+            <vm:GridChild Col="1" Row="4"><vw:Cell Height="28"><vw:Cmb Key="ml_3_0" OptionsText="OFF|BLINK|ON" Width="120" Default="0" /></vw:Cell></vm:GridChild>
+            <vm:GridChild Col="2" Row="4"><vw:Cell Height="28"><vw:Cmb Key="ml_3_1" OptionsText="OFF|BLINK|ON" Width="120" Default="1" /></vw:Cell></vm:GridChild>
+            <vm:GridChild Col="3" Row="4"><vw:Cell Height="28"><vw:Cmb Key="ml_3_2" OptionsText="OFF|BLINK|ON" Width="120" Default="0" /></vw:Cell></vm:GridChild>
+            <vm:GridChild Col="4" Row="4"><vw:Cell Height="28"><vw:Cmb Key="ml_3_3" OptionsText="OFF|BLINK|ON" Width="120" Default="2" /></vw:Cell></vm:GridChild>
+        </vm:GridElement>
+    </vm:GroupElement>
+
+    <vm:StackElement Orientation="Horizontal">
+        <vw:Btn Text="应用" Cmd="Log" Arg="信号灯设定已应用" />
+    </vm:StackElement>
+
+    <vm:GroupElement Title="说明">
+        <vm:TextElement Text="状态：表示设备处于某种状态时，包括运行、卡料、暂停和警告。&#x0a;红色 / 黄色 / 绿色：可定义信号灯的三种颜色灯在对应状态下所触发的状态，包括长亮(ON)、闪烁(BLINK)以及不激活(OFF)。&#x0a;蜂鸣器：可定义信号灯蜂鸣器的状态，是否蜂鸣。"
+                        FontSize="11.5" Foreground="#6E6E73" Wrap="Wrap" />
+    </vm:GroupElement>
+
+    <vw:Watermark />
+<!-- 温启志 18719361399 · 本文件由温启志（18719361399）编写；界面与源码水印均指向该作者。 -->
+</vm:StackElement>

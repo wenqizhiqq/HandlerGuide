@@ -1,0 +1,75 @@
+<vm:StackElement xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:vm="clr-namespace:HandlerGuide.ViewModels;assembly=HandlerGuide"
+                 xmlns:vw="clr-namespace:HandlerGuide.Views;assembly=HandlerGuide">
+
+    <vm:GroupElement>
+        <vm:GridElement ColsSpec="110,360,360">
+            <vm:GridChild Col="0" Row="0">
+                <vw:Cell Text="" Bg="Transparent" />
+            </vm:GridChild>
+            <vm:GridChild Col="1" Row="0">
+                <vw:Cell Text="速度比率" Bg="Transparent" Fg="TextPrimaryBrush" Bold="True" Ta="Center" />
+            </vm:GridChild>
+            <vm:GridChild Col="2" Row="0">
+                <vw:Cell Text="加速度/减速度" Bg="Transparent" Fg="TextPrimaryBrush" Bold="True" Ta="Center" />
+            </vm:GridChild>
+        </vm:GridElement>
+    </vm:GroupElement>
+
+    <vm:GroupElement>
+        <vm:GridElement ColsSpec="110,360,360" Margin="0,4,0,4">
+            <vm:GridChild Col="0" Row="0"><vm:TextElement Text="所有轴" FontSize="12.5" Foreground="#1D1D1F" Margin="0,0,10,0" /></vm:GridChild>
+            <vm:GridChild Col="1" Row="0"><vw:SldRow Label="" Key="sp_v_所有轴" Default="100" /></vm:GridChild>
+            <vm:GridChild Col="2" Row="0"><vw:SldRow Label="" Key="sp_a_所有轴" Default="100" /></vm:GridChild>
+        </vm:GridElement>
+        <vm:GridElement ColsSpec="110,360,360" Margin="0,4,0,4">
+            <vm:GridChild Col="0" Row="0"><vm:TextElement Text="上料臂" FontSize="12.5" Foreground="#1D1D1F" Margin="0,0,10,0" /></vm:GridChild>
+            <vm:GridChild Col="1" Row="0"><vw:SldRow Label="" Key="sp_v_上料臂" Default="100" /></vm:GridChild>
+            <vm:GridChild Col="2" Row="0"><vw:SldRow Label="" Key="sp_a_上料臂" Default="100" /></vm:GridChild>
+        </vm:GridElement>
+        <vm:GridElement ColsSpec="110,360,360" Margin="0,4,0,4">
+            <vm:GridChild Col="0" Row="0"><vm:TextElement Text="上料Z轴" FontSize="12.5" Foreground="#1D1D1F" Margin="0,0,10,0" /></vm:GridChild>
+            <vm:GridChild Col="1" Row="0"><vw:SldRow Label="" Key="sp_v_上料Z轴" Default="100" /></vm:GridChild>
+            <vm:GridChild Col="2" Row="0"><vw:SldRow Label="" Key="sp_a_上料Z轴" Default="100" /></vm:GridChild>
+        </vm:GridElement>
+        <vm:GridElement ColsSpec="110,360,360" Margin="0,4,0,4">
+            <vm:GridChild Col="0" Row="0"><vm:TextElement Text="下料臂" FontSize="12.5" Foreground="#1D1D1F" Margin="0,0,10,0" /></vm:GridChild>
+            <vm:GridChild Col="1" Row="0"><vw:SldRow Label="" Key="sp_v_下料臂" Default="100" /></vm:GridChild>
+            <vm:GridChild Col="2" Row="0"><vw:SldRow Label="" Key="sp_a_下料臂" Default="100" /></vm:GridChild>
+        </vm:GridElement>
+        <vm:GridElement ColsSpec="110,360,360" Margin="0,4,0,4">
+            <vm:GridChild Col="0" Row="0"><vm:TextElement Text="下料Z轴" FontSize="12.5" Foreground="#1D1D1F" Margin="0,0,10,0" /></vm:GridChild>
+            <vm:GridChild Col="1" Row="0"><vw:SldRow Label="" Key="sp_v_下料Z轴" Default="100" /></vm:GridChild>
+            <vm:GridChild Col="2" Row="0"><vw:SldRow Label="" Key="sp_a_下料Z轴" Default="100" /></vm:GridChild>
+        </vm:GridElement>
+        <vm:GridElement ColsSpec="110,360,360" Margin="0,4,0,4">
+            <vm:GridChild Col="0" Row="0"><vm:TextElement Text="运料小车" FontSize="12.5" Foreground="#1D1D1F" Margin="0,0,10,0" /></vm:GridChild>
+            <vm:GridChild Col="1" Row="0"><vw:SldRow Label="" Key="sp_v_运料小车" Default="100" /></vm:GridChild>
+            <vm:GridChild Col="2" Row="0"><vw:SldRow Label="" Key="sp_a_运料小车" Default="100" /></vm:GridChild>
+        </vm:GridElement>
+        <vm:GridElement ColsSpec="110,360,360" Margin="0,4,0,4">
+            <vm:GridChild Col="0" Row="0"><vm:TextElement Text="空盘传送臂" FontSize="12.5" Foreground="#1D1D1F" Margin="0,0,10,0" /></vm:GridChild>
+            <vm:GridChild Col="1" Row="0"><vw:SldRow Label="" Key="sp_v_空盘传送臂" Default="100" /></vm:GridChild>
+            <vm:GridChild Col="2" Row="0"><vw:SldRow Label="" Key="sp_a_空盘传送臂" Default="100" /></vm:GridChild>
+        </vm:GridElement>
+        <vm:GridElement ColsSpec="110,360,360" Margin="0,4,0,4">
+            <vm:GridChild Col="0" Row="0"><vm:TextElement Text="旋转台" FontSize="12.5" Foreground="#1D1D1F" Margin="0,0,10,0" /></vm:GridChild>
+            <vm:GridChild Col="1" Row="0"><vw:SldRow Label="" Key="sp_v_旋转台" Default="100" /></vm:GridChild>
+            <vm:GridChild Col="2" Row="0"><vw:SldRow Label="" Key="sp_a_旋转台" Default="100" /></vm:GridChild>
+        </vm:GridElement>
+        <vm:GridElement ColsSpec="110,360,360" Margin="0,4,0,4">
+            <vm:GridChild Col="0" Row="0"><vm:TextElement Text="测试臂" FontSize="12.5" Foreground="#1D1D1F" Margin="0,0,10,0" /></vm:GridChild>
+            <vm:GridChild Col="1" Row="0"><vw:SldRow Label="" Key="sp_v_测试臂" Default="100" /></vm:GridChild>
+            <vm:GridChild Col="2" Row="0"><vw:SldRow Label="" Key="sp_a_测试臂" Default="100" /></vm:GridChild>
+        </vm:GridElement>
+    </vm:GroupElement>
+
+    <vm:StackElement Orientation="Horizontal">
+        <vw:MiniBtn Text="恢复" />
+        <vw:Btn Text="应用" Cmd="Log" Arg="速度设定已应用" />
+    </vm:StackElement>
+
+    <vw:Watermark />
+<!-- 温启志 18719361399 · 本文件由温启志（18719361399）编写；界面与源码水印均指向该作者。 -->
+</vm:StackElement>

@@ -681,7 +681,18 @@ namespace HandlerGuide.ViewModels
             object raw;
             try { raw = _get != null ? _get(MachineModel.Instance) : null; }
             catch { raw = null; }
-            string s = _fmt != null ? string.Format(CultureInfo.InvariantCulture, _fmt, raw) : (raw?.ToString() ?? "");
+
+            // 格式串有两种约定，必须区分处理：
+            //   · 含 '{' → 复合格式（string.Format，如 "{0}"）；
+            //   · 不含 '{' → 数值/自定义格式（IFormattable，如 "0.###"、"0.00"）。
+            // 之前一律走 string.Format，导致 "0.###" 这类数值格式被原样输出成字面量。
+            string s;
+            if (raw == null) s = "";
+            else if (string.IsNullOrEmpty(_fmt)) s = raw.ToString();
+            else if (_fmt.IndexOf('{') >= 0) s = string.Format(CultureInfo.InvariantCulture, _fmt, raw);
+            else if (raw is IFormattable f) s = f.ToString(_fmt, CultureInfo.InvariantCulture);
+            else s = raw.ToString();
+
             Value = s;
         }
     }
@@ -732,11 +743,29 @@ namespace HandlerGuide.ViewModels
 
     // ---------------- 图形（料盘 / 机台布局 / 吸头） ----------------
 
-    // 温启志 18719361399 · 类 public abstract class DiagramItem
-    public abstract class DiagramItem
+    // 温启志 18719361399 · 类 public abstract class DiagramItem : ObservableObject
+    /// <summary>
+    /// 画布图形基类。继承 ObservableObject 是为了让仿真动画可以逐帧
+    /// 直接改写 X/Y/W/H/Fill/Text 等属性而无需重建整个 Items 集合
+    /// （X/Y 变更会连带通知 Left/Top，因为 Canvas.Left/Top 绑定的是后者）。
+    /// </summary>
+    public abstract class DiagramItem : ObservableObject
     {
-        public double X { get; set; }
-        public double Y { get; set; }
+        private double _x;
+        private double _y;
+
+        public double X
+        {
+            get => _x;
+            set { if (Set(ref _x, value)) Raise(nameof(Left)); }
+        }
+
+        public double Y
+        {
+            get => _y;
+            set { if (Set(ref _y, value)) Raise(nameof(Top)); }
+        }
+
         public virtual double Left => X;
         public virtual double Top => Y;
     }
@@ -744,13 +773,17 @@ namespace HandlerGuide.ViewModels
     // 温启志 18719361399 · 类 public class RectItem : DiagramItem
     public class RectItem : DiagramItem
     {
-        public double W { get; set; }
-        public double H { get; set; }
-        public Brush Fill { get; set; }
+        private double _w, _h;
+        private Brush _fill;
+        private string _text;
+
+        public double W { get => _w; set => Set(ref _w, value); }
+        public double H { get => _h; set => Set(ref _h, value); }
+        public Brush Fill { get => _fill; set => Set(ref _fill, value); }
         public Brush Stroke { get; set; }
         public double StrokeThickness { get; set; } = 1;
         public double Radius { get; set; }
-        public string Text { get; set; }
+        public string Text { get => _text; set => Set(ref _text, value); }
         public double TextSize { get; set; } = 10.5;
         public Brush TextColor { get; set; }
         public FontWeight TextWeight { get; set; } = FontWeights.SemiBold;
@@ -759,27 +792,53 @@ namespace HandlerGuide.ViewModels
     // 温启志 18719361399 · 类 public class EllipseItem : DiagramItem
     public class EllipseItem : DiagramItem
     {
-        public double W { get; set; }
-        public double H { get; set; }
-        public Brush Fill { get; set; }
+        private double _w, _h;
+        private Brush _fill;
+
+        public double W { get => _w; set => Set(ref _w, value); }
+        public double H { get => _h; set => Set(ref _h, value); }
+        public Brush Fill { get => _fill; set => Set(ref _fill, value); }
     }
 
     // 温启志 18719361399 · 类 public class TextItem : DiagramItem
     public class TextItem : DiagramItem
     {
-        public string Text { get; set; }
+        private string _text;
+        private Brush _foreground;
+
+        public string Text { get => _text; set => Set(ref _text, value); }
         public double TextSize { get; set; } = 11;
-        public Brush Foreground { get; set; }
+        public Brush Foreground { get => _foreground; set => Set(ref _foreground, value); }
         public double TextWidth { get; set; } = double.NaN;
         public TextAlignment Align { get; set; } = TextAlignment.Center;
     }
 
-[ContentProperty("Items")]
-        public class CanvasElement : Element
+    // 温启志 18719361399 · 类 public class CanvasElement : Element, ILiveValue
+    [ContentProperty("Items")]
+    public class CanvasElement : Element, ILiveValue
     {
+        public CanvasElement()
+        {
+            // 注册到「快速刷新」通道：仿真动画需要 20fps 级别的重绘，
+            // 与普通读数（500ms）分开，避免拖慢整个界面。
+            LiveRegistry.RegisterFast(this);
+        }
+
         public double CanvasWidth { get; set; } = 300;
         public double CanvasHeight { get; set; } = 200;
         public List<DiagramItem> Items { get; } = new List<DiagramItem>();
+
+        /// <summary>
+        /// 逐帧重绘回调（仿真页用）。为 null 时本画布是静态图，不产生任何开销。
+        /// </summary>
+        public Action<CanvasElement> Draw { get; set; }
+
+        /// <summary>由 LiveRegistry 的快速通道调用。</summary>
+        public void Refresh()
+        {
+            try { Draw?.Invoke(this); }
+            catch { /* 重绘异常不允许影响界面 */ }
+        }
     }
 
     // ---------------- 标签页 ----------------

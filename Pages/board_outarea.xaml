@@ -1,0 +1,43 @@
+<vm:StackElement xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:vm="clr-namespace:HandlerGuide.ViewModels;assembly=HandlerGuide"
+                 xmlns:vw="clr-namespace:HandlerGuide.Views;assembly=HandlerGuide">
+
+    <vm:StackElement Orientation="Horizontal">
+        <vm:StackElement Margin="0,0,20,12">
+            <vm:TextElement Text="Fix1 | 0" FontSize="12.5" Foreground="#1D1D1F" FontWeight="SemiBold" Align="Center" HAlign="Center" />
+            <vw:CellGrid Rows="20" Cols="8" Cw="15" Ch="15" />
+        </vm:StackElement>
+        <vm:StackElement Margin="0,0,20,12">
+            <vm:TextElement Text="Fix2 | 0" FontSize="12.5" Foreground="#1D1D1F" FontWeight="SemiBold" Align="Center" HAlign="Center" />
+            <vw:CellGrid Rows="20" Cols="8" Cw="15" Ch="15" />
+        </vm:StackElement>
+        <vm:StackElement Margin="0,0,20,12">
+            <vm:TextElement Text="Fix3 | 0" FontSize="12.5" Foreground="#1D1D1F" FontWeight="SemiBold" Align="Center" HAlign="Center" />
+            <vw:CellGrid Rows="20" Cols="8" Cw="15" Ch="15" />
+        </vm:StackElement>
+    </vm:StackElement>
+
+    <vm:StackElement Orientation="Horizontal">
+        <vm:StackElement Margin="0,0,20,12">
+            <vm:TextElement Text="Auto1 | 0" FontSize="12.5" Foreground="#1D1D1F" FontWeight="SemiBold" Align="Center" HAlign="Center" />
+            <vw:CellGrid Rows="20" Cols="8" Cw="15" Ch="15" />
+        </vm:StackElement>
+        <vm:StackElement Margin="0,0,20,12">
+            <vm:TextElement Text="Auto2 | 0" FontSize="12.5" Foreground="#1D1D1F" FontWeight="SemiBold" Align="Center" HAlign="Center" />
+            <vw:CellGrid Rows="20" Cols="8" Cw="15" Ch="15" />
+        </vm:StackElement>
+        <vm:StackElement Margin="0,0,20,12">
+            <vm:TextElement Text="Auto3 | 0" FontSize="12.5" Foreground="#1D1D1F" FontWeight="SemiBold" Align="Center" HAlign="Center" />
+            <vw:CellGrid Rows="20" Cols="8" Cw="15" Ch="15" />
+        </vm:StackElement>
+    </vm:StackElement>
+
+    <vm:GroupElement Title="图例">
+        <vm:TextElement Text="单元格为白底无字表示该位置没有料；绿底表示该位置有料；单元格中的数字表示测试结果对应的 Bin#。"
+                        FontSize="11.5" Foreground="#6E6E73" Wrap="Wrap" />
+    </vm:GroupElement>
+
+    <vw:Watermark />
+<!-- 温启志 18719361399 · 本文件由温启志（18719361399）编写；界面与源码水印均指向该作者。 -->
+</vm:StackElement>

@@ -1,0 +1,66 @@
+<vm:StackElement xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:vm="clr-namespace:HandlerGuide.ViewModels;assembly=HandlerGuide"
+                 xmlns:vw="clr-namespace:HandlerGuide.Views;assembly=HandlerGuide">
+
+    <vm:GroupElement Title="计时器">
+        <vm:FieldRowElement Label="真空检查时间" LabelWidth="130" Unit="ms">
+            <vw:Num Key="ut_vacchk" Default="25" Width="90" Format="0" />
+        </vm:FieldRowElement>
+        <vm:FieldRowElement Label="真空释放时间" LabelWidth="130" Unit="ms">
+            <vw:Num Key="ut_vacrel" Default="100" Width="90" Format="0" />
+        </vm:FieldRowElement>
+        <vm:FieldRowElement Label="真空吸取超时" LabelWidth="130" Unit="ms">
+            <vw:Num Key="ut_vacto" Default="500" Width="90" Format="0" />
+        </vm:FieldRowElement>
+        <vm:FieldRowElement Label="机械臂稳定时间" LabelWidth="130" Unit="ms">
+            <vw:Num Key="ut_stable" Default="0" Width="90" Format="0" />
+        </vm:FieldRowElement>
+        <vm:FieldRowElement Label="丢料检查时间" LabelWidth="130" Unit="ms">
+            <vw:Num Key="ut_dropchk" Default="100" Width="90" Format="0" />
+        </vm:FieldRowElement>
+    </vm:GroupElement>
+
+    <vm:GroupElement Title="压力与重测">
+        <vw:Chk Key="ut_aftervac" Label="放料后真空检查（提起后检查 Nest 是否还有芯片）" />
+        <vm:SpacerElement H="6" />
+        <vm:FieldRowElement Label="压力超限" LabelWidth="90">
+            <vm:StackElement Orientation="Horizontal">
+                <vw:Num Key="ut_press" Default="10" Width="80" Format="0" />
+                <vm:TextElement Text="%fs" FontSize="12" Foreground="#6E6E73" Margin="8,0,16,0" />
+                <vm:TextElement Text="时间" FontSize="12.5" Foreground="#1D1D1F" Margin="0,0,8,0" />
+                <vw:Num Key="ut_presst" Default="0" Width="80" Format="0" />
+                <vm:TextElement Text="ms" FontSize="12" Foreground="#6E6E73" Margin="8,0,0,0" />
+            </vm:StackElement>
+        </vm:FieldRowElement>
+        <vm:FieldRowElement Label="重测次数" LabelWidth="130">
+            <vw:Num Key="ut_retry" Default="0" Width="90" Format="0" />
+        </vm:FieldRowElement>
+        <vm:FieldRowElement Label="测试座查空偏移" LabelWidth="130" Unit="mm">
+            <vw:Num Key="ut_skoffset" Default="0" Width="90" Format="0.###" />
+        </vm:FieldRowElement>
+        <vm:FieldRowElement Label="叠料传感器失效检查偏移" LabelWidth="170" Unit="mm">
+            <vw:Num Key="ut_stkoffset" Default="0" Width="90" Format="0.###" />
+        </vm:FieldRowElement>
+    </vm:GroupElement>
+
+    <vm:GroupElement Title="检查与延时">
+        <vw:Chk Key="ut_skchk" Label="测试座查空@连续好品达到阈值" />
+        <vm:FieldRowElement Label="阈值" LabelWidth="130" Unit="颗">
+            <vw:Num Key="ut_skchk_n" Default="0" Width="90" Format="0" />
+        </vm:FieldRowElement>
+        <vw:Chk Key="ut_chchk" Label="测试通道检查" Default="True" />
+        <vw:Chk Key="ut_skchk2" Label="测试座检查(传感器)" Default="True" />
+        <vm:FieldRowElement Label="放料后延时抬起" LabelWidth="130" Unit="ms">
+            <vw:Num Key="ut_delayup" Default="0" Width="90" Format="0" />
+        </vm:FieldRowElement>
+    </vm:GroupElement>
+
+    <vm:StackElement Orientation="Horizontal">
+        <vw:MiniBtn Text="恢复" />
+        <vw:Btn Text="应用" Cmd="Log" Arg="测试臂参数已应用" />
+    </vm:StackElement>
+
+    <vw:Watermark />
+<!-- 温启志 18719361399 · 本文件由温启志（18719361399）编写；界面与源码水印均指向该作者。 -->
+</vm:StackElement>

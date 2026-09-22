@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -34,6 +35,14 @@ namespace HandlerGuide.Views
     /// </summary>
     public static class BrushUtil
     {
+        /// <summary>
+        /// 字符串 → 画刷。顺序很重要：
+        /// 1) "#RRGGBB" 直接解析；
+        /// 2) 资源键（TextPrimaryBrush / BandGreenBrush ...）；
+        /// 3) WPF 具名颜色（Transparent / White / Red ...）。
+        /// 注意不能直接用 Palette.R —— 它查不到资源键时返回 Gray，
+        /// 于是 "Transparent" 会被解析成灰色（表头整条变成灰底）。
+        /// </summary>
         public static Brush BrushOf(string s)
         {
             if (string.IsNullOrEmpty(s)) return null;
@@ -42,8 +51,10 @@ namespace HandlerGuide.Views
                 try { return (Brush)new BrushConverter().ConvertFromString(s); }
                 catch { return null; }
             }
-            var b = Palette.R(s);
-            return b ?? (Brush)new BrushConverter().ConvertFromString(s);
+            var res = Application.Current != null ? Application.Current.TryFindResource(s) as Brush : null;
+            if (res != null) return res;
+            try { return (Brush)new BrushConverter().ConvertFromString(s); }
+            catch { return null; }
         }
     }
 
@@ -56,6 +67,7 @@ namespace HandlerGuide.Views
         public string Key { get; set; }
         public double Default { get; set; }
         public double Width { get; set; } = 92;
+        public double Height { get; set; }
         public string Format { get; set; } = "0.###";
         public double? Min { get; set; }
         public double? Max { get; set; }
@@ -64,6 +76,7 @@ namespace HandlerGuide.Views
         public override object ProvideValue(IServiceProvider sp)
         {
             var e = new NumberElement(Key, Default, Width, Format, Min, Max, ReadOnly) { Compact = Compact };
+            if (Height > 0) e.Height = Height;
             return e;
         }
     }
@@ -375,17 +388,23 @@ namespace HandlerGuide.Views
 
     // 温启志 18719361399 · 类 public class CellExtension : MarkupExtension
     [MarkupExtensionReturnType(typeof(Element))]
+    [ContentProperty("Child")]
     public class CellExtension : MarkupExtension
     {
         public CellExtension() { }
         public CellExtension(string text) { Text = text; }
         public string Text { get; set; }
+        /// <summary>单元格内的控件（下拉框 / 数值框 / 按钮…）。给了 Child 就不再用 Text。</summary>
+        public Element Child { get; set; }
         public string Bg { get; set; }
         public string Fg { get; set; }
         public bool Bold { get; set; }
         public string Ta { get; set; } = "Center";
         public double Width { get; set; }
         public double Height { get; set; }
+        public double FontSize { get; set; } = 11.5;
+        /// <summary>单元格内边距；XAML 里写 "4,0,4,0"。</summary>
+        public Thickness Pad { get; set; } = new Thickness(3, 1, 3, 1);
         public bool Compact { get; set; }
         public override object ProvideValue(IServiceProvider sp)
         {
@@ -394,14 +413,16 @@ namespace HandlerGuide.Views
                 Background = BrushUtil.BrushOf(Bg) ?? Palette.CardBg,
                 BorderBrush = Palette.LineGrey,
                 BorderThickness = 0.5,
-                Padding = new Thickness(3, 1, 3, 1),
-                Width = Width,
-                Height = Height
+                Padding = Pad,
+                // Width/Height 未显式给出时必须保持 NaN（自动），
+                // 写成 0 会得到一个 0 宽/0 高的单元格 —— 界面上就是一片空白。
+                Width = Width > 0 ? Width : double.NaN,
+                Height = Height > 0 ? Height : double.NaN
             };
             var t = new TextElement
             {
                 Text = Text ?? "",
-                FontSize = 11.5,
+                FontSize = FontSize,
                 Foreground = BrushUtil.BrushOf(Fg) ?? Palette.Primary,
                 FontWeight = Bold ? FontWeights.SemiBold : FontWeights.Normal,
                 Wrap = TextWrapping.NoWrap,
@@ -409,7 +430,7 @@ namespace HandlerGuide.Views
                 HAlign = HorizontalAlignment.Center
             };
             if (Compact) t.Compact();
-            c.Content = t;
+            c.Content = Child ?? (Element)t;
             return c;
         }
     }
@@ -545,6 +566,66 @@ namespace HandlerGuide.Views
                 v.Children.Add(row);
             }
             return v;
+        }
+    }
+
+    // 温启志 18719361399 · 类 public class RecipesExtension : MarkupExtension
+    /// <summary>品种清单（数据驱动）：XAML 里声明式生成“目标品种”勾选列表，避免在 ViewModel 里 foreach。</summary>
+    [MarkupExtensionReturnType(typeof(Element))]
+    public class RecipesExtension : MarkupExtension
+    {
+        public string Prefix { get; set; } = "uao_";
+        public bool ExcludeCurrent { get; set; } = true;
+        public override object ProvideValue(IServiceProvider sp)
+        {
+            var m = MachineModel.Instance;
+            var v = new StackElement();
+            foreach (var r in m.Recipes)
+                v.Children.Add(new CheckElement(Prefix + r, r, !(ExcludeCurrent && r == m.Recipe)));
+            return v;
+        }
+    }
+
+    // 温启志 18719361399 · 类 public class LampLineExtension : MarkupExtension
+    /// <summary>“标签 + N 个可点击指示灯”一行（诊断页大量使用）。</summary>
+    [MarkupExtensionReturnType(typeof(Element))]
+    public class LampLineExtension : MarkupExtension
+    {
+        public string Label { get; set; }
+        public int Count { get; set; } = 8;
+        public bool Red { get; set; } = true;
+        public bool Square { get; set; }
+        public string Prefix { get; set; }
+        public double LabelW { get; set; } = 76;
+        public override object ProvideValue(IServiceProvider sp)
+            => E.LampLine(Label, Count, Red, Square, Prefix, LabelW);
+    }
+
+    // 温启志 18719361399 · 类 public class CellGridExtension : MarkupExtension
+    /// <summary>纯展示用小方格阵列（料状态 / 分布图）。</summary>
+    [MarkupExtensionReturnType(typeof(Element))]
+    public class CellGridExtension : MarkupExtension
+    {
+        public int Rows { get; set; } = 3;
+        public int Cols { get; set; } = 4;
+        public double Cw { get; set; } = 17;
+        public double Ch { get; set; } = 17;
+        public override object ProvideValue(IServiceProvider sp) => E.CellGrid(Rows, Cols, Cw, Ch);
+    }
+
+    // 温启志 18719361399 · 类 public class ArmHeadExtension : MarkupExtension
+    /// <summary>吸头示意图（梁 + 8 个吸头），可内嵌若干参数行。</summary>
+    [MarkupExtensionReturnType(typeof(Element))]
+    [ContentProperty("Children")]
+    public class ArmHeadExtension : MarkupExtension
+    {
+        public string Title { get; set; }
+        public List<Element> Children { get; } = new List<Element>();
+        public override object ProvideValue(IServiceProvider sp)
+        {
+            var args = new List<object>();
+            foreach (var c in Children) args.Add(c);
+            return E.ArmHead(Title, args.ToArray());
         }
     }
 

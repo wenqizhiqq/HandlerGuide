@@ -1,0 +1,71 @@
+<vm:StackElement xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:vm="clr-namespace:HandlerGuide.ViewModels;assembly=HandlerGuide"
+                 xmlns:vw="clr-namespace:HandlerGuide.Views;assembly=HandlerGuide">
+
+    <vm:GroupElement Title="Temperature @610">
+        <vm:ScrollElement ViewHeight="460" HScroll="Disabled" VScroll="Auto">
+            <vm:GridElement ColsSpec="190,130,130"
+                            RowsSpec="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                <vm:GridChild Col="0" Row="0"><vw:Cell Text="温度模式" Bg="HeadBlueBrush" Bold="True" Width="190" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+                <vm:GridChild Col="1" Row="0" ColSpan="2"><vw:Cell Text="室温" Bg="HeadAmberBrush" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+
+                <vm:GridChild Col="0" Row="1"><vw:Cell Text="初始加热/S" Bg="BandGreyBrush" Width="190" Height="26" FontSize="11" Pad="4,0,4,0" /></vm:GridChild>
+                <vm:GridChild Col="1" Row="1" ColSpan="2"><vw:Cell Text="0 / 60" Bg="HeadAmberBrush" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+
+                <vm:GridChild Col="0" Row="2"><vw:Cell Text="加热时间/S" Bg="BandGreyBrush" Width="190" Height="26" FontSize="11" Pad="4,0,4,0" /></vm:GridChild>
+                <vm:GridChild Col="1" Row="2" ColSpan="2"><vw:Cell Text="60" Bg="HeadAmberBrush" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+
+                <vm:GridChild Col="0" Row="3"><vw:Cell Text="设定温度/°C" Bg="BandGreyBrush" Width="190" Height="26" FontSize="11" Pad="4,0,4,0" /></vm:GridChild>
+                <vm:GridChild Col="1" Row="3" ColSpan="2"><vw:Cell Text="25" Bg="HeadAmberBrush" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+
+                <vm:GridChild Col="0" Row="4"><vw:Cell Text="预温盘 #1/2" Bg="BandGreyBrush" Width="190" Height="26" FontSize="11" Pad="4,0,4,0" /></vm:GridChild>
+                <vm:GridChild Col="1" Row="4"><vw:Cell Text="0.0" Width="130" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+                <vm:GridChild Col="2" Row="4"><vw:Cell Text="0.0" Width="130" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+
+                <vm:GridChild Col="0" Row="5"><vw:Cell Text="小车 A/B" Bg="BandGreyBrush" Width="190" Height="26" FontSize="11" Pad="4,0,4,0" /></vm:GridChild>
+                <vm:GridChild Col="1" Row="5"><vw:Cell Text="0.0" Width="130" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+                <vm:GridChild Col="2" Row="5"><vw:Cell Text="0.0" Width="130" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+
+                <vm:GridChild Col="0" Row="6"><vw:Cell Text="测试臂 A1/A2" Bg="BandGreyBrush" Width="190" Height="26" FontSize="11" Pad="4,0,4,0" /></vm:GridChild>
+                <vm:GridChild Col="1" Row="6"><vw:Cell Text="0.0" Width="130" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+                <vm:GridChild Col="2" Row="6"><vw:Cell Text="0.0" Width="130" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+
+                <vm:GridChild Col="0" Row="7"><vw:Cell Text="测试臂 A3/A4" Bg="BandGreyBrush" Width="190" Height="26" FontSize="11" Pad="4,0,4,0" /></vm:GridChild>
+                <vm:GridChild Col="1" Row="7"><vw:Cell Text="0.0" Width="130" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+                <vm:GridChild Col="2" Row="7"><vw:Cell Text="0.0" Width="130" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+
+                <vm:GridChild Col="0" Row="8"><vw:Cell Text="测试臂 A5/A6" Bg="BandGreyBrush" Width="190" Height="26" FontSize="11" Pad="4,0,4,0" /></vm:GridChild>
+                <vm:GridChild Col="1" Row="8"><vw:Cell Text="0.0" Width="130" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+                <vm:GridChild Col="2" Row="8"><vw:Cell Text="0.0" Width="130" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+
+                <vm:GridChild Col="0" Row="9"><vw:Cell Text="测试臂 A7/A8" Bg="BandGreyBrush" Width="190" Height="26" FontSize="11" Pad="4,0,4,0" /></vm:GridChild>
+                <vm:GridChild Col="1" Row="9"><vw:Cell Text="0.0" Width="130" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+                <vm:GridChild Col="2" Row="9"><vw:Cell Text="0.0" Width="130" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+
+                <vm:GridChild Col="0" Row="10"><vw:Cell Text="测试臂 B1/B2" Bg="BandGreyBrush" Width="190" Height="26" FontSize="11" Pad="4,0,4,0" /></vm:GridChild>
+                <vm:GridChild Col="1" Row="10"><vw:Cell Text="0.0" Width="130" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+                <vm:GridChild Col="2" Row="10"><vw:Cell Text="0.0" Width="130" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+
+                <vm:GridChild Col="0" Row="11"><vw:Cell Text="测试臂 B3/B4" Bg="BandGreyBrush" Width="190" Height="26" FontSize="11" Pad="4,0,4,0" /></vm:GridChild>
+                <vm:GridChild Col="1" Row="11"><vw:Cell Text="0.0" Width="130" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+                <vm:GridChild Col="2" Row="11"><vw:Cell Text="0.0" Width="130" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+
+                <vm:GridChild Col="0" Row="12"><vw:Cell Text="测试臂 B5/B6" Bg="BandGreyBrush" Width="190" Height="26" FontSize="11" Pad="4,0,4,0" /></vm:GridChild>
+                <vm:GridChild Col="1" Row="12"><vw:Cell Text="0.0" Width="130" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+                <vm:GridChild Col="2" Row="12"><vw:Cell Text="0.0" Width="130" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+
+                <vm:GridChild Col="0" Row="13"><vw:Cell Text="测试臂 B7/B8" Bg="BandGreyBrush" Width="190" Height="26" FontSize="11" Pad="4,0,4,0" /></vm:GridChild>
+                <vm:GridChild Col="1" Row="13"><vw:Cell Text="0.0" Width="130" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+                <vm:GridChild Col="2" Row="13"><vw:Cell Text="0.0" Width="130" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+
+                <vm:GridChild Col="0" Row="14"><vw:Cell Text="测试板 1/2" Bg="BandGreyBrush" Width="190" Height="26" FontSize="11" Pad="4,0,4,0" /></vm:GridChild>
+                <vm:GridChild Col="1" Row="14"><vw:Cell Text="0.0" Width="130" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+                <vm:GridChild Col="2" Row="14"><vw:Cell Text="0.0" Width="130" Height="26" FontSize="11" Pad="2,0,2,0" /></vm:GridChild>
+            </vm:GridElement>
+        </vm:ScrollElement>
+    </vm:GroupElement>
+
+    <vw:Watermark />
+<!-- 温启志 18719361399 · 本文件由温启志（18719361399）编写；界面与源码水印均指向该作者。 -->
+</vm:StackElement>
