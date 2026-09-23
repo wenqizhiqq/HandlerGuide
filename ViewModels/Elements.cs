@@ -827,6 +827,32 @@ namespace HandlerGuide.ViewModels
         public double CanvasWidth { get; set; } = 300;
         public double CanvasHeight { get; set; } = 200;
         public List<DiagramItem> Items { get; } = new List<DiagramItem>();
+        /// <summary>
+        /// 自检用「包含性守卫」：布局页把「必须落在某个箱体里」的图形登记进来
+        /// （闭包返回 null 表示合格，返回字符串表示越界描述），自检时逐帧校验。
+        /// 生产运行时该列表为空，零开销。
+        /// </summary>
+        public List<Func<string>> Guards { get; } = new List<Func<string>>();
+
+        /// <summary>跑一遍所有守卫，返回越界描述（空列表 = 全部合格）。</summary>
+        public List<string> CheckGuards()
+        {
+            var bad = new List<string>();
+            for (int i = 0; i < Guards.Count; i++)
+            {
+                try
+                {
+                    string s = Guards[i]();
+                    if (!string.IsNullOrEmpty(s)) bad.Add(s);
+                }
+                catch (Exception ex)
+                {
+                    bad.Add("guard[" + i + "] 抛异常: " + ex.Message);
+                }
+            }
+            return bad;
+        }
+
 
         /// <summary>
         /// 逐帧重绘回调（仿真页用）。为 null 时本画布是静态图，不产生任何开销。

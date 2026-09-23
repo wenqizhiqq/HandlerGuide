@@ -199,6 +199,11 @@ namespace HandlerGuide
                     b = Path.Combine(shotDir, "_layout_t4.png");
                 }
 
+                // 包含性守卫：料盘是循环流动的，单看一帧抓不住越界，所以每帧都跑一遍，
+                // 把越界描述去重收集起来（同一个箱体在不同相位可能报出不同的越界量）。
+                var guardHits = new System.Collections.Generic.HashSet<string>();
+                var guardCanvas = ViewModels.LayoutPages.LastLayoutCanvas;
+
                 for (int i = 0; i < 80; i++)
                 {
                     vm.FastTick(0.05);
@@ -211,6 +216,24 @@ namespace HandlerGuide
                         System.Windows.Threading.DispatcherPriority.Background);
                     if (i == 19 && a != null) Shoot(win, a);
                     if (i == 79 && b != null) Shoot(win, b);
+                    if (guardCanvas != null)
+                        foreach (var g in guardCanvas.CheckGuards()) guardHits.Add(g);
+                }
+
+                if (guardCanvas == null)
+                    Log("layout guard: 未拿到画布（LastLayoutCanvas 为空），跳过包含性校验");
+                else if (guardHits.Count == 0)
+                    Log("layout guard: 合格 guards=" + guardCanvas.Guards.Count + " violations=0");
+                else
+                {
+                    Log("layout guard: 越界 guards=" + guardCanvas.Guards.Count
+                        + " violations=" + guardHits.Count);
+                    int shown = 0;
+                    foreach (var g in guardHits)
+                    {
+                        Log("  ! " + g);
+                        if (++shown >= 5) break;
+                    }
                 }
 
                 long diff = -1;
