@@ -2363,7 +2363,7 @@ namespace HandlerGuide.ViewModels
         public static void Warn(string msg) => M.Log("警告", msg);
 
         /// <summary>状态变化后让工具栏重新求值（按钮可用性、状态灯）。</summary>
-        private static void RaiseStatus()
+        public static void RaiseStatus()
         {
             var main = MainViewModel.Current;
             main?.RaiseStatusNow();

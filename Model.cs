@@ -150,6 +150,55 @@ namespace HandlerGuide
         /// <summary>批次结束时间（结批次时写入）。</summary>
         public DateTime? BatchEnd { get; set; }
 
+        // ------------------------------------------------------------------
+        //  批次(Lot)管理与运行统计（温启志 18719361399）
+        //  参考 ASTI Hexa Maxx《Chapter 4 Operator's Menu》与《Chapter 3 Run Time Data》：
+        //  Lot Number / Lot Size / Operator ID / Shift / Package / Start Date & Time /
+        //  Gross PPH / Nett PPH / MTBA / Lot Time / Run Time / Jam Time / Stop Time。
+        // ------------------------------------------------------------------
+
+        /// <summary>批量（该批次计划投产的器件数）。</summary>
+        public int LotSize { get; set; }
+
+        /// <summary>班别（如 A / B / C 或 1 / 2）。</summary>
+        public string Shift { get; set; } = "A";
+
+        /// <summary>输出介质：Tray（料盘）或 Tape（载带）。</summary>
+        public string OutputType { get; set; } = "Tray";
+
+        /// <summary>重扫模式（Rescan Mode）：对已有结果重新扫描分类。</summary>
+        public bool RescanMode { get; set; }
+
+        /// <summary>卡料次数（用于计算 MTBA）。</summary>
+        public int JamCount { get; set; }
+
+        /// <summary>卡料累计时间（分钟）。</summary>
+        public double JamTimeMin { get; set; }
+
+        /// <summary>停机累计时间（分钟，含人为停止与等待）。</summary>
+        public double StopTimeMin { get; set; }
+
+        /// <summary>纯运行累计时间（分钟，不含任何停机）。</summary>
+        public double RunTimeMin { get; set; }
+
+        /// <summary>载带 #1 已编带数量（Tape 输出时有效）。</summary>
+        public int Carrier1Count { get; set; }
+
+        /// <summary>载带 #2 已编带数量（Tape 输出时有效）。</summary>
+        public int Carrier2Count { get; set; }
+
+        /// <summary>自动打印：开批 / 结批时自动输出批次汇总。</summary>
+        public bool AutoPrinting { get; set; }
+
+        /// <summary>批次是否处于「清料(Purge/Abort)」过程中。</summary>
+        public bool Purging { get; set; }
+
+        /// <summary>KGD 补盘排序（把空穴位用 KGD 器件填满）。</summary>
+        public bool KgdTraySort { get; set; }
+
+        /// <summary>批次记录存放目录。</summary>
+        public string LotDirName => "Lot";
+
         // ---- 主界面（复刻 image37）所需的实时读数 ----
         private string _clock = "00:00:00";
         private string _runTime = "0:00:00";

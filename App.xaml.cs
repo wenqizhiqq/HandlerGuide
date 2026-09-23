@@ -663,7 +663,130 @@ namespace HandlerGuide
                 // ---------- 18. 主页统计页签（Counter / UPH-Tray / Timer） ----------
                 Chk("主页可构建", () => { }, () => HomePages.MainScreen() != null);
 
-                // ---------- 19. 收尾：把自检自己造出来的东西清干净 ----------
+                // ---------- 19. 批次管理 / 运行统计（温启志 18719361399） ----------
+                Chk("开批校验：批号为空会被拒", () =>
+                {
+                    M.SetText("f_BatchNo", "");
+                    M.SetNum("f_LotSize", 0);
+                }, () => LotOps.CheckCanOpenLot() != null);
+
+                Chk("开批校验：批量为 0 会被拒", () =>
+                {
+                    M.SetText("f_BatchNo", "HG_LOT_1");
+                    M.SetNum("f_LotSize", 0);
+                }, () => LotOps.CheckCanOpenLot() != null);
+
+                Chk("开批成功", () =>
+                {
+                    M.SetText("f_BatchNo", "HG_LOT_1");
+                    M.SetText("f_SubBatchNo", "SUB-1");
+                    M.SetText("f_Customer", "JHT");
+                    M.SetText("f_Operator", "OP-001");
+                    M.SetText("f_Shift", "A");
+                    M.SetChoice("f_output_type", 0);
+                    M.SetNum("f_LotSize", 500);
+                    if (!LotOps.OpenLot()) throw new Exception("开批失败：" + (LotOps.CheckCanOpenLot() ?? "未知原因"));
+                }, () => M.BatchOpen && M.LotSize == 500 && M.Shift == "A");
+
+                Chk("开批后统计被清零", () => { },
+                    () => M.TotalCount == 0 && M.JamCount == 0 && M.RunTimeMin == 0);
+                Chk("重复开批会被拒", () => { }, () => LotOps.CheckCanOpenLot() != null);
+                Chk("批次状态文本", () => { }, () => LotOps.LotStateText == "已开批");
+
+                Chk("运行时间累计（运行中）", () =>
+                {
+                    Ops.StartProduction();
+                    for (int i = 0; i < 120; i++) LotOps.Tick(1.0 / 120.0);   // 1 分钟
+                }, () => Math.Abs(M.RunTimeMin - 1.0) < 0.01);
+
+                Chk("停机时间累计（暂停后）", () =>
+                {
+                    Ops.PauseProduction();
+                    for (int i = 0; i < 60; i++) LotOps.Tick(1.0 / 120.0);    // 0.5 分钟
+                }, () => Math.Abs(M.StopTimeMin - 0.5) < 0.01);
+
+                Chk("产量与良率统计", () =>
+                {
+                    Ops.ResumeProduction();
+                    Pump(400);
+                }, () => M.TotalCount > 0 && M.Yield >= 0 && M.Yield <= 100);
+
+                Chk("卡料计数与 MTBA", () =>
+                {
+                    LotOps.JamOccurred("自检模拟卡料");
+                    LotOps.JamOccurred("自检模拟卡料2");
+                }, () => M.JamCount == 2 && LotOps.MtbaMin > 0);
+
+                Chk("批次时间 = 运行 + 卡料 + 停机", () => { },
+                    () => Math.Abs(LotOps.LotTimeMin - (M.RunTimeMin + M.JamTimeMin + M.StopTimeMin)) < 0.01);
+                Chk("批次进度 / 剩余数量", () => { },
+                    () => LotOps.ProgressPercent >= 0 && LotOps.Remaining == Math.Max(0, M.LotSize - M.TotalCount));
+                Chk("Gross/Nett PPH 非负", () => { },
+                    () => LotOps.GrossPPH >= 0 && LotOps.NettPPH >= 0);
+
+                Chk("停产后才能切重扫模式", () =>
+                {
+                    Ops.StopProduction();
+                    if (!LotOps.SetRescanMode(true)) throw new Exception("切换重扫模式失败");
+                }, () => M.RescanMode && !Ops.IsRunning);
+
+                Chk("Tray 模式下换载带会被拒", () => { }, () => !LotOps.ChangeCarrier(1));
+                Chk("载带编号越界会被拒", () => { }, () => !LotOps.ChangeCarrier(3));
+                Chk("切到 Tape 后可换载带", () =>
+                {
+                    M.OutputType = "Tape";
+                    M.Carrier1Count = 123;
+                    if (!LotOps.ChangeCarrier(1)) throw new Exception("换载带失败");
+                }, () => M.Carrier1Count == 0);
+
+                Chk("KGD 补盘可切换", () => LotOps.SetKgdTraySort(true), () => M.KgdTraySort);
+                Chk("自动打印可切换", () => LotOps.SetAutoPrinting(false), () => !M.AutoPrinting);
+                Chk("停止后才能中止批次", () =>
+                {
+                    Ops.StopProduction();
+                    if (!LotOps.AbortLot()) throw new Exception("中止批次失败");
+                }, () => M.Purging);
+                Chk("清料完成", () => LotOps.FinishPurge(), () => !M.Purging);
+                Chk("清盘", () => { if (!LotOps.PurgeTrays()) throw new Exception("清盘失败"); }, () => M.Purging);
+                Chk("清料完成后可结批", () => LotOps.FinishPurge(), () => !M.Purging);
+
+                Chk("事件日志 / 错误日志", () => { },
+                    () => LotOps.EventLog().Count > 0 && !string.IsNullOrEmpty(LotOps.ExportEventLog())
+                       && !string.IsNullOrEmpty(LotOps.ExportErrorLog()));
+                Chk("批次汇总文本非空", () => { }, () => LotOps.PrintLotSummary().Length > 100);
+
+                Chk("结批成功并写批次记录", () =>
+                {
+                    if (!LotOps.CloseLot()) throw new Exception("结批失败：" + (LotOps.CheckCanCloseLot() ?? "未知原因"));
+                }, () => !M.BatchOpen && M.BatchEnd.HasValue);
+
+                Chk("批次记录可被检索到", () => { },
+                    () => LotOps.SearchLotRecords(null, null, "HG_LOT_1").Any(r => r.LotNo == "HG_LOT_1"));
+                Chk("按班别检索", () => { },
+                    () => LotOps.SearchLotRecords(null, null, null, null, "A").Any(r => r.LotNo == "HG_LOT_1"));
+                Chk("按不存在的批号检索为空", () => { },
+                    () => !LotOps.SearchLotRecords(null, null, "NO_SUCH_LOT_ZZZ").Any());
+                Chk("批次记录总数 > 0", () => { }, () => LotOps.LotRecordCount > 0);
+                Chk("重复结批会被拒", () => { }, () => LotOps.CheckCanCloseLot() != null);
+
+                // ---------- 20. 收尾：把自检自己造出来的东西清干净 ----------
+                Chk("清理自检批次记录", () =>
+                {
+                    try
+                    {
+                        foreach (var f in System.IO.Directory.GetFiles(LotOps.LotDir, "*.crd"))
+                        {
+                            var lines = System.IO.File.ReadAllLines(f)
+                                .Where(l => l.IndexOf("HG_LOT_1", StringComparison.OrdinalIgnoreCase) < 0)
+                                .ToArray();
+                            System.IO.File.WriteAllLines(f, lines);
+                        }
+                        foreach (var f in System.IO.Directory.GetFiles(LotOps.LotDir, "HG_LOT_1.lot"))
+                            System.IO.File.Delete(f);
+                    }
+                    catch { /* 清理失败不影响自检结论 */ }
+                }, () => !LotOps.SearchLotRecords(null, null, "HG_LOT_1").Any());
+
                 Chk("清理自检品种", () =>
                 {
                     Ops.DeleteRecipe("hg_ops_selftest_recipe");

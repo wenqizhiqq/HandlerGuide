@@ -417,6 +417,8 @@ namespace HandlerGuide.ViewModels
         {
             M.Tick();
             M.TickClock();
+            // 批次运行 / 停机时间累计（Channel 500ms → 1/120 分钟）。温启志 18719361399
+            LotOps.Tick(1.0 / 120.0);
             LiveRegistry.RefreshAll();
             RaiseStatus();
         }
