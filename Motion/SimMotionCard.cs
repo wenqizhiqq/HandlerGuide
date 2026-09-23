@@ -66,7 +66,7 @@ namespace HandlerGuide.Motion
         }
 
         /// <inheritdoc />
-        public string CardName => "内置仿真卡（Leadshine DMC 兼容）";
+        public string CardName => "内置仿真卡（雷赛 DMC-E 兼容）";
 
         /// <inheritdoc />
         public bool IsReal => false;
@@ -84,7 +84,7 @@ namespace HandlerGuide.Motion
         public int OutputCount => 32;
 
         /// <inheritdoc />
-        public string Info => "仿真模式：梯形速度曲线 + 软限位钳制 + IO 反馈联动";
+        public string Info => "仿真模式：DMC-E 语义 · 梯形速度曲线 + 软限位钳制 + IO 反馈联动";
 
         /// <inheritdoc />
         public bool Open()

@@ -135,6 +135,13 @@ namespace HandlerGuide.Motion
         /// <summary>最近一次被拒绝的运动原因。</summary>
         public string LastReject { get; private set; } = "";
 
+        /// <summary>
+        /// 最近一次「真卡探测」的说明文字。
+        /// 没连上真卡时这里写的是具体原因（驱动缺失 / 未插卡 / 位数不匹配），
+        /// 现场排查时先看这一条。
+        /// </summary>
+        public string LastProbeInfo { get; private set; } = "尚未探测";
+
         /// <summary>被安全策略拒绝的累计次数。</summary>
         public int RejectCount { get; private set; }
 
@@ -367,15 +374,17 @@ namespace HandlerGuide.Motion
             var mm = MachineModel.Instance;
             if (_card != null && _card.IsReal && _card.IsConnected) return true;
 
-            // 1) 先探测 LTDMC.dll + 板卡
-            if (LeadshineApi.Probe())
+            // 1) 先探测 LTDMC.dll + 板卡（DMC-E 总线卡 / DMC 脉冲卡都能识别）
+            bool found = DmceApi.ProbeEx(out ushort cardId, out bool isBus, out string desc);
+            LastProbeInfo = desc;
+            if (found)
             {
-                var real = new LeadshineCard(Axes.Count);
+                var real = new DmceCard(Axes.Count);
                 if (real.Open())
                 {
                     _card = real;
                     ApplyAllConfig();
-                    mm.Log("信息", "已连接雷赛运动控制卡：" + real.CardName + "（" + Axes.Count + " 轴）");
+                    mm.Log("信息", "已连接雷赛运动控制卡：" + real.CardName + " · " + desc + "（" + Axes.Count + " 轴）");
                     return true;
                 }
             }

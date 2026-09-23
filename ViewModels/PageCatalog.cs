@@ -112,9 +112,12 @@ namespace HandlerGuide.ViewModels
             {
                 Name = "运动仿真",
                 Icon = "🎛️",
-                Desc = "雷赛运动控制卡（LTDMC.dll / DMC 系列）轴与 IO 的仿真、互锁与轨迹预览；无卡时自动降级为内置仿真卡。",
+                Desc = "雷赛 DMC-E 总线卡 / DMC 脉冲卡（LTDMC.dll）的轴与 IO 仿真、互锁、整机模块平面动画；无卡时自动降级为内置仿真卡。",
                 Items =
                 {
+                    D("motion_layout", "🏭", "模块平面仿真",
+                      "三温标准机 11 个模组的整机平面图，模组内零件随运动控制卡实时动作（料盘升降 / 流水走料 / 移盘穿梭 / 压测下压 / 料枪伸缩 / 加热盘通断），并内置安全演示节拍。",
+                      LayoutPages.LayoutPage),
                     D("motion_sim", "🎛️", "运动仿真",
                       "轴点动 / 回零 / 停止、32 入 32 出 IO 监视与手动翻转、10 条安全互锁规则、共享走廊轨迹动画与安全演示节拍。",
                       MotionPages.SimPage),

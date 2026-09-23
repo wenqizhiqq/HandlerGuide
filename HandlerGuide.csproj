@@ -23,6 +23,12 @@
   <ItemGroup>
     <!-- 把用户手册随程序一起发布，运行时直接读取复刻页面 -->
     <None Include="..\Pick and Place Handler 9000 User Manual_CN.docx" CopyToOutputDirectory="PreserveNewest" />
+    <!-- 雷赛 DMC-E 总线卡 / DMC 脉冲卡原生驱动（LTDMC.dll）。
+         必须放在 exe 同级目录：DllImport("LTDMC.dll") 的默认搜索顺序里
+         只有应用程序目录与 PATH，放在 native\ 子目录里是找不到的
+         （曾因此一直报「LTDMC.dll 缺失」，真卡永远连不上）。
+         本机未插卡时 dmc_board_init 返回 0，MotionManager 自动降级为内置仿真卡。 -->
+    <None Include="native\LTDMC.dll" Link="LTDMC.dll" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

@@ -94,6 +94,14 @@ namespace HandlerGuide
             try
             {
                 File.WriteAllText(LogPath, "");
+
+                // 自检里会「关掉一个窗口再开一个新窗口」。
+                // 默认 ShutdownMode 是 OnLastWindowClose：关掉唯一的窗口会立刻启动
+                // Application.Shutdown()，于是 Application.Current 变成 null，
+                // 之后任何 Palette.R(...) 都会 NullReferenceException。
+                // 自检必须改成显式关闭，由 OnStartup 末尾的 Shutdown() 收尾。
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
                 PresentationTraceSources.Refresh();
                 var bind = PresentationTraceSources.DataBindingSource;
                 bind.Listeners.Add(new DelegateTraceListener());
@@ -138,11 +146,130 @@ namespace HandlerGuide
                 Trace.Flush();
                 win.Close();
 
+                LayoutSelfTest(shotDir);
                 MotionSelfTest();
             }
             catch (Exception ex)
             {
                 Log("selftest crash: " + ex);
+            }
+        }
+
+        /// <summary>
+        /// 平面仿真页「动画」自检。
+        /// 日志全绿并不代表界面在动：本方法连续泵 4 秒仿真节拍（80 帧），
+        /// 在 t≈1s 与 t≈4s 各截一张图，然后逐像素比较。
+        /// 差异为 0 就说明画面根本没变化 —— 即使 ok=51 bad=0 也算失败。
+        /// </summary>
+        private static void LayoutSelfTest(string shotDir)
+        {
+            try
+            {
+                var m = Motion.MotionManager.Instance;
+                m.ResetEStop();
+                m.ClearAlarm();
+
+                var win = new Views.MainWindow();
+                win.Show();
+                win.UpdateLayout();
+                var vm = win.Vm;
+
+                ViewModels.PageVm page = null;
+                foreach (var p in vm.AllPages)
+                {
+                    if (p.Id == "motion_layout") { page = p; break; }
+                }
+                if (page == null)
+                {
+                    Log("layout selftest: 找不到 motion_layout 页面");
+                    win.Close();
+                    return;
+                }
+
+                // 显式构建一次：XAML/构建异常必须计入失败，不能被绑定吞掉。
+                var content = page.Content;
+                if (content == null) throw new InvalidOperationException("motion_layout 内容为空");
+                vm.Navigate(page);
+                win.UpdateLayout();
+
+                string a = null, b = null;
+                if (!string.IsNullOrEmpty(shotDir))
+                {
+                    a = Path.Combine(shotDir, "_layout_t1.png");
+                    b = Path.Combine(shotDir, "_layout_t4.png");
+                }
+
+                for (int i = 0; i < 80; i++)
+                {
+                    vm.FastTick(0.05);
+                    win.UpdateLayout();
+                    // 关键：数据绑定更新排在 DispatcherPriority.DataBind 上，
+                    // UpdateLayout() 只做 Measure/Arrange，不会刷新绑定。
+                    // 必须显式把消息队列泵到 Background，否则截图拿到的永远是旧画面
+                    // （之前这里 pixelDiff=0，看起来「动画坏了」，其实是探针读到了旧视觉树）。
+                    win.Dispatcher.Invoke(() => { },
+                        System.Windows.Threading.DispatcherPriority.Background);
+                    if (i == 19 && a != null) Shoot(win, a);
+                    if (i == 79 && b != null) Shoot(win, b);
+                }
+
+                long diff = -1;
+                if (a != null && b != null) diff = ComparePng(a, b);
+
+                Log("layout selftest: frames=80 demoCycles=" + m.DemoCycles
+                    + " step=" + m.DemoStepText
+                    + " upArmX=" + m.Position(4).ToString("0.0")
+                    + " downArmX=" + m.Position(16).ToString("0.0")
+                    + " carA=" + m.Position(28).ToString("0.0")
+                    + " carB=" + m.Position(29).ToString("0.0")
+                    + " pressZ=" + m.Position(2).ToString("0.0")
+                    + " gunY=" + m.Position(5).ToString("0.0")
+                    + " heat=" + m.ReadOut(15)
+                    + " pixelDiff=" + diff
+                    + (diff > 0 ? " （动画正常）"
+                       : diff == 0 ? " （警告：画面没有变化）"
+                       : " （未开启截图，跳过像素比较）"));
+
+                win.Close();
+            }
+            catch (Exception ex)
+            {
+                Log("layout selftest crash: " + ex.Message);
+            }
+        }
+
+        /// <summary>逐像素比较两张 PNG，返回不同的像素个数（-1 = 尺寸不一致）。</summary>
+        private static long ComparePng(string pa, string pb)
+        {
+            try
+            {
+                if (!File.Exists(pa) || !File.Exists(pb)) return -1;
+                var da = new System.Windows.Media.Imaging.PngBitmapDecoder(
+                    new Uri(pa), System.Windows.Media.Imaging.BitmapCreateOptions.None,
+                    System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+                var db = new System.Windows.Media.Imaging.PngBitmapDecoder(
+                    new Uri(pb), System.Windows.Media.Imaging.BitmapCreateOptions.None,
+                    System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+                var fa = da.Frames[0];
+                var fb = db.Frames[0];
+                int w = fa.PixelWidth, h = fa.PixelHeight;
+                if (w != fb.PixelWidth || h != fb.PixelHeight) return -1;
+                int stride = w * 4;
+                var ba = new byte[stride * h];
+                var bb = new byte[stride * h];
+                fa.CopyPixels(ba, stride, 0);
+                fb.CopyPixels(bb, stride, 0);
+                long diff = 0;
+                for (int i = 0; i + 2 < ba.Length; i += 4)
+                {
+                    if (ba[i] != bb[i] || ba[i + 1] != bb[i + 1] || ba[i + 2] != bb[i + 2]) diff++;
+                }
+                return diff;
+            }
+            catch (Exception ex)
+            {
+                Log("ComparePng fail: " + ex.Message);
+                return -1;
             }
         }
 
@@ -155,7 +282,12 @@ namespace HandlerGuide
             try
             {
                 var m = Motion.MotionManager.Instance;
+
                 m.Connect();
+                // 探测说明由 Connect() 记录：没连上真卡时这里就是具体原因
+                // （驱动缺失 / 未插卡 / 位数不匹配），现场排查先看这一条。
+                // 注意不要在 Connect() 之外再调一次 dmc_board_init —— 那会重复初始化板卡。
+                Log("motion probe: " + m.LastProbeInfo);
                 Log("motion: card=" + m.CardName + " sim=" + m.IsSim
                     + " axes=" + m.Axes.Count + " in=" + m.Inputs.Count + " out=" + m.Outputs.Count);
 
