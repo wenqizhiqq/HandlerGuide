@@ -34,7 +34,8 @@
     </vm:GroupElement>
 
     <vm:StackElement Orientation="Horizontal">
-        <vw:Btn Text="应用" Cmd="Log" Arg="工作模式：正常模式" />
+        <vw:MiniBtn Text="恢复" Cmd="Reset" Arg="mode" />
+        <vw:Btn Text="应用" Cmd="Apply" Arg="mode" />
     </vm:StackElement>
 
     <vm:GroupElement Title="工作模式说明">

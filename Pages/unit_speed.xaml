@@ -66,8 +66,8 @@
     </vm:GroupElement>
 
     <vm:StackElement Orientation="Horizontal">
-        <vw:MiniBtn Text="恢复" />
-        <vw:Btn Text="应用" Cmd="Log" Arg="速度设定已应用" />
+        <vw:MiniBtn Text="恢复" Cmd="Reset" Arg="unit_speed" />
+        <vw:Btn Text="应用" Cmd="Apply" Arg="unit_speed" />
     </vm:StackElement>
 
     <vw:Watermark />

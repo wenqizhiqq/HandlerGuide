@@ -469,31 +469,26 @@ namespace HandlerGuide.Views
         {
             string[] heads = { "pidx", "UnitName", "SubArea", "Code", "Message", "DateTime", "Recover", "StopTime", "RunMode", "LotId", "MesId" };
             double[] widths = { 46, 76, 70, 100, 320, 150, 60, 70, 80, 60, 60 };
-            var sample = new (string, string, string, string, string)[]
-            {
-                ("92", "HMI_Main", "EVT060054", "品种切换至[SGS_QFP32_7X7_32_1]", "2023-07-14 08:51:23.622"),
-                ("93", "System", "EVT000050", "程序开始-2.0.23.709", "2023-07-14 08:51:23.757"),
-                ("94", "HMI_Main", "EVT060055", "用户登录成功- [Admin]", "2023-07-14 08:51:38.390"),
-                ("95", "HMI_Main", "EVT060056", "用户等级变为- [Admin]", "2023-07-14 08:51:38.397"),
-                ("96", "System", "EVT000000", "用户进行操作：登录成功] [Admin][Admin]", "2023-07-14 08:51:38.403"),
-                ("97", "Machine", "EVT040059", "机台开始归零", "2023-07-14 11:38:34.435"),
-                ("98", "Machine", "EVT040060", "机台归零成功", "2023-07-14 11:38:43.041"),
-            };
+            // 温启志 18719361399：表格改为读真实日志（MachineModel.Logs）。
+            // 每格用 LiveElement 绑定 Ops.LogCell(行, 列)，由 LiveRegistry 每 500ms 统一刷新，
+            // 这样「更新 / 导出」之后表格内容会立刻跟着变，而不是永远显示死数据。
             var host = new StackElement();
             var head = new StackElement { Orientation = Orientation.Horizontal };
             for (int i = 0; i < heads.Length; i++)
                 head.Children.Add(new DisplayElement(heads[i], widths[i], Palette.HeadBlue, Palette.Primary, TextAlignment.Left, 11) { Margin = new Thickness(0, 0, 1, 1) });
             host.Children.Add(head);
-            string[] cellTexts = new string[11];
-            foreach (var s in sample)
+
+            for (int r = 0; r < 40; r++)
             {
+                int rr = r;
                 var row = new StackElement { Orientation = Orientation.Horizontal };
-                cellTexts[0] = s.Item1; cellTexts[1] = s.Item2; cellTexts[2] = "";
-                cellTexts[3] = s.Item3; cellTexts[4] = s.Item4; cellTexts[5] = s.Item5;
-                cellTexts[6] = "0"; cellTexts[7] = ""; cellTexts[8] = "Normal";
-                cellTexts[9] = ""; cellTexts[10] = "";
-                for (int i = 0; i < 11; i++)
-                    row.Children.Add(new DisplayElement(cellTexts[i], widths[i], System.Windows.Media.Brushes.White, Palette.Primary, TextAlignment.Left, 11) { Margin = new Thickness(0, 0, 1, 1) });
+                for (int c = 0; c < heads.Length; c++)
+                {
+                    int cc = c;
+                    row.Children.Add(new LiveElement(_ => ViewModels.Ops.LogCell(rr, cc), null, widths[c],
+                        System.Windows.Media.Brushes.White, Palette.Primary, 11)
+                    { Margin = new Thickness(0, 0, 1, 1) });
+                }
                 host.Children.Add(row);
             }
             return new ScrollElement { Content = host };

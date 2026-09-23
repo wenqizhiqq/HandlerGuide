@@ -44,44 +44,57 @@ namespace HandlerGuide.ViewModels
                 case "Log":
                     m.Log("信息", arg ?? "");
                     break;
+
+                // ---- 下面这些是 XAML 页面真正用到的按钮命令（温启志 18719361399）----
+                // Cmd="Apply"/"Reset" 的 Arg 是「页 id」，对应 Ops 里的按页表单。
+                case "Apply":
+                    if (Ops.HasPageForm(arg)) Ops.ApplyPageForm(arg);
+                    else m.Log("信息", "已应用参数" + (arg != null ? "：" + arg : ""));
+                    break;
+                case "Reset":
+                    if (Ops.HasPageForm(arg)) Ops.RestorePageForm(arg);
+                    else m.Log("信息", "已重置" + (arg != null ? "：" + arg : ""));
+                    break;
                 case "Warn":
                     m.Log("警告", arg ?? "");
                     break;
                 case "Jog":
-                    m.Log("信息", "Jog " + (arg ?? ""));
+                {
+                    // Arg 形如 "轴名|方向" 或 "轴名|+步长"
+                    string a = arg ?? "";
+                    int bar = a.IndexOf('|');
+                    if (bar <= 0) { m.Log("信息", "Jog " + a); break; }
+                    string ax = a.Substring(0, bar);
+                    string d = a.Substring(bar + 1).Trim();
+                    if (d == "+" || d == "-") Ops.JogAxisByName(ax, d == "+" ? 1 : -1);
+                    else if (double.TryParse(d, out double step)) Ops.JogAxisBy(Ops.FindAxis(ax)?.Index ?? -1, step);
+                    else Ops.JogAxisByName(ax, 1);
                     break;
+                }
                 case "Toggle":
                     if (!string.IsNullOrEmpty(arg))
                         m.SetToggle(arg, !m.GetToggle(arg));
                     break;
-                case "Apply":
-                    m.Log("信息", "已应用参数" + (arg != null ? "：" + arg : ""));
-                    break;
-                case "Reset":
-                    m.Log("信息", "已重置" + (arg != null ? "：" + arg : ""));
-                    break;
                 case "Export":
-                    m.Log("信息", "已导出" + (arg != null ? "：" + arg : ""));
+                    if (arg == "recipe") Ops.ExportRecipeDialog();
+                    else if (arg == "log") Ops.ExportLogDialog();
+                    else if (arg == "user") Ops.ExportUsersDialog();
+                    else if (arg == "alarm") Ops.ExportAlarmStatsDialog();
+                    else m.Log("信息", "已导出" + (arg != null ? "：" + arg : ""));
                     break;
                 case "Import":
-                    m.Log("信息", "已导入" + (arg != null ? "：" + arg : ""));
+                    if (arg == "recipe") Ops.ImportRecipeDialog();
+                    else if (arg == "user") Ops.ImportUsersDialog();
+                    else m.Log("信息", "已导入" + (arg != null ? "：" + arg : ""));
                     break;
                 case "ApplyTemp":
-                {
-                    int idx = m.GetChoice("tc_mode");
-                    m.TempMode = idx == 1 ? "高温模式" : "常温模式";
-                    m.TempSet = idx == 1 ? 50 : 25;
-                    m.Log("信息", "温控模式切换为：" + m.TempMode);
+                    Ops.ApplyTempControl();
                     break;
-                }
                 case "Home":
-                {
-                    foreach (var mo in m.Motors) m.SetToggle("mh_" + mo.Name, true);
-                    m.Log("信息", "开始归零过程");
+                    Ops.ConfirmHome();
                     break;
-                }
                 case "CancelHome":
-                    m.Log("信息", "已取消归零");
+                    Ops.CancelHome();
                     break;
                 case "SelectAll":
                 {
@@ -96,7 +109,7 @@ namespace HandlerGuide.ViewModels
                     break;
                 }
                 case "UpdateLog":
-                    m.Log("信息", "信息记录已更新");
+                    Ops.UpdateLog();
                     break;
                 case "SelectAllRecipes":
                     foreach (var r in m.Recipes) m.SetToggle("uao_" + r, true);
@@ -105,8 +118,20 @@ namespace HandlerGuide.ViewModels
                 case "DeselectAllRecipes":
                     foreach (var r in m.Recipes) m.SetToggle("uao_" + r, false);
                     m.Log("信息", "已全不选目标品种");
-                    break;                case "ExportLog":
-                    m.Log("信息", "信息记录已导出为文本文件");
+                    break;
+                case "ExportLog":
+                    Ops.ExportLogDialog();
+                    break;
+                case "ExportAlarm":
+                    Ops.ExportAlarmStatsDialog();
+                    break;
+                // 「偏移设定」页区域列表里的 + 按钮：Arg 是区域编号（1~13）
+                case "OffsetRegion":
+                    {
+                        int ri;
+                        if (int.TryParse(arg, out ri)) Ops.SelectOffsetRegion(ri);
+                        else m.Log("警告", "区域编号无效：" + arg);
+                    }
                     break;
                 default:
                     m.Log("信息", arg ?? name ?? "");

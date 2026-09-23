@@ -480,8 +480,8 @@ namespace HandlerGuide.ViewModels
                         E.H(E.T("子模块", 11.5, E.P, false, TextWrapping.NoWrap, TextAlignment.Center, HorizontalAlignment.Center),
                             E.Cmb("ba_sub", new[] { "ALL", "X 轴", "Z 轴", "小车", "测试臂" }, 130, 0)),
                         E.Spacer(2)),
-                    E.V(E.Btn("更新", () => E.M.Log("信息", "刷新报警统计")),
-                        E.MiniBtn("导出", null))));
+                    E.V(E.Btn("更新", Ops.RefreshAlarmStats),
+                        E.MiniBtn("导出", Ops.ExportAlarmStatsDialog))));
 
             return E.V(
                 

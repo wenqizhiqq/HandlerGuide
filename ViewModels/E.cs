@@ -237,23 +237,43 @@ namespace HandlerGuide.ViewModels
 
         public static NumberElement Num(string key, double def = 0, double w = 92, string fmt = "0.###",
             double? min = null, double? max = null, bool readOnly = false)
-            => new NumberElement(key, def, w, fmt, min, max, readOnly);
+        {
+            // 登记合法区间（供 Ops 表单做范围校验）并保证键存在
+            // （前缀匹配 / 恢复快照都依赖「键已经出现在模型里」）。
+            Ops.NoteRange(key, min, max);
+            Ops.NoteDefault(key, def, readOnly);
+            return new NumberElement(key, def, w, fmt, min, max, readOnly);
+        }
 
         public static TextInputElement Text(string key, string def = "", double w = 160, bool readOnly = false)
-            => new TextInputElement(key, def, w, readOnly);
+        {
+            // 温启志 18719361399：非只读框登记缺省值，让「应用/恢复」能覆盖到它
+            if (!readOnly) Ops.NoteTextDefault(key, def);
+            return new TextInputElement(key, def, w, readOnly);
+        }
 
         public static ComboElement Cmb(string key, string[] opts, double w = 150, int def = 0)
-            => new ComboElement(key, opts, w, def);
+        {
+            Ops.NoteChoiceDefault(key, def);
+            return new ComboElement(key, opts, w, def);
+        }
 
         public static CheckElement Chk(string key, string label, bool def = false)
-            => new CheckElement(key, label, def);
+        {
+            Ops.NoteToggleDefault(key, def);
+            return new CheckElement(key, label, def);
+        }
 
         public static SwitchElement Switch(string key, bool def = false)
-            => new SwitchElement(key, def);
+        {
+            Ops.NoteToggleDefault(key, def);
+            return new SwitchElement(key, def);
+        }
 
         public static StackElement Radios(string key, string[] opts, bool vertical = true, int def = 0)
         {
             var sp = new StackElement { Orientation = vertical ? Orientation.Vertical : Orientation.Horizontal };
+            Ops.NoteChoiceDefault(key, def);
             int cur = M.GetChoice(key, def);
             for (int i = 0; i < opts.Length; i++)
             {
@@ -263,7 +283,8 @@ namespace HandlerGuide.ViewModels
             return sp;
         }
 
-        public static ButtonElement Btn(string text, Action act = null, string style = "PrimaryButton", double fs = 12.5)
+        public static ButtonElement Btn(string text, Action act = null, string style = "PrimaryButton",
+            double fs = 12.5, Func<bool> enabled = null)
         {
             return new ButtonElement
             {
@@ -272,11 +293,20 @@ namespace HandlerGuide.ViewModels
                 StyleKey = style,
                 FontSize = fs,
                 Padding = new Thickness(14, 6, 14, 6),
-                Margin = new Thickness(0, 2, 8, 2)
+                Margin = new Thickness(0, 2, 8, 2),
+                Enabled = enabled
             };
         }
 
-        public static ButtonElement MiniBtn(string text, Action act = null, double w = 0)
+        // 温启志 18719361399 · 实时徽标（主界面「命令中心」的运行状态）
+        /// <summary>文字与底色都随运行态刷新的圆角徽标。</summary>
+        public static LiveBadgeElement LiveBadge(Func<MachineModel, string> text, Func<MachineModel, Brush> bg,
+            double w = 0, double fs = 13)
+        {
+            return new LiveBadgeElement(text, bg, w, fs);
+        }
+
+        public static ButtonElement MiniBtn(string text, Action act = null, double w = 0, Func<bool> enabled = null)
         {
             return new ButtonElement
             {
@@ -286,7 +316,32 @@ namespace HandlerGuide.ViewModels
                 FontSize = 12,
                 Padding = new Thickness(10, 4, 10, 4),
                 Margin = new Thickness(0, 2, 6, 2),
-                Width = w > 0 ? w : double.NaN
+                Width = w > 0 ? w : double.NaN,
+                Enabled = enabled
+            };
+        }
+
+        /// <summary>
+        /// 可点击的列表行（温启志 18719361399）—— 用于「品种列表 / 测试座布局」这类需要点选的列表。
+        /// 选中行用高亮底色 + 半粗体表示。
+        /// </summary>
+        public static ButtonElement ListRow(string text, Action act, bool selected, double w = double.NaN)
+        {
+            return new ButtonElement
+            {
+                Text = text,
+                Command = act == null ? null : new RelayCommand(act),
+                StyleKey = "ListItemButton",
+                FontSize = 12.5,
+                FontWeight = selected ? FontWeights.SemiBold : FontWeights.Normal,
+                Padding = new Thickness(8, 5, 8, 5),
+                Margin = new Thickness(0, 0, 0, 2),
+                HAlign = HorizontalAlignment.Stretch,
+                Width = w,
+                Foreground = selected ? Brushes.Goldenrod : Palette.Primary,
+                Background = selected ? Palette.SelectedRow : Brushes.White,
+                BorderBrush = Palette.Divider,
+                BorderThickness = new Thickness(1)
             };
         }
 

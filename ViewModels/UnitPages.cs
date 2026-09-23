@@ -37,6 +37,7 @@ namespace HandlerGuide.ViewModels
         // ---------------- 速度 (image59) ----------------
         public static Element UnitSpeed()
         {
+            var wqzForm = Ops.PageForm("速度设定", "sp_");
             var m = E.M;
             string[] parts = { "所有轴", "上料臂", "上料Z轴", "下料臂", "下料Z轴", "运料小车", "空盘传送臂", "旋转台", "测试臂" };
 
@@ -59,12 +60,15 @@ namespace HandlerGuide.ViewModels
                 
                 E.Group("", head),
                 E.Group("", rows),
-                E.H(E.MiniBtn("恢复"), E.Btn("应用", () => m.Log("信息", "速度设定已应用"))));
+                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", wqzForm.Apply),
+                    E.T("应用会把速度比率/加减速度下装到各轴的速度曲线；恢复回到本页打开时的值。",
+                        11, E.Sec, false, TextWrapping.Wrap)));
         }
 
         // ---------------- 上下料臂 (image60) ----------------
         public static Element UnitArm()
         {
+            var wqzForm = Ops.PageForm("上下料臂参数", "ua_");
             var m = E.M;
             Func<string, Element> page = tag => E.V(
                 E.Group("吸料重试",
@@ -90,7 +94,7 @@ namespace HandlerGuide.ViewModels
                 E.Group("其他",
                     E.Chk("ua_continue_" + tag, "换盘/上料臂丢料跳过后继续取料"),
                     E.Chk("ua_same_" + tag, "下料与上料一致")),
-                E.H(E.MiniBtn("恢复"), E.Btn("应用", () => m.Log("信息", "上下料臂参数已应用"))));
+                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", wqzForm.Apply)));
 
             return E.V(
                 E.T("上下料臂设定", 13, E.P, true),
@@ -101,6 +105,7 @@ namespace HandlerGuide.ViewModels
         // ---------------- 运料小车 (image61) ----------------
         public static Element UnitCart()
         {
+            var wqzForm = Ops.PageForm("运料小车参数", "uc_");
             var m = E.M;
             return E.V(
                 
@@ -124,12 +129,13 @@ namespace HandlerGuide.ViewModels
                         E.T("纵向传感器选择", 12, E.P, true),
                         E.H(E.T("小车A", 12.5, E.P).Margin(0, 0, 8, 0), E.Chk("uc_ar1", "R1", true), E.Chk("uc_ar2", "R2", true)),
                         E.H(E.T("小车B", 12.5, E.P).Margin(0, 0, 8, 0), E.Chk("uc_br1", "R1", true), E.Chk("uc_br2", "R2", true))), 0, 2),
-                E.H(E.MiniBtn("恢复"), E.Btn("应用", () => m.Log("信息", "运料小车参数已应用"))));
+                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", wqzForm.Apply)));
         }
 
         // ---------------- 测试臂 (image62) ----------------
         public static Element UnitTestArm()
         {
+            var wqzForm = Ops.PageForm("测试臂参数", "ut_");
             var m = E.M;
             return E.V(
                 
@@ -153,12 +159,13 @@ namespace HandlerGuide.ViewModels
                     E.Chk("ut_chchk", "测试通道检查", true),
                     E.Chk("ut_skchk2", "测试座检查(传感器)", true),
                     E.Row("放料后延时抬起", E.Num("ut_delayup", 0, 90, "0"), 130, "ms")),
-                E.H(E.MiniBtn("恢复"), E.Btn("应用", () => m.Log("信息", "测试臂参数已应用"))));
+                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", wqzForm.Apply)));
         }
 
         // ---------------- 料盘传送 (image63) ----------------
         public static Element UnitTransfer()
         {
+            var wqzForm = Ops.PageForm("料盘传送参数", "uf_");
             var m = E.M;
             return E.V(
                 
@@ -169,12 +176,13 @@ namespace HandlerGuide.ViewModels
                 E.Group("其他",
                     E.Row("机械臂稳定时间", E.Num("uf_stable", 0, 100, "0"), 220, "ms"),
                     E.Row("料盘到位确认时间", E.Num("uf_arrive", 100, 100, "0"), 220, "ms")),
-                E.H(E.MiniBtn("恢复"), E.Btn("应用", () => m.Log("信息", "料盘传送参数已应用"))));
+                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", wqzForm.Apply)));
         }
 
         // ---------------- 进出盘 (image64) ----------------
         public static Element UnitIO()
         {
+            var wqzForm = Ops.PageForm("进出盘参数", "ui_");
             var m = E.M;
             return E.V(
                 
@@ -195,12 +203,13 @@ namespace HandlerGuide.ViewModels
                 E.Group("其他",
                     E.Chk("ui_float", "芯片浮动检查（激活 AUTO1/2/3 的浮动检查功能）", true),
                     E.Row("手自动换盘", E.Cmb("ui_changemode", new[] { "自动", "手动" }, 130), 100)),
-                E.H(E.MiniBtn("恢复"), E.Btn("应用", () => m.Log("信息", "进出盘参数已应用"))));
+                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", wqzForm.Apply)));
         }
 
         // ---------------- 偏移设定 (image65) ----------------
         public static Element UnitOffset()
         {
+            var wqzForm = Ops.PageForm("偏移设定", "uo_");
             var m = E.M;
             var regions = new[]
             {
@@ -215,7 +224,7 @@ namespace HandlerGuide.ViewModels
                 int idx = i;
                 list.Children.Add(E.H(
                     E.T(regions[i], 12, E.P).Margin(0, 0, 6, 0).Wd(150),
-                    E.MiniBtn("+", () => m.Log("信息", "切换到区域：" + regions[idx]), 34)));
+                    E.MiniBtn("+", () => Ops.SelectOffsetRegion(idx + 1), 34)));
             }
 
             var map = E.Grid().Cols("*", "1", "*").Rows("Auto", "Auto");
@@ -254,12 +263,15 @@ namespace HandlerGuide.ViewModels
                         E.Row("测试Y 放料", E.Num("uo_ty_place", 0, 90, "0.###"), 110, "mm"),
                         E.Spacer(6),
                         E.Chk("uo_rot_sep", "旋转台取/放分别设定")), 0, 2),
-                E.H(E.MiniBtn("恢复"), E.Btn("Apply", () => m.Log("信息", "偏移设定已应用"))));
+                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", wqzForm.Apply),
+                E.T("偏移量合法范围 -2 ~ +2mm；应用后写入品种参数并落盘。",
+                    11, E.Sec, false, TextWrapping.Wrap)));
         }
 
         // ---------------- 应用参数至其他品种 ----------------
         public static Element UnitApplyOthers()
         {
+            var wqzForm = Ops.PageForm("应用参数至其他品种", "uao_");
             var m = E.M;
             var items = E.V();
             foreach (var r in m.Recipes)
@@ -279,7 +291,7 @@ namespace HandlerGuide.ViewModels
                 E.Group("目标品种", items),
                 E.H(E.MiniBtn("全选", () => { foreach (var r in m.Recipes) m.SetToggle("uao_" + r, true); }),
                     E.MiniBtn("全不选", () => { foreach (var r in m.Recipes) m.SetToggle("uao_" + r, false); }),
-                    E.Btn("应用", () => m.Log("信息", "单元参数已应用到所选品种"))));
+                    E.Btn("应用", () => wqzForm.Apply())));
         }
     }
 }

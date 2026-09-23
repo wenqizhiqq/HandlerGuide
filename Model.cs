@@ -144,6 +144,12 @@ namespace HandlerGuide
         public bool BatchOpen { get; set; } = false;
         public string StartMode { get; set; } = "初始模式";
 
+        /// <summary>批次开始时间（开批次时写入，界面显示批次时长用）。</summary>
+        public DateTime? BatchStart { get; set; }
+
+        /// <summary>批次结束时间（结批次时写入）。</summary>
+        public DateTime? BatchEnd { get; set; }
+
         // ---- 主界面（复刻 image37）所需的实时读数 ----
         private string _clock = "00:00:00";
         private string _runTime = "0:00:00";
@@ -237,46 +243,47 @@ namespace HandlerGuide
             Bins.Add(new BinInfo { Index = 98, Name = "Bin ERR(无效)", ColorText = "#FF3B30" });
         }
 
-        // 实时仿真 tick
+        // 实时仿真 tick（500ms 通道）
+        //
+        // 重要：产量统计**不在这里**做了。以前这段会自己随机累加 Total/Good/Bad，
+        // 结果是「暂停了数字还在涨」，而且和运控真实节拍完全脱节。
+        // 现在产量由 Ops.OnCycleCompleted() 在真实取放料循环结束时统计。
+        // 这里只保留「环境量」的轻微波动，以及未接卡时的电机阻尼。
         public void Tick()
         {
+            var mm = Motion.MotionManager.Instance;
+            bool cardLive = mm != null && mm.Connected;
+
             if (RunState != "运行")
             {
+                if (!cardLive)
+                    foreach (var m in Motors)
+                    {
+                        m.Busy = false;
+                        m.Torque = Math.Round(m.Torque * 0.9, 1);
+                    }
+                return;
+            }
+
+            long ms = Environment.TickCount64;
+
+            // 气压：围绕 240Kgf 轻微摆动，看起来像真的
+            Pressure = Math.Round(240 + Math.Sin(ms / 2600.0) * 2.0, 1);
+
+            // 48 小时趋势：以当前 UPH 为基准小幅波动
+            double baseUph = UPH > 0 ? UPH : 0;
+            UPH48 = Math.Round(baseUph * (0.94 + 0.05 * Math.Sin(ms / 9000.0)), 0);
+
+            Stage = ((ms / 4000) % 4).ToString();
+
+            // 电机状态：接了卡就完全以运控层回写的真实值为准，绝不在这里随机覆盖，
+            // 否则《诊断 / 电机状态》页会跟着乱跳，看不出真实运动。
+            if (!cardLive)
                 foreach (var m in Motors)
                 {
                     m.Busy = false;
                     m.Torque = Math.Round(m.Torque * 0.9, 1);
                 }
-                return;
-            }
-
-            int processed = 1 + _rnd.Next(0, 3);
-            TotalCount += processed;
-            Accumulated += processed;
-            int bad = _rnd.Next(0, 2);
-            BadCount += bad;
-            GoodCount += (processed - bad);
-            Yield = TotalCount == 0 ? 0 : Math.Round((double)GoodCount / TotalCount * 100, 2);
-            UPH = 8000 + _rnd.Next(0, 4000);
-            CycleT = Math.Round(0.4 + _rnd.NextDouble() * 0.4, 3);
-            TestT = Math.Round(2 + _rnd.NextDouble() * 6, 2);
-            IndexT = Math.Round(0.45 + _rnd.NextDouble() * 0.2, 3);
-
-            foreach (var b in Bins)
-            {
-                if (!b.Unused && _rnd.Next(0, 40) == 0) b.Count += _rnd.Next(1, 5);
-            }
-
-            foreach (var m in Motors)
-            {
-                m.Busy = _rnd.Next(0, 3) == 0;
-                m.Position = Math.Round(m.Position + (_rnd.NextDouble() - 0.5) * 2, 1);
-                m.Torque = Math.Round(1 + _rnd.NextDouble() * 8, 1);
-                m.ALM = _rnd.Next(0, 60) == 0;
-            }
-            Pressure = Math.Round(240 + (_rnd.NextDouble() - 0.5) * 4, 1);
-            UPH48 = 7000 + _rnd.Next(0, 4000);
-            Stage = _rnd.Next(0, 4).ToString();
         }
 
         /// <summary>由界面定时器驱动，刷新时间类读数。</summary>

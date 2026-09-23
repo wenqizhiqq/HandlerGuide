@@ -186,11 +186,12 @@ namespace HandlerGuide.ViewModels
                 E.JogBar(),
                 E.Spacer(4),
                 E.H(
-                    E.MiniBtn("Home", () => E.M.Log("信息", "所有电机执行归零")),
-                    E.MiniBtn("Stop", () => E.M.Log("信息", "停止所有电机运动")),
-                    E.MiniBtn("ClearAlm", () => E.M.Log("信息", "清除电机报警")),
-                    E.MiniBtn("ClearBusAlm", () => E.M.Log("信息", "清除总线报警")),
-                    E.MiniBtn("X", null)),
+                    E.MiniBtn("Home", () => Ops.HomeAll()),
+                    E.MiniBtn("Stop", Ops.StopAllAxes),
+                    E.MiniBtn("ClearAlm", Ops.ClearAlarm),
+                    E.MiniBtn("ClearBusAlm", Ops.ClearBusAlarm),
+                    E.MiniBtn("X", Ops.CancelHome),
+                    E.T("（X = 取消归零队列）", 11.5, E.Sec).Margin(6, 0, 0, 0)),
                 E.Group("信号说明",
                     E.T("ORG：电机原点传感器状态　ALM：电机报警信号(伺服报警)　Homed：是否进行过归零　Code：报警代码　Busy：是否在动作中\n" +
                         "INP：伺服 INP(In-Position) 信号　MMPos：轴运行当前位置　Torque：扭矩　SP：正向软极限　SN：负向软极限\n" +
@@ -225,7 +226,12 @@ namespace HandlerGuide.ViewModels
                 int k = c;
                 xy.Add(E.Live(mm => mm.Motors[4 + k].Position, "0.000", 68, E.BandGrey, E.P, 11.5), 2, c + 1);
             }
-            xy.Add(E.Btn("Go", () => m.Log("信息", title + "：X-Y 轴运动到目标位置"), "PrimaryButton", 12), 3, 0);
+            xy.Add(E.Btn("Go", () => Ops.ArmGo(loader,
+                E.M.GetChoice(p + "_head", 2),
+                E.M.GetChoice(p + "_zone", 0),
+                E.M.GetNum(p + "_tgt0", 0),
+                E.M.GetNum(p + "_tgt1", 0),
+                E.M.GetNum(p + "_gap", 5)), "PrimaryButton", 12), 3, 0);
 
             var left = E.V(
                 E.Group("吸头选择", headSel),
@@ -275,12 +281,12 @@ namespace HandlerGuide.ViewModels
                 hg.Add(new CellElement
                 {
                     Background = E.CardBg, BorderBrush = Palette.LineGrey, BorderThickness = 0.5, Height = 30,
-                    Content = E.MiniBtn("全取", () => m.Log("信息", "吸头" + (i + 1) + " 全取"))
+                    Content = E.MiniBtn("全取", () => Ops.HeadAllPick(p, i))
                 }, 5, i + 1);
                 hg.Add(new CellElement
                 {
                     Background = E.CardBg, BorderBrush = Palette.LineGrey, BorderThickness = 0.5, Height = 30,
-                    Content = E.MiniBtn("全放", () => m.Log("信息", "吸头" + (i + 1) + " 全放"))
+                    Content = E.MiniBtn("全放", () => Ops.HeadAllRelease(p, i))
                 }, 6, i + 1);
             }
 
@@ -308,7 +314,8 @@ namespace HandlerGuide.ViewModels
 
             Func<string, string, double, double, Element> car = (tag, key, inPos, outPos) =>
                 E.Group("运料小车" + tag,
-                    E.H(E.Display("0.000", 96), E.MiniBtn("Jog", () => m.Log("信息", "小车" + tag + " 点动"))),
+                    E.H(E.Display("0.000", 96),
+                        E.MiniBtn("Jog", () => Ops.JogAxisByName("测试运料小车" + tag, 1), 56)),
                     E.Spacer(8),
                     E.H(
                         E.Box(E.V(
@@ -357,7 +364,12 @@ namespace HandlerGuide.ViewModels
                 g.Add(new CellElement
                 {
                     Background = E.CardBg, BorderBrush = Palette.LineGrey, BorderThickness = 0.5, Height = 78,
-                    Content = E.V(E.MiniBtn("全关"), E.MiniBtn("全吸"), E.MiniBtn("全放"))
+                    Content = E.V(
+                        E.MiniBtn("全关", () => { for (int i = 0; i < 16; i++)
+                            { E.M.SetToggle(prefix + "_vac_" + i, false); E.M.SetToggle(prefix + "_pick_" + i, false);
+                              E.M.SetToggle(prefix + "_rel_" + i, false); } Ops.Info("测试臂" + tag + " IO：全关"); }),
+                        E.MiniBtn("全吸", () => Ops.ArmIoAll(prefix, "vac")),
+                        E.MiniBtn("全放", () => Ops.ArmIoAll(prefix, "rel")))
                 }, 1, 17, 3, 1);
 
                 return E.Group("测试臂" + tag + "IO",
@@ -373,26 +385,28 @@ namespace HandlerGuide.ViewModels
                     .Add(TwoLineCell("测试位Y2", "0.000", E.BandGrey, 36), 0, 3),
                 E.Spacer(8),
                 E.H(
-                    PosBtn("高位", "-131.000", () => m.Log("信息", "测试Z1 至高位")),
-                    PosBtn("高位", "-131.000", () => m.Log("信息", "测试Z2 至高位")),
-                    PosBtn("A取", "-2.705", () => m.Log("信息", "测试位Y1 至 A 取料位")),
-                    PosBtn("B取", "2.278", () => m.Log("信息", "测试位Y2 至 B 取料位"))),
+                    PosBtn("高位", "-131.000", () => Ops.TestArmPos("测试位下压Z1", -131.000)),
+                    PosBtn("高位", "-131.000", () => Ops.TestArmPos("测试位下压Z2", -131.000)),
+                    PosBtn("A取", "-2.705", () => Ops.TestArmPos("测试位移动Y1", -2.705)),
+                    PosBtn("B取", "2.278", () => Ops.TestArmPos("测试位移动Y2", 2.278))),
                 E.Spacer(4),
                 E.H(
-                    PosBtn("取料", "-64.608", () => m.Log("信息", "小车A 取料")),
-                    PosBtn("取料", "-83.406", () => m.Log("信息", "小车B 取料")),
-                    PosBtn("A测", "162.456", () => m.Log("信息", "测试位Y1 至测试位")),
-                    PosBtn("B测", "-162.423", () => m.Log("信息", "测试位Y2 至测试位"))),
+                    PosBtn("取料", "-64.608", () => Ops.MoveAxisByName("测试运料小车A", -64.608)),
+                    PosBtn("取料", "-83.406", () => Ops.MoveAxisByName("测试运料小车B", -83.406)),
+                    PosBtn("A测", "162.456", () => Ops.TestArmPos("测试位移动Y1", 162.456)),
+                    PosBtn("B测", "-162.423", () => Ops.TestArmPos("测试位移动Y2", -162.423))),
                 E.Spacer(4),
                 E.H(
-                    PosBtn("放料", "-87.608", () => m.Log("信息", "小车A 放料")),
-                    PosBtn("放料", "-85.606", () => m.Log("信息", "小车B 放料")),
-                    E.MiniBtn("Jog-Z1"), E.MiniBtn("Jog-Z2")),
+                    PosBtn("放料", "-87.608", () => Ops.MoveAxisByName("测试运料小车A", -87.608)),
+                    PosBtn("放料", "-85.606", () => Ops.MoveAxisByName("测试运料小车B", -85.606)),
+                    E.MiniBtn("Jog-Z1", () => Ops.JogAxisByName("测试位下压Z1", 1), 62),
+                    E.MiniBtn("Jog-Z2", () => Ops.JogAxisByName("测试位下压Z2", 1), 62)),
                 E.Spacer(4),
                 E.H(
-                    PosBtn("接触位", "-13.421", () => m.Log("信息", "测试Z1 至接触位")),
-                    PosBtn("接触位", "-12.773", () => m.Log("信息", "测试Z2 至接触位")),
-                    E.MiniBtn("Jog-Y1"), E.MiniBtn("Jog-Y2")),
+                    PosBtn("接触位", "-13.421", () => Ops.TestArmPos("测试位下压Z1", -13.421)),
+                    PosBtn("接触位", "-12.773", () => Ops.TestArmPos("测试位下压Z2", -12.773)),
+                    E.MiniBtn("Jog-Y1", () => Ops.JogAxisByName("测试位移动Y1", 1), 62),
+                    E.MiniBtn("Jog-Y2", () => Ops.JogAxisByName("测试位移动Y2", 1), 62)),
                 E.Spacer(6),
                 E.T("当测试臂 1/2 位于高位以上位置时，测试 Y 才可移动。", 11.5, E.Sec, false, TextWrapping.Wrap));
 
@@ -589,20 +603,20 @@ namespace HandlerGuide.ViewModels
             var left = E.V(
                 ck,
                 E.Spacer(8),
-                E.Btn("SOT", () => m.Log("信息", "手动激活开始测试信号"), "PrimaryButton", 12),
+                E.Btn("SOT", Ops.TestIo_Sot, "PrimaryButton", 12),
                 E.Spacer(8),
                 E.Group("TTL-接口", ttl));
 
             var right = E.V(
                 E.H(E.T("msg:", 12, E.P), E.Text("tio_msg", "", 240)),
                 E.Spacer(6),
-                E.H(E.MiniBtn("Send", () => m.Log("信息", "发送：" + m.GetText("tio_msg"))),
+                E.H(E.MiniBtn("Send", () => Ops.TestIo_Send(m.GetText("tio_msg"))),
                     E.MiniBtn("Clear", () => { m.SetText("tio_msg", ""); m.Log("信息", "清空发送内容"); })),
                 E.Spacer(6),
                 E.H(E.Cmb("tio_com", new[] { "COM1", "COM2", "COM3", "COM4" }, 120),
-                    E.MiniBtn("TestInfo", () => m.Log("信息", "读取测试系统信息"))),
+                    E.MiniBtn("TestInfo", Ops.TestIo_TestInfo)),
                 E.Spacer(8),
-                E.Box(E.Scroll(E.T("（测试状态反馈窗口）", 11.5, E.Sec, false, TextWrapping.Wrap), 330,
+                E.Box(E.Scroll(E.Live(_ => Ops.TestIoRx, null, 330, E.CardBg, E.P, 11.5), 330,
                         System.Windows.Controls.ScrollBarVisibility.Disabled,
                         System.Windows.Controls.ScrollBarVisibility.Auto),
                     E.CardBg, Palette.LineGrey, 1, 3, new Thickness(8)));

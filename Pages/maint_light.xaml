@@ -38,7 +38,8 @@
     </vm:GroupElement>
 
     <vm:StackElement Orientation="Horizontal">
-        <vw:Btn Text="应用" Cmd="Log" Arg="信号灯设定已应用" />
+        <vw:MiniBtn Text="恢复" Cmd="Reset" Arg="maint_light" />
+        <vw:Btn Text="应用" Cmd="Apply" Arg="maint_light" />
     </vm:StackElement>
 
     <vm:GroupElement Title="说明">

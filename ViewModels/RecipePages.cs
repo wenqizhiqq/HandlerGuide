@@ -46,10 +46,8 @@ namespace HandlerGuide.ViewModels
             foreach (var r in m.Recipes)
             {
                 bool cur = r == m.Recipe;
-                list.Children.Add(E.Box(
-                    E.T(r, 12.5, cur ? Brushes.Goldenrod : E.P, cur),
-                    cur ? new SolidColorBrush(Color.FromRgb(0xE0, 0xE0, 0xE4)) : Brushes.White,
-                    E.Div, 1, 4, new Thickness(8, 5, 8, 5), new Thickness(0, 0, 0, 2)));
+                string nm = r;
+                list.Children.Add(E.ListRow(nm, () => Ops.SelectRecipe(nm), cur));
             }
 
             return E.V(
@@ -57,12 +55,16 @@ namespace HandlerGuide.ViewModels
                 E.Row("品种名", E.Text("rc_name", "NewRecipe", 220), 90),
                 E.Spacer(6),
                 E.H(
-                    E.Btn("新建", () => m.Log("信息", "新建品种：" + m.GetText("rc_name"))),
-                    E.Btn("删除", () => m.Log("信息", "删除品种（当前品种不可删除）")),
-                    E.Btn("复制", () => m.Log("信息", "复制品种")),
-                    E.Btn("重命名", () => m.Log("信息", "重命名品种")),
-                    E.Btn("导入", () => m.Log("信息", "导入品种参数文件")),
-                    E.Btn("导出", () => m.Log("信息", "导出品种参数文件"))),
+                    E.Btn("新建", () => Ops.NewRecipe(m.GetText("rc_name"))),
+                    E.Btn("删除", () => Ops.DeleteRecipe(m.Recipe)),
+                    E.Btn("复制", () => Ops.CopyRecipe(m.Recipe, m.GetText("rc_name"))),
+                    E.Btn("重命名", () => Ops.RenameRecipe(m.Recipe, m.GetText("rc_name"))),
+                    E.Btn("导入", Ops.ImportRecipeDialog),
+                    E.Btn("导出", Ops.ExportRecipeDialog)),
+                E.H(
+                    E.Btn("载入品种", () => Ops.LoadRecipe(m.Recipe)),
+                    E.Btn("应用到机台", () => Ops.ApplyRecipe(m.Recipe)),
+                    E.T("当前品种：" + m.Recipe, 12.5, E.Sec).Margin(8, 0, 0, 0)),
                 E.Spacer(10),
                 E.Group("品种列表", E.Scroll(list, 320)),
                 E.Group("说明",
@@ -73,6 +75,7 @@ namespace HandlerGuide.ViewModels
         public static Element TestMode()
         {
             var m = E.M;
+            var wqzForm = Ops.PageForm("测试模式", "tm_");
             var layouts = new[]
             {
                 "ThirtyTwo-Sites_R", "ThirtyTwo-Sites_L", "Sixteen-Sites_A", "Sixteen-Sites_B",
@@ -85,9 +88,8 @@ namespace HandlerGuide.ViewModels
             foreach (var l in layouts)
             {
                 bool cur = l == m.SiteLayoutName;
-                layout.Children.Add(E.Box(E.T(l, 12, cur ? Brushes.Goldenrod : E.P, cur),
-                    cur ? new SolidColorBrush(Color.FromRgb(0xE0, 0xE0, 0xE4)) : Brushes.White,
-                    E.Div, 1, 3, new Thickness(8, 4, 8, 4), new Thickness(0, 0, 0, 2)));
+                string nm = l;
+                layout.Children.Add(E.ListRow(nm, () => Ops.SelectSiteLayout(nm), cur));
             }
 
             // 测试通道映射：a~h 列，A~D 行，每格一个通道下拉
@@ -126,15 +128,19 @@ namespace HandlerGuide.ViewModels
                 E.Group("浮动检查传感器",
                     E.Chk("tm_float_in", "入口位置浮动检查传感器", true),
                     E.Chk("tm_float_out", "出口位置浮动检查传感器", true)),
-                E.H(E.MiniBtn("恢复"), E.Btn("应用", () => m.Log("信息", "测试模式设定已应用"))));
+                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", wqzForm.Apply)));
         }
 
         // ---------------- 料盘 (image42~image45) ----------------
         public static Element TrayPage()
         {
             var m = E.M;
+            var defForm = Ops.PageForm("料盘定义", "td_");
 
-            Func<int, Element> typeTab = idx => E.V(
+            Func<int, Element> typeTab = idx =>
+            {
+            var trayForm = Ops.PageForm("料盘类型" + idx, "tp_");
+            return E.V(
                 E.Row("名称", E.Text("tp_name" + idx, "SGS_QFP64_10X" + idx, 200), 70),
                 E.Spacer(6),
                 E.Grid().Cols("150", "150", "150", "150")
@@ -157,7 +163,9 @@ namespace HandlerGuide.ViewModels
                     E.PadGrid(8, 14)),
                 E.Spacer(8),
                 E.Row("选择需要复制的料盘类型", E.Cmb("tp_copy_" + idx, new[] { "料盘类型1", "料盘类型2", "料盘类型3" }, 160), 170),
-                E.H(E.MiniBtn("复制", () => m.Log("信息", "复制料盘类型")), E.Btn("应用", () => m.Log("信息", "料盘参数已应用"))));
+                E.H(E.MiniBtn("复制", () => Ops.CopyTrayType(idx, (int)m.GetNum("tp_copy_" + idx, 1)), 72),
+                    E.MiniBtn("恢复", trayForm.Restore), E.Btn("应用", trayForm.Apply)));
+            };
 
             var defList = new[] { "上料盘", "上料空盘", "下料空盘", "自动盘1", "自动盘2", "自动盘3", "固定盘1", "固定盘2", "固定盘3", "清洁盘" };
             var defPanel = E.V(
@@ -170,8 +178,8 @@ namespace HandlerGuide.ViewModels
                     .Add(E.Cell("器件旋转", E.HeadBlue, E.P, true), 0, 3),
                 BuildDefRows(defList, 1),
                 E.Spacer(8),
-                E.H(E.MiniBtn("更改", () => m.Log("信息", "已更改所选区域料盘定义")),
-                    E.Btn("应用", () => m.Log("信息", "料盘定义已应用"))));
+                E.H(E.MiniBtn("更改", Ops.ApplyTrayDefine),
+                    E.MiniBtn("恢复", defForm.Restore), E.Btn("应用", defForm.Apply)));
 
             return E.V(
                 E.T("料盘设定", 13, E.P, true),
@@ -227,6 +235,7 @@ namespace HandlerGuide.ViewModels
         public static Element TestArmPage()
         {
             var m = E.M;
+            var wqzForm = Ops.PageForm("测试臂", "ta_");
             var contactModes = new[]
             {
                 "直接-接触", "落料-接触", "直接-软接触", "落料-软接触",
@@ -267,17 +276,18 @@ namespace HandlerGuide.ViewModels
                     E.T("实验模式：通过自动模式调整完测试臂接触位置后进入，可验证接触高度。按下 <步进/Step> 后两个测试臂会切换压到测试座上并自动启动测试过程。", 11.5, E.Sec, false, TextWrapping.Wrap),
                     E.Spacer(6),
                     E.H(
-                        E.Btn("自动校准模式", () => m.Log("信息", "进入测试臂自动高度校准模式")),
-                        E.MiniBtn("步进/Step", () => m.Log("信息", "测试臂切换")),
-                        E.MiniBtn("测试/T.Start", () => m.Log("信息", "手动触发测试信号")),
-                        E.MiniBtn("退出高度校准", () => m.Log("信息", "退出高度校准模式")))),
-                E.H(E.MiniBtn("恢复"), E.Btn("应用", () => m.Log("信息", "测试臂参数已应用"))));
+                        E.Btn("自动校准模式", Ops.StartTestArmCalibration),
+                        E.MiniBtn("步进/Step", Ops.TestArmStep),
+                        E.MiniBtn("测试/T.Start", Ops.ManualTestTrigger),
+                        E.MiniBtn("退出高度校准", Ops.ExitTestArmCalibration))),
+                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", wqzForm.Apply)));
         }
 
         // ---------------- 测试接口 (image47) ----------------
         public static Element TestInterface()
         {
             var m = E.M;
+            var wqzForm = Ops.PageForm("测试接口", "ti_");
             return E.V(
                 
                 E.Group("接口方式",
@@ -304,14 +314,17 @@ namespace HandlerGuide.ViewModels
                         .Add(E.Num("ti_sotdelay", 10, 120, "0"), 0, 4)),
                 E.Group("说明",
                     E.T("“测试接口”窗口中的 Bin F% 报警 “IC数量” 设定：当数量为零时，关闭对 Bin F% 的报警。", 11.5, E.Sec, false, TextWrapping.Wrap)),
-                E.H(E.MiniBtn("恢复"), E.Btn("应用", () => m.Log("信息", "测试接口设定已应用"))));
+                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", wqzForm.Apply)));
         }
 
         // ---------------- Bin设定 (image48~image50) ----------------
         public static Element BinSetting()
         {
             var m = E.M;
-            Func<string, Element> page = tag => E.V(
+            Func<string, Element> page = tag =>
+            {
+            var binForm = Ops.PageForm("Bin设定-" + tag, "bin_", "binv_", "binc_", "bint_");
+            return E.V(
                 E.Group("属性",
                     E.Matrix(BinCols, new[]
                     {
@@ -334,11 +347,13 @@ namespace HandlerGuide.ViewModels
                     E.SpacerW(20),
                     E.Chk("bin_retest", "重测(Double Contact)", true)),
                 E.H(
-                    E.Btn("Bin Yield Ctrl", () => m.Log("信息", "打开 Bin 良率卡控窗口")),
+                    E.Btn("Bin Yield Ctrl", Ops.ToggleBinYieldCtrl),
                     E.SpacerW(30),
-                    E.MiniBtn("恢复"),
-                    E.Btn("应用", () => m.Log("信息", "Bin 设定已应用"))));
+                    E.MiniBtn("恢复", binForm.Restore),
+                    E.Btn("应用", binForm.Apply)));
+            };
 
+            var ycForm = Ops.PageForm("Bin良率卡控", "byc_");
             var yieldCtrl = E.V(
                 E.T("Bin 良率卡控：根据产品的要求设定需要的良率卡控。", 11.5, E.Sec, false, TextWrapping.Wrap),
                 E.Spacer(8),
@@ -346,7 +361,7 @@ namespace HandlerGuide.ViewModels
                     (r, c) => c == 2
                         ? E.Cmb("byc_scope_" + r, new[] { "测试臂单个位置", "单个测试臂总体", "测试座单个位置", "测试座总体" }, 140)
                         : E.Num("byc_" + r + "_" + c, 0, 80, "0.###"), 150, 26, E.HeadBlue, E.HeadBlue, 80, 26),
-                E.H(E.Btn("应用", () => m.Log("信息", "Bin 良率卡控已应用"))));
+                E.H(E.MiniBtn("恢复", ycForm.Restore), E.Btn("应用", Ops.ApplyBinYieldCtrl)));
 
             return E.V(
                 
@@ -364,6 +379,7 @@ namespace HandlerGuide.ViewModels
         public static Element TempRecipe()
         {
             var m = E.M;
+            var wqzForm = Ops.PageForm("温度设定", "tr_");
             var hot = E.V(
                 E.Group("高温设定",
                     E.Row("加热时间", E.Num("tr_h_time", 60, 100, "0"), 130, "s"),
@@ -420,13 +436,15 @@ namespace HandlerGuide.ViewModels
                 E.Spacer(8),
                 E.Group("温度模式", E.Radios("tr_mode", new[] { "常温模式", "高温模式", "低温模式" }, false)),
                 E.Tabs(("高温", () => hot), ("室温", () => room)),
-                E.H(E.MiniBtn("恢复"), E.Btn("应用", () => m.Log("信息", "温度设定已应用"))));
+                E.H(E.MiniBtn("恢复", wqzForm.Restore),
+                    E.Btn("应用", () => { wqzForm.Apply(); Ops.ApplyTempRecipe(); })));
         }
 
         // ---------------- 视觉 (image53 / image54) ----------------
         public static Element VisionPage()
         {
             var m = E.M;
+            var wqzForm = Ops.PageForm("视觉设定", "vs_", "bv_");
             var func = E.V(
                 E.Group("2D 功能",
                     E.Chk("vs_2d", "2D（勾选后 2D 功能生效）", true),
@@ -472,19 +490,20 @@ namespace HandlerGuide.ViewModels
                     E.Spacer(6),
                     E.LampLine("吸头", 8, true, false, "bv_head"),
                     E.Spacer(6),
-                    E.H(E.Btn("检测", () => m.Log("信息", "吸头移动到拍照位")))));
+                    E.H(E.Btn("检测", Ops.VisionMoveToCapturePos))));
 
             return E.V(
                 E.T("视觉设定", 13, E.P, true),
                 E.Spacer(8),
                 E.Tabs(("功能配置", () => func), ("Bottom Vision", () => bottom)),
-                E.H(E.MiniBtn("恢复"), E.Btn("应用", () => m.Log("信息", "视觉设定已应用"))));
+                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", wqzForm.Apply)));
         }
 
         // ---------------- 清洁盘 (image55 / image56 / image57) ----------------
         public static Element CleanPage()
         {
             var m = E.M;
+            var wqzForm = Ops.PageForm("清洁盘", "cp_", "cpo_", "cpt_", "qa_");
             var main = E.V(
                 E.Group("测试座清洁",
                     E.Chk("cp_enable", "测试座清洁（需要清洁功能时勾选）", true),
@@ -526,9 +545,9 @@ namespace HandlerGuide.ViewModels
                         E.Row("放料", E.Num("cpo_place", -2, 90, "0.###"), 70, "mm"),
                         E.Row("取料", E.Num("cpo_pick", 0, 90, "0.###"), 70, "mm"),
                         E.Row("吸头间距", E.Num("cpo_pitch", 0, 90, "0.###"), 70, "mm"))),
-                E.H(E.MiniBtn("默认", () => m.Log("信息", "已恢复清洁盘默认偏移")),
-                    E.MiniBtn("恢复"),
-                    E.Btn("应用", () => m.Log("信息", "清洁盘偏移已应用"))));
+                E.H(E.MiniBtn("默认", Ops.RestoreCleanDefault),
+                    E.MiniBtn("恢复", wqzForm.Restore),
+                    E.Btn("应用", () => { wqzForm.Apply(); Ops.ApplyCleanOffset(); })));
 
             var tray = E.V(
                 E.T("可以设定所用清洁盘的料盘信息。", 11.5, E.Sec, false, TextWrapping.Wrap),
@@ -555,7 +574,8 @@ namespace HandlerGuide.ViewModels
                 E.T("清洁盘设定", 13, E.P, true),
                 E.Spacer(8),
                 E.Tabs(("清洁盘", () => main), ("偏移调整", () => offset), ("Tray", () => tray), ("QA取样", () => qa)),
-                E.H(E.MiniBtn("恢复"), E.Btn("应用", () => m.Log("信息", "清洁盘设定已应用"))));
+                E.H(E.MiniBtn("恢复", wqzForm.Restore),
+                    E.Btn("应用", () => { wqzForm.Apply(); Ops.ResetCleanCounters(); })));
         }
     }
 }

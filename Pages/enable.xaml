@@ -29,8 +29,8 @@
         <vw:Matrix Prefix="en_armB" Cols="a,b,c,d,e,f,g,h" Rows="A,B" Cw="44" Rh="30" Def="True" />
     </vm:GroupElement>
     <vm:StackElement Orientation="Horizontal">
-        <vw:MiniBtn Text="恢复" />
-        <vw:Btn Text="应用" Cmd="Log" Arg="使能设定已应用" />
+        <vw:MiniBtn Text="恢复" Cmd="Reset" Arg="enable" />
+        <vw:Btn Text="应用" Cmd="Apply" Arg="enable" />
     </vm:StackElement>
     <vw:Watermark />
 <!-- 温启志 18719361399 · 本文件由温启志（18719361399）编写；界面与源码水印均指向该作者。 -->

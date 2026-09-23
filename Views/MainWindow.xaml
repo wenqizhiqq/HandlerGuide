@@ -88,6 +88,7 @@
                         </StackPanel>
                     </Button>
 
+                    <!-- 命令中心（生产控制）已搬到「主界面」页内，见 HomePages.CommandCenter() -->
                     <Border Width="1" Background="{StaticResource DividerBrush}" Margin="8,4" />
 
                     <!-- 模块按钮（含下拉子工具） -->
@@ -303,6 +304,15 @@
                            Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
                 <TextBlock Text="|" Foreground="#C7C7CC" Margin="12,0" />
                 <TextBlock Text="{Binding StatusPressure}" FontSize="12"
+                           Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="|" Foreground="#C7C7CC" Margin="12,0" />
+                <TextBlock Text="{Binding StatusTempActual}" FontSize="12"
+                           Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="|" Foreground="#C7C7CC" Margin="12,0" />
+                <TextBlock Text="{Binding StatusServo}" FontSize="12"
+                           Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="|" Foreground="#C7C7CC" Margin="12,0" />
+                <TextBlock Text="{Binding StatusHome}" FontSize="12"
                            Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
                 <TextBlock Text="|" Foreground="#C7C7CC" Margin="12,0" />
                 <TextBlock Text="{Binding Breadcrumb}" FontSize="12"

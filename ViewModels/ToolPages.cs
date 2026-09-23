@@ -46,6 +46,7 @@ namespace HandlerGuide.ViewModels
                 ("维护模式", "切换为该模式时，“开始运行”按钮失效，设备将无法启动。"),
             };
 
+            var wqzForm = Ops.PageForm("工作模式", "mode_");
             var body = E.V(
                 E.H(E.T("运行模式", 12.5, E.P).Margin(0, 0, 10, 0),
                     E.Cmb("mode_sel", modes.Select(x => x.Item1).ToArray(), 200)),
@@ -57,7 +58,7 @@ namespace HandlerGuide.ViewModels
                     E.Chk("mode_random", "随机生成"),
                     E.Row("测试时间", E.H(E.Num("mode_rtime", 500, 90), E.T("ms", 12, E.Sec).Margin(8, 0, 0, 0)), 80),
                     E.Row("良品率", E.H(E.Num("mode_ryield", 100, 90), E.T("%", 12, E.Sec).Margin(8, 0, 0, 0)), 80)),
-                E.H(E.Btn("应用", () => m.Log("信息", "工作模式：" + m.GetText("mode_name", "正常模式")))));
+                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", Ops.ApplyWorkMode)));
 
             var desc = E.Group("工作模式说明",
                 modes.Select(x => (object)E.V(
@@ -78,6 +79,7 @@ namespace HandlerGuide.ViewModels
         public static Element EnablePage()
         {
             var m = E.M;
+            var wqzForm = Ops.PageForm("使能设定", "en_");
             string[] cols = { "a", "b", "c", "d", "e", "f", "g", "h" };
 
             Func<string, string, Element> block = (title, prefix) => E.Group(title,
@@ -97,7 +99,7 @@ namespace HandlerGuide.ViewModels
                 units,
                 block("测试臂A使能", "en_armA"),
                 block("测试臂B使能", "en_armB"),
-                E.H(E.MiniBtn("恢复"), E.Btn("应用", () => m.Log("信息", "使能设定已应用"))));
+                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", Ops.ApplyEnable)));
         }
 
         // ---------------- 温控设定 (image110) ----------------
@@ -110,13 +112,7 @@ namespace HandlerGuide.ViewModels
                 E.Group("加热器工作条件",
                     E.Radios("tc_mode", new[] { "室温(25°C)", "高温(50°C)" }),
                     E.Spacer(10),
-                    E.H(E.Btn("应用", () =>
-                    {
-                        int idx = m.GetChoice("tc_mode");
-                        m.TempMode = idx == 1 ? "高温模式" : "常温模式";
-                        m.TempSet = idx == 1 ? 50 : 25;
-                        m.Log("信息", "温控模式切换为：" + m.TempMode);
-                    }))),
+                    E.H(E.Btn("应用", Ops.ApplyTempControl))),
                 E.Group("说明",
                     E.T("该窗口用于选择加热器的工作条件。选择“高温”后，主界面 Temp 区域会显示高温模式与温度范围。", 11.5, E.Sec, false, TextWrapping.Wrap)));
         }
@@ -136,7 +132,7 @@ namespace HandlerGuide.ViewModels
                     E.Display("-------√", 90)));
             }
 
-            var ok = E.Btn("OK", () => m.Log("信息", "开始归零过程"));
+            var ok = E.Btn("OK", Ops.ConfirmHome);
             ok.StyleKey = null;
             ok.Width = 90; ok.Height = 46;
             ok.Background = new SolidColorBrush(Color.FromRgb(0x1E, 0x8E, 0x3E));
@@ -145,7 +141,7 @@ namespace HandlerGuide.ViewModels
             ok.BorderThickness = new Thickness(0);
             ok.Margin = new Thickness(0, 0, 10, 0);
 
-            var cancel = E.Btn("Cancel", () => m.Log("信息", "已取消归零"));
+            var cancel = E.Btn("Cancel", Ops.CancelHome);
             cancel.StyleKey = null;
             cancel.Width = 90; cancel.Height = 46;
             cancel.Background = new SolidColorBrush(Color.FromRgb(0xC0, 0x20, 0x2A));
@@ -181,31 +177,19 @@ namespace HandlerGuide.ViewModels
             }
             host.Children.Add(head);
 
-            var sample = new (string, string, string, string, string)[]
+            // 温启志 18719361399：表格改为读真实日志（M.Logs），每 500ms 由 LiveRegistry 统一刷新
+            for (int r = 0; r < 40; r++)
             {
-                ("92", "HMI_Main", "EVT060054", "品种切换至[SGS_QFP32_7X7_32_1]", "2023-07-14 08:51:23.622"),
-                ("93", "System", "EVT000050", "程序开始-2.0.23.709", "2023-07-14 08:51:23.757"),
-                ("94", "HMI_Main", "EVT060055", "用户登录成功- [Admin]", "2023-07-14 08:51:38.390"),
-                ("95", "HMI_Main", "EVT060056", "用户等级变为- [Admin]", "2023-07-14 08:51:38.397"),
-                ("96", "System", "EVT000000", "用户进行操作：登录成功] [Admin][Admin]", "2023-07-14 08:51:38.403"),
-                ("97", "Machine", "EVT040059", "机台开始归零", "2023-07-14 11:38:34.435"),
-                ("98", "Machine", "EVT040060", "机台归零成功", "2023-07-14 11:38:43.041"),
-            };
-            foreach (var s in sample)
-            {
+                int rr = r;
                 var row = E.H();
-                row.Children.Add(E.Display(s.Item1, widths[0], Brushes.White, E.P, TextAlignment.Left, 11));
-                row.Children.Add(E.Display(s.Item2, widths[1], Brushes.White, E.P, TextAlignment.Left, 11));
-                row.Children.Add(E.Display("", widths[2], Brushes.White, E.P, TextAlignment.Left, 11));
-                row.Children.Add(E.Display(s.Item3, widths[3], Brushes.White, E.P, TextAlignment.Left, 11));
-                row.Children.Add(E.Display(s.Item4, widths[4], Brushes.White, E.P, TextAlignment.Left, 11));
-                row.Children.Add(E.Display(s.Item5, widths[5], Brushes.White, E.P, TextAlignment.Left, 11));
-                row.Children.Add(E.Display("0", widths[6], Brushes.White, E.P, TextAlignment.Left, 11));
-                row.Children.Add(E.Display("", widths[7], Brushes.White, E.P, TextAlignment.Left, 11));
-                row.Children.Add(E.Display("Normal", widths[8], Brushes.White, E.P, TextAlignment.Left, 11));
-                row.Children.Add(E.Display("", widths[9], Brushes.White, E.P, TextAlignment.Left, 11));
-                row.Children.Add(E.Display("", widths[10], Brushes.White, E.P, TextAlignment.Left, 11));
-                foreach (var e in row.Children) e.Margin = new Thickness(0, 0, 1, 1);
+                for (int c = 0; c < heads.Length; c++)
+                {
+                    int cc = c;
+                    var cell = E.Live(_ => Ops.LogCell(rr, cc), null, widths[c],
+                        Brushes.White, E.P, 11);
+                    cell.Margin = new Thickness(0, 0, 1, 1);
+                    row.Children.Add(cell);
+                }
                 host.Children.Add(row);
             }
 
@@ -224,8 +208,8 @@ namespace HandlerGuide.ViewModels
                              E.H(E.T("运行模式", 12, E.P).Margin(0, 0, 8, 0), E.Cmb("il_run", new[] { "Normal", "Exercise", "Dry1", "Dry2" }, 120))),
                         E.SpacerW(20),
                         E.V(E.H(E.T("代码", 12, E.P).Margin(0, 0, 8, 0), E.Text("il_code", "", 120)),
-                             E.H(E.MiniBtn("更新", () => m.Log("信息", "信息记录已更新")),
-                                  E.MiniBtn("导出", () => m.Log("信息", "信息记录已导出为文本文件")))))),
+                             E.H(E.MiniBtn("更新", Ops.UpdateLog),
+                                  E.MiniBtn("导出", Ops.ExportLogDialog))))),
                 E.Spacer(8),
                 E.Scroll(host, 320, ScrollBarVisibility.Auto, ScrollBarVisibility.Auto),
                 E.Group("说明",
@@ -265,8 +249,18 @@ namespace HandlerGuide.ViewModels
                     E.Spacer(8),
                     E.H(E.Btn("关闭控制程序", () =>
                     {
+                        // 温启志 18719361399：先过运控前置检查，运行中 / 有轴在动一律拒绝关闭
+                        if (!Ops.CanShutdown(out string why))
+                        {
+                            MessageBox.Show(why, "关闭程序", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            return;
+                        }
                         if (MessageBox.Show("确定要关闭控制程序吗？", "关闭程序", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                        {
+                            Ops.SaveParams();
+                            Ops.Info("控制程序正常退出");
                             Application.Current.Shutdown();
+                        }
                     }, "PrimaryButton", 13))));
         }
 

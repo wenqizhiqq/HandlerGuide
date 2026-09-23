@@ -138,8 +138,8 @@
     </vm:GroupElement>
 
     <vm:StackElement Orientation="Horizontal">
-        <vw:MiniBtn Text="恢复" />
-        <vw:Btn Text="应用" Cmd="Log" Arg="温度偏移参数已应用" />
+        <vw:MiniBtn Text="恢复" Cmd="Reset" Arg="maint_toffset" />
+        <vw:Btn Text="应用" Cmd="Apply" Arg="maint_toffset" />
     </vm:StackElement>
 
     <vw:Watermark />

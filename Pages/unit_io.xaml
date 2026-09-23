@@ -56,8 +56,8 @@
     </vm:GroupElement>
 
     <vm:StackElement Orientation="Horizontal">
-        <vw:MiniBtn Text="恢复" />
-        <vw:Btn Text="应用" Cmd="Log" Arg="进出盘参数已应用" />
+        <vw:MiniBtn Text="恢复" Cmd="Reset" Arg="unit_io" />
+        <vw:Btn Text="应用" Cmd="Apply" Arg="unit_io" />
     </vm:StackElement>
 
     <vw:Watermark />

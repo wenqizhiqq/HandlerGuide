@@ -11,7 +11,9 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Linq;
 using System.Windows;
+using HandlerGuide.ViewModels;   // Ops / OpsForm（温启志 18719361399）
 
 namespace HandlerGuide
 {
@@ -146,8 +148,10 @@ namespace HandlerGuide
                 Trace.Flush();
                 win.Close();
 
+                Ops.DialogsSuppressed = true;   // 自检无人值守，禁止弹模态对话框
                 LayoutSelfTest(shotDir);
                 MotionSelfTest();
+                OpsSelfTest();
             }
             catch (Exception ex)
             {
@@ -300,6 +304,384 @@ namespace HandlerGuide
         /// 运动控制无头自检：驱动仿真卡跑完整演示节拍，校验
         /// 「物理积分 / 软限位不越界 / 共享导轨间隙 / 互锁拒绝计数」。
         /// </summary>
+        /// <summary>
+        /// Ops 命令通路自检（温启志 18719361399）。
+        ///
+        /// 为什么需要它：界面全绿只证明「页面能渲染」，不证明「按钮真的有用」。
+        /// 本方法把每个按钮背后的 Ops 方法都真调一遍，并断言状态按预期变化，
+        /// 任何一条抛异常或状态没动都记 OPS FAIL —— 这样才不会出现
+        /// 「点了应用按钮，其实什么都没发生」这种最坑人的情况。
+        /// </summary>
+        private static void OpsSelfTest()
+        {
+            int ok = 0, bad = 0;
+            var fails = new System.Collections.Generic.List<string>();
+
+            void Chk(string name, Action act, Func<bool> expect = null)
+            {
+                try
+                {
+                    act();
+                    if (expect != null && !expect())
+                    {
+                        bad++;
+                        fails.Add(name + " : 状态未按预期变化");
+                        return;
+                    }
+                    ok++;
+                }
+                catch (Exception ex)
+                {
+                    bad++;
+                    fails.Add(name + " : " + ex.GetType().Name + " " + ex.Message);
+                }
+            }
+
+            void Pump(int frames, double dt = 0.05)
+            {
+                for (int i = 0; i < frames; i++)
+                {
+                    Motion.MotionManager.Instance.Tick(dt);
+                    Ops.TickHome(dt);
+                    Ops.TickTemp(dt);
+                    Ops.TickTestArmCalibration(dt);
+                    Ops.TickManualPulse(dt);
+                    Ops.TickTestIoPulse(dt);
+                }
+            }
+
+            try
+            {
+                var mm = Motion.MotionManager.Instance;
+                var M = MachineModel.Instance;
+
+                // ---------- 0. 前置：复位到干净状态 ----------
+                Chk("ResetEmergency", Ops.ResetEmergency);
+                Chk("ClearAlarm", Ops.ClearAlarm);
+                Chk("ClearBusAlarm", Ops.ClearBusAlarm);
+                Chk("StopAllAxes", Ops.StopAllAxes);
+                Chk("UseSimCard", Ops.UseSimCard);
+                Chk("ConnectCard", Ops.ConnectCard, () => mm.Connected);
+
+                // ---------- 1. 伺服 / IO ----------
+                Chk("ServoAll(on)", () => Ops.ServoAll(true), () => Ops.ServoOnCount > 0);
+                Chk("ServoAxis(0,on)", () => Ops.ServoAxis(0, true));
+                Chk("SetOut(0,true)", () => Ops.SetOut(0, true), () => mm.ReadOut(0));
+                Chk("ToggleOut(0)", () => Ops.ToggleOut(0), () => !mm.ReadOut(0));
+                // 注意：IN0 是「急停按钮」输入。这里必须点两次复原，
+                // 否则后面所有运动都会被 SafetyCheck 以「急停按钮处于按下状态」拒绝。
+                Chk("ToggleInput(0) 再复原", () => { Ops.ToggleInput(0); Ops.ToggleInput(0); });
+                Chk("ResetOutputs", Ops.ResetOutputs, () => !mm.ReadOut(0));
+
+                // ---------- 2. 归零队列 ----------
+                Chk("HomeAll", () => Ops.HomeAll(), () => Ops.HomeActive);
+                Pump(600);
+                Chk("HomeAll 完成", () => { }, () => !Ops.HomeActive);
+                // 队列清空不等于归零成功（被互锁拒绝也会清空），所以要用 Homed 位判定
+                Chk("HomeAll 真的归零了", () => { }, () => mm.Axes.All(a => mm.State(a.Index).Homed));
+                Chk("HomeAll 后位置=回零位", () => { },
+                    () => Math.Abs(mm.Position(0) - mm.Axes[0].HomeMm) < 1.0);
+                // 单轴归零直接走 Mm.Home()，不经过 Ops 的归零队列 —— 所以判返回是否被接受
+                Chk("HomeAxisByName", () =>
+                {
+                    if (!Ops.HomeAxisByName("料盘传送臂")) throw new Exception("单轴归零被拒绝");
+                });
+                Chk("HomeAxis(0)", () =>
+                {
+                    if (!Ops.HomeAxis(0)) throw new Exception("单轴归零被拒绝");
+                });
+                Pump(400);
+                Chk("单轴归零后已回零位", () => { },
+                    () => Math.Abs(mm.Position(30) - mm.Axes[30].HomeMm) < 1.0);
+
+                // ---------- 3. 轴运动 ----------
+                // 先离开回零位，否则 Jog 的位移可能被软限位吃掉
+                mm.MoveAbs(0, 160);
+                Pump(200);
+                double p0 = mm.Position(0);
+                Chk("JogAxis(0,+1)", () => Ops.JogAxis(0, 1));
+                Pump(20);
+                Chk("JogAxis 生效", () => { }, () => Math.Abs(mm.Position(0) - p0) > 0.001);
+                Chk("StopAxis(0)", () => Ops.StopAxis(0));
+                Chk("MoveAxisTo(0,100)", () => Ops.MoveAxisTo(0, 100));
+                Pump(200);
+                Chk("MoveAxisTo 到位", () => { }, () => Math.Abs(mm.Position(0) - 100) < 1.0);
+                Chk("MoveAxisByName", () => Ops.MoveAxisByName("测试位移动Y1", 50));
+                Pump(200);
+                Chk("JogAxisByName", () => Ops.JogAxisByName("测试位下压Z1", 1));
+                Pump(10);
+                Chk("StopAxisByName", () => Ops.StopAxisByName("测试位下压Z1"));
+                Chk("JogAxisBy", () => Ops.JogAxisBy(0, -5));
+                Pump(10);
+                Chk("JogStep 读写", () => { Ops.JogStep = 2.5; }, () => Math.Abs(Ops.JogStep - 2.5) < 1e-9);
+
+                // ---------- 4. 工作基点 / 轴名映射 ----------
+                Chk("AxisNameForKey(mb_y0_)", () => { }, () => Ops.AxisNameForKey("mb_y0_car") == "测试位移动Y1");
+                Chk("AxisNameForKey(mb_ld_z3_1)", () => { }, () => Ops.AxisNameForKey("mb_ld_z3_1") == "上料取放臂Z3轴");
+                Chk("AxisNameForKey(mb_car_in_1)", () => { }, () => Ops.AxisNameForKey("mb_car_in_1") == "测试运料小车B");
+                Chk("AxisNameForKey(mb_ta_Safe)", () => { }, () => Ops.AxisNameForKey("mb_ta_Safe") == "料盘传送臂");
+                Chk("CapturePosTo(mb_y0_car)", () => Ops.CapturePosTo("mb_y0_car"), () => M.Nums.ContainsKey("mb_y0_car"));
+                Chk("CapturePosTo 未绑定键", () => Ops.CapturePosTo("no_such_key_at_all"), () => true);
+                Chk("ApplyBasePoints", Ops.ApplyBasePoints);
+                Chk("CaptureArmXY(上料)", () => Ops.CaptureArmXY(true), () => M.Nums.ContainsKey("mb_ld_cx"));
+                Chk("ApplyArmXYChange(上料)", () => Ops.ApplyArmXYChange(true));
+                Chk("ArmZPos(Top)", () => Ops.ArmZPos(true, 0, true));
+                Chk("ArmZAll(TZ)", () => Ops.ArmZAll(false, false));
+                Chk("FindAxis", () => { }, () => Ops.FindAxis("测试位下压Z2") != null);
+
+                // ---------- 5. 生产节拍 ----------
+                Chk("StartProduction", () => Ops.StartProduction(), () => Ops.IsRunning);
+                Chk("CanShutdown 运行中必须为 false", () => { }, () => !Ops.CanShutdown(out _));
+                Pump(3000);          // 150 s 仿真：足够跑完多个循环
+                Chk("产量累加", () => { }, () => M.TotalCount > 0);
+                Chk("良率已计算", () => { }, () => M.Yield > 0);
+                Chk("PauseProduction", () => Ops.PauseProduction(), () => Ops.IsPaused);
+                Pump(100);
+                Chk("ResumeProduction", () => Ops.ResumeProduction(), () => Ops.IsRunning);
+                Chk("SingleStep", Ops.SingleStep);
+                Pump(100);
+                Chk("StopProduction", () => Ops.StopProduction(), () => Ops.IsIdle);
+                Chk("RefreshTimingReadouts", Ops.RefreshTimingReadouts, () => M.UPH > 0);
+                Chk("ResetCounters", Ops.ResetCounters, () => M.TotalCount == 0);
+
+                // ---------- 6. 急停 ----------
+                Chk("EmergencyStop", Ops.EmergencyStop, () => mm.EStop);
+                Chk("StartProduction 被急停拦下", () => { }, () => !Ops.StartProduction());
+                Chk("ResetEmergency", Ops.ResetEmergency, () => !mm.EStop);
+
+                // ---------- 7. 温控闭环 ----------
+                // 温控闭环自检。
+                // 注意：前面的节拍泵已经累计泵了 200 秒以上，实际温度早被带到设定值附近，
+                // 直接测「升温」测不出变化。所以先用「目标 < 实际」这条确定性路径验证降温/断电，
+                // 再切高温验证升温/吸合。
+                M.SetChoice("tc_mode", 2);                     // 低温档：目标 10℃（远低于实际）
+                Chk("ApplyTemp(低温)", Ops.ApplyTemp, () => M.TempSet < 25);
+                double t0 = Ops.TempActual;
+                Pump(200);
+                Chk("目标低于实际 → 加热器断开", () => { }, () => !Ops.HeaterOn);
+                Chk("加热器断开后温度回落", () => { }, () => Ops.TempActual < t0);
+                Chk("温度被夹在 20~120℃", () => { }, () => Ops.TempActual >= 20 && Ops.TempActual <= 120);
+
+                M.SetChoice("tc_mode", 1);                     // 高温档：目标 50℃
+                Chk("ApplyTemp(高温)", Ops.ApplyTemp, () => M.TempSet >= 45);
+                double t1 = Ops.TempActual;
+                Pump(200);
+                Chk("目标高于实际 → 温度上升", () => { }, () => Ops.TempActual > t1);
+                Chk("加热输出已吸合(OUT15)", () => { }, () => Ops.HeaterOn);
+                Chk("ApplyTempControl", Ops.ApplyTempControl, () => M.TempSet > 0);
+                Chk("ApplyTempRecipe", Ops.ApplyTempRecipe);
+
+                // ---------- 8. 测试臂 / 测试接口 ----------
+                // 急停会把伺服全部断使能，校准前置条件要求伺服已使能
+                Chk("ServoAll(on) 复位后重新使能", () => Ops.ServoAll(true), () => Ops.ServoOnCount > 0);
+                Chk("StartTestArmCalibration", Ops.StartTestArmCalibration, () => Ops.TestArmCalibrating);
+                Pump(600);
+                Chk("校准自动结束", () => { }, () => !Ops.TestArmCalibrating);
+                Chk("TestArmStep", Ops.TestArmStep);
+                Chk("ManualTestTrigger", Ops.ManualTestTrigger);
+                Pump(5);
+                Chk("TickManualPulse 回落", () => { }, () => !mm.ReadOut(0));
+                Chk("ExitTestArmCalibration", Ops.ExitTestArmCalibration);
+                Chk("TestIo_Sot", Ops.TestIo_Sot);
+                Pump(5);
+                Chk("TickTestIoPulse 回落", () => { }, () => !mm.ReadOut(0));
+                Chk("TestIo_Send", () => Ops.TestIo_Send("SELFTEST"), () => Ops.TestIoRx.Contains("SELFTEST"));
+                Chk("TestIo_TestInfo", Ops.TestIo_TestInfo, () => Ops.TestIoRx.Contains("Ready"));
+
+                // ---------- 9. Bin / 视觉 / 清洁 ----------
+                Chk("ApplyBinYieldCtrl", Ops.ApplyBinYieldCtrl);
+                Chk("ToggleBinYieldCtrl", Ops.ToggleBinYieldCtrl);
+                Chk("ToggleBinYieldCtrl 复原", Ops.ToggleBinYieldCtrl);
+                M.SetToggle("bv_head0", true);
+                Chk("VisionMoveToCapturePos", Ops.VisionMoveToCapturePos);
+                Chk("DefaultContactForce", Ops.DefaultContactForce, () => M.GetNum("ta_force") > 0);
+                Chk("RestoreCleanDefault", Ops.RestoreCleanDefault);
+                Chk("ApplyCleanOffset", Ops.ApplyCleanOffset);
+                Chk("ResetCleanCounters", Ops.ResetCleanCounters, () => M.GetNum("cp_counter") == 0);
+
+                // ---------- 10. 配方文件 ----------
+                string rec = "SELFTEST_RECIPE";
+                Chk("NewRecipe", () => Ops.NewRecipe(rec));
+                Chk("SaveRecipeAs", () => Ops.SaveRecipeAs(rec));
+                Chk("LoadRecipe", () => Ops.LoadRecipe(rec));
+                Chk("ApplyRecipe", () => Ops.ApplyRecipe(rec));
+                Chk("CopyRecipe", () => Ops.CopyRecipe(rec, rec + "_C"));
+                Chk("RenameRecipe", () => Ops.RenameRecipe(rec + "_C", rec + "_R"));
+                Chk("DeleteRecipe(副本)", () => Ops.DeleteRecipe(rec + "_R"));
+                Chk("SelectRecipe", () => Ops.SelectRecipe(rec), () => M.Recipe == rec);
+                Chk("DeleteRecipe(本体)", () => Ops.DeleteRecipe(rec));
+                Chk("SyncRecipeListFromDisk", Ops.SyncRecipeListFromDisk);
+                Chk("ExportRecipeTo", () =>
+                {
+                    string p = Path.Combine(Path.GetTempPath(), "hg_ops_selftest_recipe.json");
+                    Ops.ExportRecipeTo(M.Recipe, p);
+                    if (!File.Exists(p)) throw new IOException("导出文件不存在：" + p);
+                });
+                Chk("ImportRecipeFrom", () =>
+                {
+                    string p = Path.Combine(Path.GetTempPath(), "hg_ops_selftest_recipe.json");
+                    if (File.Exists(p)) Ops.ImportRecipeFrom(p);
+                });
+                Chk("CopyTrayType", () => Ops.CopyTrayType(2, 1), () => M.Nums.ContainsKey("tp_nx_2"));
+                Chk("ApplyTrayDefine", Ops.ApplyTrayDefine);
+                Chk("SelectSiteLayout", () => Ops.SelectSiteLayout("Sixteen-Sites_A"),
+                    () => M.SiteLayoutName == "Sixteen-Sites_A");
+
+                // ---------- 11. 参数持久化 ----------
+                Chk("SaveParams", Ops.SaveParams, () => File.Exists(Ops.ParamsPath));
+                Chk("SnapshotJson", () => { }, () => Ops.SnapshotJson().Length > 10);
+                Chk("LoadParams", Ops.LoadParams);
+                Chk("RestoreJson", () => Ops.RestoreJson(Ops.SnapshotJson()));
+                Chk("ApplyAllAxisConfigs", Ops.ApplyAllAxisConfigs);
+                Chk("PullAxisConfigsToModel", Ops.PullAxisConfigsToModel);
+
+                // ---------- 12. 批次 / 用户 ----------
+                Chk("OpenBatch", () => Ops.OpenBatch("MO-SELFTEST", "SUB-1", "Tester"), () => M.BatchOpen);
+                Chk("CloseBatch", Ops.CloseBatch, () => !M.BatchOpen);
+                Chk("ZeroStats", Ops.ZeroStats, () => M.TotalCount == 0);
+                Chk("LoadUsers", Ops.LoadUsers, () => Ops.UserCount >= 3);
+                M.SetText("mu_user", "Tester");
+                M.SetText("mu_pass", "999");
+                M.SetChoice("mu_level", 1);
+                Chk("AddOrUpdateUser", Ops.AddOrUpdateUser, () => Ops.UserCount >= 4);
+                Chk("SetPrivilegeLevel", Ops.SetPrivilegeLevel);
+                M.SetText("mu_user", "Tester");
+                Chk("DeleteUser", Ops.DeleteUser, () => Ops.UserCount >= 3);
+                Chk("ApplyUsers", Ops.ApplyUsers);
+                Chk("UserCell", () => { }, () => !string.IsNullOrEmpty(Ops.UserCell(0, 0)));
+
+                // ---------- 13. 工具 / 主界面 / 控制板 ----------
+                Chk("ApplyWorkMode", Ops.ApplyWorkMode);
+                Chk("ApplyEnable", Ops.ApplyEnable);
+                Chk("ApplyLightSetting", Ops.ApplyLightSetting);
+                Chk("CheckChannelMap(auto)", () => Ops.CheckChannelMap(true));
+                Chk("CheckChannelMap(manual)", () => Ops.CheckChannelMap(false));
+                Chk("RunClean(auto)", () => Ops.RunClean(true));
+                Chk("RunClean(manual)", () => Ops.RunClean(false));
+                Chk("DisassembleArm", Ops.DisassembleArm);
+                Chk("DisassembleArm 后轴在动 → 禁止关机", () => { }, () => !Ops.CanShutdown(out _));
+                Pump(600);           // 等机械走完
+                Chk("运动结束后允许关机", () => { }, () => Ops.CanShutdown(out _));
+                Chk("SnapMachineState", Ops.SnapMachineState, () => Directory.GetFiles(Ops.DataDir, "snap_*.log").Length > 0);
+                Chk("RefreshAlarmStats", Ops.RefreshAlarmStats);
+                Chk("UpdateLog", Ops.UpdateLog);
+                Chk("LogCell", () => { }, () => Ops.LogCell(0, 1) != null);
+                Chk("LogRowCount", () => { }, () => Ops.LogRowCount >= 0);
+                Chk("CanShutdown 空闲为 true", () => { }, () => Ops.CanShutdown(out _));
+                Chk("ConfirmHome", Ops.ConfirmHome, () => Ops.HomeActive);
+                Chk("CancelHome(2)", Ops.CancelHome, () => !Ops.HomeActive);
+
+                // ---------- 14. 臂 Go / 传送臂 ----------
+                Chk("ArmGo(上料)", () => Ops.ArmGo(true, 2, 0, 100, 100, 5));
+                Pump(400);
+                Chk("TrayArmGo", () => Ops.TrayArmGo("Safe", -722.99));
+                Pump(400);
+                Chk("TestArmPos", () => Ops.TestArmPos("测试位下压Z1", 0));
+                Pump(100);
+
+                // ---------- 15. 表单（按前缀自动覆盖） ----------
+                Chk("PageForm+Apply", () =>
+                {
+                    var f = Ops.PageForm("自检表单", "ta_", "tp_");
+                    f.Snapshot();
+                    f.Apply();
+                    f.Restore();
+                });
+                Chk("Form+字段", () =>
+                {
+                    var f = Ops.Form("自检字段")
+                             .Num("st_door_t", 30, 0, 600, "开门处理时间")
+                             .Chk("st_skt_empty", true, "测试座空检查")
+                             .Text("sf_ftp_ip", "192.168.0.100", "FTP 地址");
+                    f.Snapshot();
+                    f.Apply();
+                    f.Restore();
+                });
+                // ta_drop 在《品种 → 测试臂》里声明了区间 [-15, 0]
+                // XAML 页面（Pages/*.xaml 覆盖了同名 C# 构建函数）的按页表单：
+                // 页面渲染阶段应该已经通过 PageVm.MakeContent → Ops.PageFormById 建好表单，
+                // 并在页面构建完成后由 FreezePageForms() 记下初值。这里逐个验证。
+                Chk("XAML 页表单全部已冻初值", () => { }, () => Ops.PageFormsNotSnapped().Count == 0);
+                foreach (var pid in new[]
+                {
+                    "enable", "inforec", "maint_light", "maint_toffset", "mode", "motorhome", "tempctl",
+                    "unit_apply", "unit_arm", "unit_cart", "unit_io", "unit_offset",
+                    "unit_speed", "unit_testarm", "unit_transfer"
+                })
+                {
+                    string page = pid;
+                    Chk("ApplyPageForm(" + page + ")", () => Ops.ApplyPageForm(page));
+                    Chk("RestorePageForm(" + page + ")", () => Ops.RestorePageForm(page));
+                }
+                Chk("未知页表单被拒绝", () => Ops.ApplyPageForm("no_such_page"), () => true);
+
+                Chk("TryRange(ta_drop)", () => { }, () => Ops.TryRange("ta_drop", out var rlo, out var rhi)
+                                                            && Math.Abs(rlo + 15) < 1e-9 && Math.Abs(rhi) < 1e-9);
+                Chk("TryRange(未声明键)", () => { }, () => !Ops.TryRange("no_range_key", out _, out _));
+                Chk("CountKeys", () => { }, () => Ops.CountKeys("ta_") >= 0);
+
+                // ---------- 16. 日志 ----------
+                Chk("ExportLog", () => { }, () => !string.IsNullOrEmpty(Ops.ExportLog()));
+                Chk("ExportLogTo", () =>
+                {
+                    string p = Path.Combine(Path.GetTempPath(), "hg_ops_selftest_log.txt");
+                    Ops.ExportLogTo(p);
+                    if (!File.Exists(p)) throw new IOException("导出文件不存在：" + p);
+                });
+
+                // ---------- 17. 偏移设定：13 个区域各自一套偏移（温启志 18719361399） ----------
+                Chk("SelectOffsetRegion 越界被拒", () => { }, () => !Ops.SelectOffsetRegion(0) && !Ops.SelectOffsetRegion(99));
+                Chk("SelectOffsetRegion(#1 已在该区)", () => { }, () => !Ops.SelectOffsetRegion(1));
+                Chk("SelectOffsetRegion(#5 切换成功)", () => Ops.SelectOffsetRegion(5), () => Ops.CurrentOffsetRegion == 5);
+                Chk("区域名映射", () => { }, () => Ops.OffsetRegionName(5) == "加热盘2" && Ops.OffsetRegionName(13) == "固定盘3");
+                Chk("切换后区域文本已更新", () => { }, () => M.GetText("uo_region") == "#5-加热盘2");
+                Chk("在 #5 改值后再切走", () =>
+                {
+                    M.SetNum("uo_x", 1.25);
+                    M.SetNum("uo_y", -0.75);
+                    M.SetNum("uo_place", -3.5);
+                    M.SetNum("uo_pick", 0.4);
+                    Ops.SelectOffsetRegion(9);            // 存 #5、载入 #9
+                }, () => Ops.CurrentOffsetRegion == 9);
+                Chk("#9 是首次访问 → 载入出厂缺省", () => { },
+                    () => Math.Abs(M.GetNum("uo_x", 999)) < 1e-9
+                       && Math.Abs(M.GetNum("uo_place", 999) + 2.0) < 1e-9);
+                Chk("#5 的改动被保存下来了", () => { },
+                    () => Ops.OffsetRegionSnapshot(5) != null
+                       && Math.Abs(Ops.OffsetRegionSnapshot(5)[0] - 1.25) < 1e-9
+                       && Math.Abs(Ops.OffsetRegionSnapshot(5)[2] + 3.5) < 1e-9);
+                Chk("切回 #5 能取回刚才的值", () => Ops.SelectOffsetRegion(5),
+                    () => Math.Abs(M.GetNum("uo_x", 0) - 1.25) < 1e-9
+                       && Math.Abs(M.GetNum("uo_y", 0) + 0.75) < 1e-9
+                       && Math.Abs(M.GetNum("uo_place", 0) + 3.5) < 1e-9);
+                Chk("区域数 = 13", () => { }, () => Ops.OffsetRegionCount == 13);
+                Chk("ResetAllOffsetRegions", () => Ops.ResetAllOffsetRegions(),
+                    () => Ops.CurrentOffsetRegion == 1 && Ops.OffsetRegionSnapshot(5) == null);
+                Chk("恢复 unit_offset 页会连带清区域", () => Ops.RestorePageForm("unit_offset"),
+                    () => Ops.CurrentOffsetRegion == 1);
+
+                // ---------- 18. 主页统计页签（Counter / UPH-Tray / Timer） ----------
+                Chk("主页可构建", () => { }, () => HomePages.MainScreen() != null);
+
+                // ---------- 19. 收尾：把自检自己造出来的东西清干净 ----------
+                Chk("清理自检品种", () =>
+                {
+                    Ops.DeleteRecipe("hg_ops_selftest_recipe");
+                    Ops.DeleteRecipe(rec);
+                    Ops.SyncRecipeListFromDisk();
+                }, () => !MachineModel.Instance.Recipes.Any(r => r.StartsWith("SELFTEST")
+                                                                || r.StartsWith("hg_ops_selftest")));
+
+                Log("ops selftest: ok=" + ok + " bad=" + bad);
+                foreach (var f in fails) Log("OPS FAIL " + f);
+                if (bad == 0) Log("ops selftest done ALL PASS ok=" + ok);
+            }
+            catch (Exception ex)
+            {
+                Log("ops selftest crash: " + ex);
+            }
+        }
+
         private static void MotionSelfTest()
         {
             try

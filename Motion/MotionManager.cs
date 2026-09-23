@@ -151,11 +151,20 @@ namespace HandlerGuide.Motion
         /// <summary>自演示节拍是否运行中。</summary>
         public bool AutoCycle { get; private set; }
 
+        /// <summary>节拍是否处于「暂停」（保持 AutoCycle，但不推进步骤）。</summary>
+        public bool Paused { get; private set; }
+
         /// <summary>当前节拍步骤描述。</summary>
         public string DemoStepText { get; private set; } = "未运行";
 
         /// <summary>节拍完成的循环数。</summary>
         public int DemoCycles { get; private set; }
+
+        /// <summary>
+        /// 一个完整取放料循环结束。产量计数 / Bin 分类 / UPH 由订阅方（Ops）负责，
+        /// 这样运控层不需要知道业务统计，避免 Motion ↔ ViewModels 互相引用。
+        /// </summary>
+        public event Action CycleCompleted;
 
         private MotionManager()
         {
@@ -772,6 +781,7 @@ namespace HandlerGuide.Motion
         {
             if (!Connected) { MachineModel.Instance.Log("警告", "控制卡未连接，无法启动演示"); return; }
             AutoCycle = true;
+            Paused = false;
             _demoStep = 0;
             _demoDwell = 0;
             _demoTimeout = 0;
@@ -780,10 +790,41 @@ namespace HandlerGuide.Motion
             MachineModel.Instance.Log("信息", "启动运动演示节拍（全程经安全互锁裁决）");
         }
 
+        /// <summary>暂停节拍：轴保持当前位置，步骤不再推进。</summary>
+        public void PauseDemo()
+        {
+            if (!AutoCycle) return;
+            Paused = true;
+            DemoStepText = "已暂停：" + DemoStepText;
+            MachineModel.Instance.Log("信息", "节拍已暂停（保持当前位置）");
+        }
+
+        /// <summary>从暂停处继续。</summary>
+        public void ResumeDemo()
+        {
+            if (!AutoCycle) return;
+            Paused = false;
+            DemoStepText = DemoStepText.Replace("已暂停：", "");
+            MachineModel.Instance.Log("信息", "节拍已继续");
+        }
+
+        /// <summary>单步执行一次节拍（暂停状态下使用）。</summary>
+        public void StepOnce()
+        {
+            if (!Connected) { MachineModel.Instance.Log("警告", "控制卡未连接"); return; }
+            if (!AutoCycle) { StartDemo(); Paused = true; }
+            Paused = false;
+            _demoDwell = 0;
+            _demoTimeout = 0;
+            AdvanceDemo();
+            Paused = true;
+        }
+
         /// <summary>停止自演示节拍。</summary>
         public void StopDemo()
         {
             AutoCycle = false;
+            Paused = false;
             DemoStepText = "已停止";
             StopAll();
         }
@@ -791,7 +832,7 @@ namespace HandlerGuide.Motion
         /// <summary>推进演示节拍：仅在所有轴静止且驻留结束时进入下一步。</summary>
         private void StepDemo(double dt)
         {
-            if (!AutoCycle) return;
+            if (!AutoCycle || Paused) return;
 
             _demoDwell -= dt;
             if (AnyBusy() || _demoDwell > 0)
@@ -818,6 +859,9 @@ namespace HandlerGuide.Motion
             {
                 _demoStep = 0;
                 DemoCycles++;
+                // 通知订阅方（Ops）做产量计数 —— 运控层不碰业务统计。
+                try { CycleCompleted?.Invoke(); }
+                catch (Exception ex) { MachineModel.Instance.Log("警告", "循环完成回调异常：" + ex.Message); }
             }
             var st = _demo[_demoStep];
             DemoStepText = "第 " + (_demoStep + 1) + "/" + _demo.Count + " 步：" + st.Label;

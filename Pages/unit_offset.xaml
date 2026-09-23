@@ -47,55 +47,55 @@
                                 <vm:StackElement>
                                     <vm:StackElement Orientation="Horizontal">
                                         <vm:TextElement Text="#1-小车A入口" FontSize="12" Foreground="#1D1D1F" Width="150" Margin="0,0,6,0" />
-                                        <vw:MiniBtn Text="+" Width="34" Cmd="Log" Arg="切换到区域：#1-小车A入口" />
+                                        <vw:MiniBtn Text="+" Width="34" Cmd="OffsetRegion" Arg="1" />
                                     </vm:StackElement>
                                     <vm:StackElement Orientation="Horizontal">
                                         <vm:TextElement Text="#2-小车B入口" FontSize="12" Foreground="#1D1D1F" Width="150" Margin="0,0,6,0" />
-                                        <vw:MiniBtn Text="+" Width="34" Cmd="Log" Arg="切换到区域：#2-小车B入口" />
+                                        <vw:MiniBtn Text="+" Width="34" Cmd="OffsetRegion" Arg="2" />
                                     </vm:StackElement>
                                     <vm:StackElement Orientation="Horizontal">
                                         <vm:TextElement Text="#3-上料盘" FontSize="12" Foreground="#1D1D1F" Width="150" Margin="0,0,6,0" />
-                                        <vw:MiniBtn Text="+" Width="34" Cmd="Log" Arg="切换到区域：#3-上料盘" />
+                                        <vw:MiniBtn Text="+" Width="34" Cmd="OffsetRegion" Arg="3" />
                                     </vm:StackElement>
                                     <vm:StackElement Orientation="Horizontal">
                                         <vm:TextElement Text="#4-加热盘1" FontSize="12" Foreground="#1D1D1F" Width="150" Margin="0,0,6,0" />
-                                        <vw:MiniBtn Text="+" Width="34" Cmd="Log" Arg="切换到区域：#4-加热盘1" />
+                                        <vw:MiniBtn Text="+" Width="34" Cmd="OffsetRegion" Arg="4" />
                                     </vm:StackElement>
                                     <vm:StackElement Orientation="Horizontal">
                                         <vm:TextElement Text="#5-加热盘2" FontSize="12" Foreground="#1D1D1F" Width="150" Margin="0,0,6,0" />
-                                        <vw:MiniBtn Text="+" Width="34" Cmd="Log" Arg="切换到区域：#5-加热盘2" />
+                                        <vw:MiniBtn Text="+" Width="34" Cmd="OffsetRegion" Arg="5" />
                                     </vm:StackElement>
                                     <vm:StackElement Orientation="Horizontal">
                                         <vm:TextElement Text="#6-旋转台" FontSize="12" Foreground="#1D1D1F" Width="150" Margin="0,0,6,0" />
-                                        <vw:MiniBtn Text="+" Width="34" Cmd="Log" Arg="切换到区域：#6-旋转台" />
+                                        <vw:MiniBtn Text="+" Width="34" Cmd="OffsetRegion" Arg="6" />
                                     </vm:StackElement>
                                     <vm:StackElement Orientation="Horizontal">
                                         <vm:TextElement Text="#7-清洁盘" FontSize="12" Foreground="#1D1D1F" Width="150" Margin="0,0,6,0" />
-                                        <vw:MiniBtn Text="+" Width="34" Cmd="Log" Arg="切换到区域：#7-清洁盘" />
+                                        <vw:MiniBtn Text="+" Width="34" Cmd="OffsetRegion" Arg="7" />
                                     </vm:StackElement>
                                     <vm:StackElement Orientation="Horizontal">
                                         <vm:TextElement Text="#8-自动盘1" FontSize="12" Foreground="#1D1D1F" Width="150" Margin="0,0,6,0" />
-                                        <vw:MiniBtn Text="+" Width="34" Cmd="Log" Arg="切换到区域：#8-自动盘1" />
+                                        <vw:MiniBtn Text="+" Width="34" Cmd="OffsetRegion" Arg="8" />
                                     </vm:StackElement>
                                     <vm:StackElement Orientation="Horizontal">
                                         <vm:TextElement Text="#9-自动盘2" FontSize="12" Foreground="#1D1D1F" Width="150" Margin="0,0,6,0" />
-                                        <vw:MiniBtn Text="+" Width="34" Cmd="Log" Arg="切换到区域：#9-自动盘2" />
+                                        <vw:MiniBtn Text="+" Width="34" Cmd="OffsetRegion" Arg="9" />
                                     </vm:StackElement>
                                     <vm:StackElement Orientation="Horizontal">
                                         <vm:TextElement Text="#10-自动盘3" FontSize="12" Foreground="#1D1D1F" Width="150" Margin="0,0,6,0" />
-                                        <vw:MiniBtn Text="+" Width="34" Cmd="Log" Arg="切换到区域：#10-自动盘3" />
+                                        <vw:MiniBtn Text="+" Width="34" Cmd="OffsetRegion" Arg="10" />
                                     </vm:StackElement>
                                     <vm:StackElement Orientation="Horizontal">
                                         <vm:TextElement Text="#11-固定盘1" FontSize="12" Foreground="#1D1D1F" Width="150" Margin="0,0,6,0" />
-                                        <vw:MiniBtn Text="+" Width="34" Cmd="Log" Arg="切换到区域：#11-固定盘1" />
+                                        <vw:MiniBtn Text="+" Width="34" Cmd="OffsetRegion" Arg="11" />
                                     </vm:StackElement>
                                     <vm:StackElement Orientation="Horizontal">
                                         <vm:TextElement Text="#12-固定盘2" FontSize="12" Foreground="#1D1D1F" Width="150" Margin="0,0,6,0" />
-                                        <vw:MiniBtn Text="+" Width="34" Cmd="Log" Arg="切换到区域：#12-固定盘2" />
+                                        <vw:MiniBtn Text="+" Width="34" Cmd="OffsetRegion" Arg="12" />
                                     </vm:StackElement>
                                     <vm:StackElement Orientation="Horizontal">
                                         <vm:TextElement Text="#13-固定盘3" FontSize="12" Foreground="#1D1D1F" Width="150" Margin="0,0,6,0" />
-                                        <vw:MiniBtn Text="+" Width="34" Cmd="Log" Arg="切换到区域：#13-固定盘3" />
+                                        <vw:MiniBtn Text="+" Width="34" Cmd="OffsetRegion" Arg="13" />
                                     </vm:StackElement>
                                 </vm:StackElement>
                             </vm:ScrollElement>
@@ -160,8 +160,8 @@
     </vm:GridElement>
 
     <vm:StackElement Orientation="Horizontal">
-        <vw:MiniBtn Text="恢复" />
-        <vw:Btn Text="Apply" Cmd="Log" Arg="偏移设定已应用" />
+        <vw:MiniBtn Text="恢复" Cmd="Reset" Arg="unit_offset" />
+        <vw:Btn Text="应用" Cmd="Apply" Arg="unit_offset" />
     </vm:StackElement>
 
     <vw:Watermark />

@@ -64,8 +64,8 @@
                     <vw:Chk Key="ua_same_ld" Label="下料与上料一致" />
                 </vm:GroupElement>
                 <vm:StackElement Orientation="Horizontal">
-                    <vw:MiniBtn Text="恢复" />
-                    <vw:Btn Text="应用" Cmd="Log" Arg="上下料臂参数已应用" />
+                    <vw:MiniBtn Text="恢复" Cmd="Reset" Arg="unit_arm" />
+                    <vw:Btn Text="应用" Cmd="Apply" Arg="unit_arm" />
                 </vm:StackElement>
             </vm:StackElement>
         </vm:TabItemVm>
@@ -127,8 +127,8 @@
                     <vw:Chk Key="ua_same_ul" Label="下料与上料一致" />
                 </vm:GroupElement>
                 <vm:StackElement Orientation="Horizontal">
-                    <vw:MiniBtn Text="恢复" />
-                    <vw:Btn Text="应用" Cmd="Log" Arg="上下料臂参数已应用" />
+                    <vw:MiniBtn Text="恢复" Cmd="Reset" Arg="unit_arm" />
+                    <vw:Btn Text="应用" Cmd="Apply" Arg="unit_arm" />
                 </vm:StackElement>
             </vm:StackElement>
         </vm:TabItemVm>

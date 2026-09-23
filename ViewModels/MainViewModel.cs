@@ -43,10 +43,27 @@ namespace HandlerGuide.ViewModels
         public bool Fill { get; set; }
 
         /// <summary>页面内容（首次访问时构建并缓存；优先加载 Views/Pages/{id}.xaml）。</summary>
-        public Element Content => _content ?? (_content = MakeContent());
+        public Element Content
+        {
+            get
+            {
+                if (_content == null)
+                {
+                    _content = MakeContent();
+                    // 页面构建完成 → 冻住本页参数表单的初值（「恢复」回到打开页面那一刻）
+                    Ops.FreezePageForms();
+                }
+                return _content;
+            }
+        }
 
         private Element MakeContent()
         {
+            // XAML 页面覆盖了同名 C# 构建函数，它的「应用 / 恢复」按钮只能走
+            // PageCommands → Ops.ApplyPageForm/RestorePageForm。这里先把本页表单
+            // 建好并挂进「待冻结」队列，页面构建完成后由 FreezePageForms() 记初值。
+            Ops.PageFormById(Id);
+
             var fromXaml = PageLoader.Load(Id);
             if (fromXaml != null)
             {
@@ -109,6 +126,38 @@ namespace HandlerGuide.ViewModels
         public Func<string, string, bool> Confirm { get; set; }
         public Action<string, string> Alert { get; set; }
 
+        // 文件对话框服务：由视图注入，视图模型不引用 System.Windows.Forms / Microsoft.Win32。
+        //   PickOpenFiles(标题, 过滤器) → 选中文件路径数组（取消返回 null/空）
+        //   PickSaveFile (标题, 过滤器, 默认文件名) → 目标路径（取消返回 null）
+        public Func<string, string, string[]> PickOpenFiles { get; set; }
+        public Func<string, string, string, string> PickSaveFile { get; set; }
+
+        /// <summary>弹出「打开」对话框并导入品种参数。</summary>
+        public RelayCommand ImportRecipeCommand => new RelayCommand(() =>
+        {
+            var files = PickOpenFiles?.Invoke("导入品种参数", "品种参数文件 (*.json)|*.json|所有文件 (*.*)|*.*");
+            if (files == null || files.Length == 0) return;
+            foreach (var f in files) Ops.ImportRecipeFrom(f);
+        });
+
+        /// <summary>弹出「另存为」对话框并导出当前品种参数。</summary>
+        public RelayCommand ExportRecipeCommand => new RelayCommand(() =>
+        {
+            string def = M.Recipe + "_" + DateTime.Now.ToString("yyyyMMdd_HHmm") + ".json";
+            string path = PickSaveFile?.Invoke("导出品种参数", "品种参数文件 (*.json)|*.json", def);
+            if (string.IsNullOrEmpty(path)) return;
+            Ops.ExportRecipeTo(M.Recipe, path);
+        });
+
+        /// <summary>弹出「另存为」对话框并导出信息记录。</summary>
+        public RelayCommand ExportLogToCommand => new RelayCommand(() =>
+        {
+            string def = "log_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".txt";
+            string path = PickSaveFile?.Invoke("导出信息记录", "文本文件 (*.txt)|*.txt", def);
+            if (string.IsNullOrEmpty(path)) return;
+            Ops.ExportLogTo(path);
+        });
+
         public MainViewModel()
         {
             // 先注册运动页的具名实时信号（静态构造函数不会因方法组引用而触发）
@@ -129,6 +178,14 @@ namespace HandlerGuide.ViewModels
 
             // 运动控制卡：优先探测雷赛 LTDMC.dll / DMC 硬件，失败自动降级为内置仿真卡。
             Motion.MotionManager.Instance.Connect();
+
+            // 操作层：订阅运控循环回调、装载上次参数、并入磁盘上的配方。
+            // 必须显式调用 —— 静态类的方法组引用不会触发静态构造函数（技能文档 Pitfall 7）。
+            Current = this;
+            Ops.Init();
+            // 把控制卡的轴参数回填到界面模型，保证《单元设定 / 电机归零》页显示的是真值
+            Ops.PullAxisConfigsToModel();
+            Ops.RefreshTimingReadouts();
 
             Navigate(HomePage);
         }
@@ -171,9 +228,9 @@ namespace HandlerGuide.ViewModels
 
         public RelayCommand GoHomeCommand => new RelayCommand(() => Navigate(HomePage));
 
-        public RelayCommand SaveCommand => new RelayCommand(() => M.Log("信息", "参数已保存"));
+        public RelayCommand SaveCommand => new RelayCommand(() => Ops.SaveParams());
 
-        public RelayCommand RecallCommand => new RelayCommand(() => M.Log("信息", "参数已召回"));
+        public RelayCommand RecallCommand => new RelayCommand(() => Ops.LoadParams());
 
         public bool KeyboardLocked
         {
@@ -287,16 +344,53 @@ namespace HandlerGuide.ViewModels
             : M.RunState == "暂停" ? Palette.Tip
             : Palette.Secondary;
 
-        public string VersionText => "Version: 2.0.23.709   ·   " + WenQiZhiMark;
+        // ---------------- 命令中心工具条（启动 / 暂停 / 停止 / 急停 / 归零） ----------------
 
-        /// <summary>由界面定时器驱动：推进仿真 + 刷新实时读数。</summary>
-        public void Tick()
+        /// <summary>最近构造的实例。Ops 用它把状态变化即时推回工具栏（按钮可用性 / 状态灯）。</summary>
+        public static MainViewModel Current { get; private set; }
+
+        public RelayCommand StartCommand => new RelayCommand(() => Ops.StartProduction());
+        public RelayCommand PauseCommand => new RelayCommand(() => Ops.PauseProduction());
+        public RelayCommand ResumeCommand => new RelayCommand(() => Ops.ResumeProduction());
+        public RelayCommand StopCommand => new RelayCommand(() => Ops.StopProduction());
+        public RelayCommand SingleStepCommand => new RelayCommand(() => Ops.SingleStep());
+        public RelayCommand EStopCommand => new RelayCommand(() => Ops.EmergencyStop());
+        public RelayCommand ResetEStopCommand => new RelayCommand(() => Ops.ResetEmergency());
+        public RelayCommand ClearAlarmCommand => new RelayCommand(() => Ops.ClearAlarm());
+        public RelayCommand HomeAllCommand => new RelayCommand(() => Ops.HomeAll());
+        public RelayCommand CancelHomeCommand => new RelayCommand(() => Ops.CancelHome());
+        public RelayCommand StopAllCommand => new RelayCommand(() => Ops.StopAllAxes());
+        public RelayCommand ServoOnCommand => new RelayCommand(() => Ops.ServoAll(true));
+        public RelayCommand ServoOffCommand => new RelayCommand(() => Ops.ServoAll(false));
+        public RelayCommand ResetCountersCommand => new RelayCommand(() => Ops.ResetCounters());
+        public RelayCommand ExportLogCommand => new RelayCommand(() => Ops.ExportLog());
+
+        // 温启志 18719361399：命令中心按钮已搬到主界面页内（HomePages.CommandCenter），
+        // 可用性判断统一放在 Ops，这里保留同名属性只是为了兼容旧绑定，避免两份逻辑分叉。
+        /// <summary>启动按钮可用：未运行、未急停、有卡、无报警。</summary>
+        public bool CanStart => Ops.CanStartProduction;
+
+        public bool CanPause => Ops.CanPauseProduction;
+        public bool CanResume => Ops.CanResumeProduction;
+        public bool CanStop => Ops.CanStopProduction;
+        public bool CanHome => Ops.CanHomeAxes;
+        public bool CanSingleStep => Ops.CanSingleStepProduction;
+
+        public string StatusServo => "伺服：" + Ops.ServoOnCount + "/"
+                                     + Motion.MotionManager.Instance.Axes.Count + " 使能";
+
+        public string StatusHome => "归零：" + Ops.HomeProgressText;
+
+        public string StatusTempActual => "实测：" + Ops.TempActual.ToString("0.0") + "°C";
+
+        /// <summary>工具栏上的大状态字。</summary>
+        public string RunStateText => M.RunState;
+
+        /// <summary>状态变化后立即刷新工具栏（不等下一个 500ms tick）。</summary>
+        public void RaiseStatusNow() => RaiseStatus();
+
+        private void RaiseStatus()
         {
-            M.Tick();
-            // 运动控制卡：推进仿真物理、回写电机状态、跑安全演示节拍
-            Motion.MotionManager.Instance.Tick(0.5);
-            M.TickClock();
-            LiveRegistry.RefreshAll();
             Raise(nameof(StatusRun));
             Raise(nameof(StatusMode));
             Raise(nameof(StatusRecipe));
@@ -304,6 +398,27 @@ namespace HandlerGuide.ViewModels
             Raise(nameof(StatusPressure));
             Raise(nameof(StatusClock));
             Raise(nameof(StatusDot));
+            Raise(nameof(StatusServo));
+            Raise(nameof(StatusHome));
+            Raise(nameof(StatusTempActual));
+            Raise(nameof(RunStateText));
+            Raise(nameof(CanStart));
+            Raise(nameof(CanPause));
+            Raise(nameof(CanResume));
+            Raise(nameof(CanStop));
+            Raise(nameof(CanHome));
+            Raise(nameof(CanSingleStep));
+        }
+
+        public string VersionText => "Version: 2.0.23.709   ·   " + WenQiZhiMark;
+
+        /// <summary>由界面定时器驱动：推进仿真 + 刷新实时读数。</summary>
+        public void Tick()
+        {
+            M.Tick();
+            M.TickClock();
+            LiveRegistry.RefreshAll();
+            RaiseStatus();
         }
 
         /// <summary>
@@ -313,6 +428,13 @@ namespace HandlerGuide.ViewModels
         public void FastTick(double dt)
         {
             Motion.MotionManager.Instance.Tick(dt);
+            // 归零队列与温控闭环都按真实时间推进，和运控物理同一条通道
+            Ops.TickHome(dt);
+            Ops.TickTemp(dt);
+            // 测试臂自动校准进度 / 手动测试脉冲宽度（温启志 18719361399）
+            Ops.TickTestArmCalibration(dt);
+            Ops.TickManualPulse(dt);
+            Ops.TickTestIoPulse(dt);
             LiveRegistry.RefreshFast();
         }
     }

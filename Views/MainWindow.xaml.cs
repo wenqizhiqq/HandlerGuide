@@ -60,6 +60,30 @@ namespace HandlerGuide.Views
             _vm.Alert = (title, msg) =>
                 MessageBox.Show(msg, title, MessageBoxButton.OK, MessageBoxImage.Information);
 
+            // 文件对话框：视图负责弹窗，视图模型只拿结果
+            _vm.PickOpenFiles = (title, filter) =>
+            {
+                var dlg = new Microsoft.Win32.OpenFileDialog
+                {
+                    Title = title,
+                    Filter = filter,
+                    Multiselect = true,
+                    CheckFileExists = true
+                };
+                return dlg.ShowDialog(this) == true ? dlg.FileNames : null;
+            };
+            _vm.PickSaveFile = (title, filter, defaultName) =>
+            {
+                var dlg = new Microsoft.Win32.SaveFileDialog
+                {
+                    Title = title,
+                    Filter = filter,
+                    FileName = defaultName,
+                    OverwritePrompt = true
+                };
+                return dlg.ShowDialog(this) == true ? dlg.FileName : null;
+            };
+
             _vm.PropertyChanged += Vm_PropertyChanged;
             DataContext = _vm;
 

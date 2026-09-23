@@ -299,9 +299,20 @@
                      ToolTip="{Binding ToolTip}" />
     </DataTemplate>
 
+    <DataTemplate DataType="{x:Type vm:LiveBadgeElement}">
+        <Border Background="{Binding Background}" CornerRadius="6" Padding="9,4"
+                Width="{Binding Width}" Margin="{Binding EffectiveMargin}"
+                HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}"
+                ToolTip="{Binding ToolTip}">
+            <TextBlock Text="{Binding Text}" FontSize="{Binding FontSize}" FontWeight="SemiBold"
+                       Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+    </DataTemplate>
+
     <DataTemplate DataType="{x:Type vm:ButtonElement}">
         <Button Content="{Binding Text}"
                 Command="{Binding Command}"
+                IsEnabled="{Binding IsEnabled}"
                 Style="{Binding StyleKey, Converter={StaticResource StyleKey}}"
                 FontSize="{Binding FontSize}"
                 FontWeight="{Binding FontWeight}"

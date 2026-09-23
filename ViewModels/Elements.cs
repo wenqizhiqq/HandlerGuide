@@ -443,11 +443,25 @@ namespace HandlerGuide.ViewModels
     }
 
     // 温启志 18719361399 · 类 public class ButtonElement : Element
-    public class ButtonElement : Element
+    public class ButtonElement : Element, ILiveValue
     {
+        private Func<bool> _enabled;
+        private bool _isEnabled = true;
+
+        private string _styleKey;
+
         public string Text { get; set; }
         public RelayCommand Command { get; set; }
-        public string StyleKey { get; set; }
+
+        /// <summary>
+        /// 样式资源键。赋值时会顺带补齐该样式的默认底色/描边（见 <see cref="ApplyStyleDefaults"/>）。
+        /// </summary>
+        public string StyleKey
+        {
+            get => _styleKey;
+            set { _styleKey = value; ApplyStyleDefaults(); }
+        }
+
         public double FontSize { get; set; } = 12.5;
         public Thickness Padding { get; set; }
         public Brush Background { get; set; }
@@ -455,6 +469,83 @@ namespace HandlerGuide.ViewModels
         public Brush BorderBrush { get; set; }
         public Thickness? BorderThickness { get; set; }
         public FontWeight FontWeight { get; set; } = FontWeights.Normal;
+
+        /// <summary>
+        /// 动态可用性（温启志 18719361399）。
+        /// 为 null 时按钮始终可用；非 null 时每个刷新周期重新求值，
+        /// 让「主界面命令中心」的启动/暂停/继续/停止等按钮能跟着运行状态自动灰显。
+        /// </summary>
+        public Func<bool> Enabled
+        {
+            get => _enabled;
+            set
+            {
+                _enabled = value;
+                if (value != null)
+                {
+                    LiveRegistry.Register(this);
+                    Refresh();
+                }
+            }
+        }
+
+        /// <summary>当前是否可用（绑定到视图的 IsEnabled）。</summary>
+        public bool IsEnabled { get => _isEnabled; private set => Set(ref _isEnabled, value); }
+
+        /// <summary>ILiveValue：按 <see cref="Enabled"/> 重新求值可用性。</summary>
+        public void Refresh()
+        {
+            if (_enabled == null) return;
+            bool v;
+            try { v = _enabled(); }
+            catch { v = false; }
+            IsEnabled = v;
+        }
+
+        /// <summary>
+        /// 按样式键补齐默认底色 / 文字色 / 描边（温启志 18719361399）。
+        /// 视图模板用 <c>{Binding Background, Converter=UnsetIfNull}</c> 绑定这些属性，
+        /// 而「绑定返回 UnsetValue」不会回退到 Style 的 Setter，导致样式里写好的配色被吃掉；
+        /// 因此在元素这一侧补上同名默认值。只补 null，调用方显式设置的颜色始终优先。
+        /// </summary>
+        private void ApplyStyleDefaults()
+        {
+            switch (_styleKey)
+            {
+                case "PrimaryButton":
+                    if (Background == null) Background = Palette.Accent;
+                    if (Foreground == null) Foreground = Brushes.White;
+                    if (BorderThickness == null) BorderThickness = new Thickness(0);
+                    break;
+
+                case "DangerButton":
+                    if (Background == null) Background = Palette.OnRed;
+                    if (Foreground == null) Foreground = Brushes.White;
+                    if (BorderThickness == null) BorderThickness = new Thickness(0);
+                    break;
+
+                case "MiniButton":
+                    if (Background == null) Background = new SolidColorBrush(Color.FromRgb(0xF2, 0xF2, 0xF4));
+                    if (Foreground == null) Foreground = Palette.Primary;
+                    if (BorderBrush == null) BorderBrush = Palette.Divider;
+                    if (BorderThickness == null) BorderThickness = new Thickness(1);
+                    break;
+
+                case "CmdButton":
+                    if (Background == null) Background = new SolidColorBrush(Color.FromRgb(0xF2, 0xF2, 0xF4));
+                    if (Foreground == null) Foreground = Palette.Primary;
+                    if (BorderBrush == null) BorderBrush = Palette.Divider;
+                    if (BorderThickness == null) BorderThickness = new Thickness(1);
+                    break;
+
+                case "ListItemButton":
+                    if (Background == null) Background = Brushes.White;
+                    if (Foreground == null) Foreground = Palette.Primary;
+                    if (BorderBrush == null) BorderBrush = Palette.Divider;
+                    if (BorderThickness == null) BorderThickness = new Thickness(1);
+                    break;
+            }
+        }
     }
 
     // 温启志 18719361399 · 类 public class SliderElement : Element
@@ -697,6 +788,43 @@ namespace HandlerGuide.ViewModels
         }
     }
 
+    // 温启志 18719361399 · 类 public class LiveBadgeElement : Element, ILiveValue
+    /// <summary>
+    /// 实时文字 + 实时底色的圆角徽标。
+    /// 主界面「命令中心」的运行状态徽标用它：底色随「停止 / 运行 / 暂停」变化。
+    /// </summary>
+    public class LiveBadgeElement : Element, ILiveValue
+    {
+        private Func<MachineModel, string> _text;
+        private Func<MachineModel, Brush> _bg;
+        private string _value = "";
+        private Brush _background;
+
+        public LiveBadgeElement() { }
+
+        public LiveBadgeElement(Func<MachineModel, string> text, Func<MachineModel, Brush> bg, double w, double fs)
+        {
+            _text = text; _bg = bg;
+            Width = w > 0 ? w : double.NaN;
+            FontSize = fs;
+            Margin = new Thickness(0, 0, 7, 0);
+            LiveRegistry.Register(this);
+            Refresh();
+        }
+
+        public string Text { get => _value; private set => Set(ref _value, value); }
+        public Brush Background { get => _background; private set => Set(ref _background, value); }
+        public double FontSize { get; set; } = 13;
+
+        public void Refresh()
+        {
+            try { Text = _text != null ? _text(MachineModel.Instance) : ""; }
+            catch { Text = ""; }
+            try { Background = _bg != null ? _bg(MachineModel.Instance) : null; }
+            catch { /* 配色取不到时保留上一次 */ }
+        }
+    }
+
     // ---------------- 表格 / 矩阵 ----------------
 
 [ContentProperty("Content")]
@@ -887,7 +1015,16 @@ namespace HandlerGuide.ViewModels
 
         public Element Content
         {
-            get => _content;
+            get
+            {
+                if (_content == null && Build != null)
+                {
+                    _content = Build();
+                    // 页签内容是「点了才构建」的，构建完同样要冻结参数表单初值
+                    Ops.FreezePageForms();
+                }
+                return _content;
+            }
             set => Set(ref _content, value);
         }
     }

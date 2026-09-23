@@ -149,6 +149,33 @@ namespace HandlerGuide.ViewModels
         }
 
         // ==================================================================
+        //  出厂轴参数快照
+        // ==================================================================
+
+        /// <summary>
+        /// 出厂轴参数（首次构建控制卡设置页时抓一次）。
+        /// 注意：以前的「恢复出厂参数」是从**当前**轴配置回写模型 —— 而「应用」刚刚才把
+        /// 模型写进轴配置，所以那个按钮实际什么也没恢复。这里改成真正的出厂快照。
+        /// </summary>
+        private static List<Motion.AxisConfig> _factoryAxes;
+
+        private static void CaptureFactoryAxes()
+        {
+            if (_factoryAxes != null) return;
+            _factoryAxes = MotionManager.Instance.Axes
+                .Select(a => new Motion.AxisConfig
+                {
+                    Index = a.Index, Name = a.Name, Group = a.Group, Unit = a.Unit,
+                    PulseEquivalent = a.PulseEquivalent,
+                    MinMm = a.MinMm, MaxMm = a.MaxMm, HomeMm = a.HomeMm,
+                    MaxVel = a.MaxVel, Acc = a.Acc, Dec = a.Dec,
+                    IsVertical = a.IsVertical, ZUpMm = a.ZUpMm,
+                    RailId = a.RailId, ClearanceMm = a.ClearanceMm, AutoCycle = a.AutoCycle
+                })
+                .ToList();
+        }
+
+        // ==================================================================
         //  小工具
         // ==================================================================
 
@@ -170,15 +197,22 @@ namespace HandlerGuide.ViewModels
             row.Children.Add(E.LiveLamp(_ => m.State(i).Busy, false, true, 11));
             row.Children.Add(E.LiveLamp(_ => m.State(i).Alarm, true, true, 11));
 
-            // 点动 / 回零 / 停止
+            // 点动 / 回零 / 停止：全部走 Ops，这样急停、自动运行中的禁动、日志都统一
             double[] steps = { -10, -1, -0.1, 0.1, 1, 10 };
             foreach (var s in steps)
             {
                 double d = s;
-                row.Children.Add(E.MiniBtn(s.ToString("0.###"), () => MotionManager.Instance.Jog(i, d), 42));
+                row.Children.Add(E.MiniBtn(s.ToString("0.###"), () => Ops.JogAxisBy(i, d), 42));
             }
-            row.Children.Add(E.MiniBtn("回零", () => MotionManager.Instance.Home(i), 44));
-            row.Children.Add(E.MiniBtn("停止", () => MotionManager.Instance.Stop(i), 44));
+            // 定位到目标框里填的值
+            row.Children.Add(E.Num("ax_go_" + i, a.HomeMm, 68, "0.###", a.MinMm, a.MaxMm));
+            row.Children.Add(E.MiniBtn("定位",
+                () => Ops.MoveAxisTo(i, MachineModel.Instance.GetNum("ax_go_" + i, a.HomeMm)), 44));
+            row.Children.Add(E.MiniBtn("回零", () => Ops.HomeAxis(i), 44));
+            row.Children.Add(E.MiniBtn("停止", () => Ops.StopAxis(i), 44));
+            // 单轴伺服使能 / 断使能
+            row.Children.Add(E.MiniBtn("使能", () => Ops.ServoAxis(i, true), 44));
+            row.Children.Add(E.MiniBtn("断使", () => Ops.ServoAxis(i, false), 44));
             return row;
         }
 
@@ -205,7 +239,9 @@ namespace HandlerGuide.ViewModels
             return E.H(
                 E.LiveLamp(_ => MotionManager.Instance.ReadIn(b), p.ActiveLow, true, 11),
                 E.T("#" + b.ToString("00"), 10, E.Sec).Wd(24),
-                E.T(p.Name, 11, E.P, false, TextWrapping.NoWrap).Wd(104))
+                E.T(p.Name, 11, E.P, false, TextWrapping.NoWrap).Wd(104),
+                // 仿真时手动造信号：模拟料到位 / 气缸到位，便于单独验证互锁
+                E.MiniBtn("模拟", () => Ops.ToggleInput(b), 40))
                 .Marg(new Thickness(0, 1, 12, 1));
         }
 
@@ -217,7 +253,7 @@ namespace HandlerGuide.ViewModels
                 E.LiveLamp(_ => MotionManager.Instance.ReadOut(b), false, true, 11),
                 E.T("#" + b.ToString("00"), 10, E.Sec).Wd(24),
                 E.T(p.Name, 11, E.P, false, TextWrapping.NoWrap).Wd(104),
-                E.MiniBtn("⇄", () => MotionManager.Instance.ToggleOut(b), 26))
+                E.MiniBtn("⇄", () => Ops.ToggleOut(b), 26))
                 .Marg(new Thickness(0, 1, 12, 1));
         }
 
@@ -254,15 +290,15 @@ namespace HandlerGuide.ViewModels
                     E.T("报警", 11.5, E.Sec).Wd(40),
                     E.LiveLamp(_ => MotionManager.Instance.AnyAlarm(), true, false, 13)),
                 E.H(
-                    E.Btn("连接雷赛真卡", () => MotionManager.Instance.Connect(), "PrimaryButton", 12),
-                    E.MiniBtn("使用仿真卡", () => MotionManager.Instance.UseSim(), 104),
-                    E.MiniBtn("断开", () => MotionManager.Instance.Disconnect(), 56),
+                    E.Btn("连接雷赛真卡", Ops.ConnectCard, "PrimaryButton", 12),
+                    E.MiniBtn("使用仿真卡", Ops.UseSimCard, 104),
+                    E.MiniBtn("断开", Ops.DisconnectCard, 56),
                     E.SpacerW(10),
-                    E.Btn("急停", () => MotionManager.Instance.TriggerEStop(), "DangerButton", 12),
-                    E.Btn("急停复位", () => MotionManager.Instance.ResetEStop(), "PrimaryButton", 12),
-                    E.MiniBtn("清除报警", () => MotionManager.Instance.ClearAlarm(), 84),
-                    E.MiniBtn("全部回零", () => MotionManager.Instance.HomeAll(), 84),
-                    E.MiniBtn("全部停止", () => MotionManager.Instance.StopAll(), 84),
+                    E.Btn("急停", Ops.EmergencyStop, "DangerButton", 12),
+                    E.Btn("急停复位", Ops.ResetEmergency, "PrimaryButton", 12),
+                    E.MiniBtn("清除报警", Ops.ClearAlarm, 84),
+                    E.MiniBtn("全部回零", () => Ops.HomeAll(), 84),
+                    E.MiniBtn("全部停止", Ops.StopAllAxes, 84),
                     E.SpacerW(10),
                     E.T("指令", 11.5, E.Sec).Wd(36), Live("move_count", null, 64),
                     E.T("拒绝", 11.5, E.Sec).Wd(36), Live("reject_count", null, 64)),
@@ -326,7 +362,7 @@ namespace HandlerGuide.ViewModels
                 E.T("输出信号（32 点）—— 点击 ⇄ 可手动翻转输出；带联动的输出会同时刷新对应输入反馈", 11.5, E.Sec),
                 E.Group("输出信号 OUT0 ~ OUT31", outWrap),
                 E.H(
-                    E.MiniBtn("全部输出复位", () => MotionManager.Instance.ResetAllOutputs(), 124),
+                    E.MiniBtn("全部输出复位", Ops.ResetOutputs, 124),
                     E.T("输出→输入反馈映射：真空电磁阀1~8 → 真空反馈1~8；测试臂下压气缸 → 测试座下压到位；加热使能 → 加热器就绪",
                         10.5, E.Sec, false, TextWrapping.Wrap)));
         }
@@ -373,8 +409,11 @@ namespace HandlerGuide.ViewModels
                     E.T("Z 轴高度（0~30mm）", 11, E.Sec)),
                 canvas,
                 E.H(
-                    E.Btn("启动演示节拍", () => MotionManager.Instance.StartDemo(), "PrimaryButton", 12),
-                    E.Btn("停止演示", () => MotionManager.Instance.StopDemo(), "DangerButton", 12),
+                    E.Btn("启动生产", () => Ops.StartProduction(), "PrimaryButton", 12),
+                    E.Btn("暂停", () => Ops.PauseProduction(), "PrimaryButton", 12),
+                    E.Btn("继续", () => Ops.ResumeProduction(), "PrimaryButton", 12),
+                    E.Btn("停止", () => Ops.StopProduction(), "DangerButton", 12),
+                    E.MiniBtn("单步", Ops.SingleStep, 56),
                     E.SpacerW(12),
                     E.T("当前步骤：", 11.5, E.Sec, true).Wd(72),
                     Live("demo_step", null, 300),
@@ -552,6 +591,7 @@ namespace HandlerGuide.ViewModels
         public static Element CardPage()
         {
             var m = MotionManager.Instance;
+            CaptureFactoryAxes();   // 首次打开本页时抓一次出厂参数
 
             // 卡型选择（纯展示 + 提示，真实卡型由 LTDMC.dll 探测结果决定）
             var cardCmb = E.Cmb("mc_cardtype",
@@ -566,9 +606,9 @@ namespace HandlerGuide.ViewModels
                     E.LiveLamp(_ => MotionManager.Instance.Connected, false, false, 13),
                     E.T("模式", 12, E.Sec).Wd(40), Live("card_mode", null, 84)),
                 E.H(
-                    E.Btn("连接 / 探测控制卡", () => MotionManager.Instance.Connect(), "PrimaryButton", 12),
-                    E.MiniBtn("强制仿真", () => MotionManager.Instance.UseSim(), 84),
-                    E.MiniBtn("断开", () => MotionManager.Instance.Disconnect(), 56),
+                    E.Btn("连接 / 探测控制卡", Ops.ConnectCard, "PrimaryButton", 12),
+                    E.MiniBtn("强制仿真", Ops.UseSimCard, 84),
+                    E.MiniBtn("断开", Ops.DisconnectCard, 56),
                     E.T("说明：优先通过 LTDMC.dll 探测雷赛 DMC 卡；探测失败自动降级为内置仿真卡。",
                         11, E.Sec, false, TextWrapping.Wrap)));
 
@@ -613,7 +653,8 @@ namespace HandlerGuide.ViewModels
                 E.Row("回零方式", E.Cmb("mc_homemode", new[] { "负向回零（原点在负方向）", "正向回零（原点在正方向）", "回到预设回零位置" }, 240, 2), 96),
                 E.Row("回零低速", E.Num("mc_homevel", 20, 90, "0"), 96, "mm/s"),
                 E.Row("回零加速时间", E.Num("mc_hometacc", 0.1, 90, "0.##"), 96, "s"),
-                E.H(E.MiniBtn("执行全部回零", () => MotionManager.Instance.HomeAll(), 116)));
+                E.H(E.MiniBtn("执行全部归零", () => Ops.HomeAll(), 116),
+                      E.MiniBtn("取消归零", Ops.CancelHome, 96)));
 
             // 诊断
             var diag = E.Group("控制卡诊断",
@@ -635,37 +676,85 @@ namespace HandlerGuide.ViewModels
         {
             var m = MotionManager.Instance;
             var mm = MachineModel.Instance;
+
+            // 运行中不允许改轴参数（软限位/速度曲线改了会直接影响正在跑的轨迹）
+            if (Ops.IsRunning) { Ops.Warn("运行中不允许修改轴参数，请先停止"); return; }
+
+            int fixedSwaps = 0, badHome = 0;
             foreach (var a in m.Axes)
             {
                 int i = a.Index;
-                a.PulseEquivalent = mm.GetNum("mc_eq_" + i, a.PulseEquivalent);
+                double oldMin = a.MinMm, oldMax = a.MaxMm;
+
+                a.PulseEquivalent = Math.Max(1, mm.GetNum("mc_eq_" + i, a.PulseEquivalent));
                 a.MinMm = mm.GetNum("mc_min_" + i, a.MinMm);
                 a.MaxMm = mm.GetNum("mc_max_" + i, a.MaxMm);
-                a.MaxVel = mm.GetNum("mc_vel_" + i, a.MaxVel);
-                a.Acc = mm.GetNum("mc_acc_" + i, a.Acc);
+                a.MaxVel = Math.Max(1, mm.GetNum("mc_vel_" + i, a.MaxVel));
+                a.Acc = Math.Max(1, mm.GetNum("mc_acc_" + i, a.Acc));
                 a.Dec = a.Acc;
                 a.HomeMm = mm.GetNum("mc_home_" + i, a.HomeMm);
+
+                // 限位写反是现场最常见的低级错误：直接对调并提示
+                if (a.MinMm > a.MaxMm)
+                {
+                    double t = a.MinMm; a.MinMm = a.MaxMm; a.MaxMm = t;
+                    mm.SetNum("mc_min_" + i, a.MinMm);
+                    mm.SetNum("mc_max_" + i, a.MaxMm);
+                    fixedSwaps++;
+                    Ops.Warn(a.Name + " 软限位上下限写反（" + oldMin.ToString("0.###")
+                             + " > " + oldMax.ToString("0.###") + "），已自动对调");
+                }
+
+                // 回零位必须落在软限位区间内，否则归零会立刻被互锁拒绝
+                if (a.HomeMm < a.MinMm || a.HomeMm > a.MaxMm)
+                {
+                    a.HomeMm = Math.Clamp(a.HomeMm, a.MinMm, a.MaxMm);
+                    mm.SetNum("mc_home_" + i, a.HomeMm);
+                    badHome++;
+                    Ops.Warn(a.Name + " 回零位超出软限位，已夹到 " + a.HomeMm.ToString("0.###"));
+                }
+
                 m.Card?.Configure(a);
             }
-            mm.Log("信息", "轴参数已应用到控制卡（" + m.Axes.Count + " 轴）");
+            Ops.PullAxisConfigsToModel();
+            mm.Log("信息", "轴参数已应用到控制卡（" + m.Axes.Count + " 轴"
+                   + (fixedSwaps > 0 ? "，修正 " + fixedSwaps + " 处限位反接" : "")
+                   + (badHome > 0 ? "，修正 " + badHome + " 处回零位越界" : "") + "）");
+            Ops.SaveParams();
         }
 
-        /// <summary>恢复出厂轴参数。</summary>
+        /// <summary>恢复出厂轴参数：回到出厂快照，并重新下发到控制卡。</summary>
         private static void RestoreAxisParams()
         {
+            CaptureFactoryAxes();
             var mm = MachineModel.Instance;
             var m = MotionManager.Instance;
+
             foreach (var a in m.Axes)
             {
+                var f = _factoryAxes.FirstOrDefault(x => x.Index == a.Index);
+                if (f == null) continue;
                 int i = a.Index;
+                a.PulseEquivalent = f.PulseEquivalent;
+                a.MinMm = f.MinMm;
+                a.MaxMm = f.MaxMm;
+                a.HomeMm = f.HomeMm;
+                a.MaxVel = f.MaxVel;
+                a.Acc = f.Acc;
+                a.Dec = f.Dec;
+
                 mm.SetNum("mc_eq_" + i, a.PulseEquivalent);
                 mm.SetNum("mc_min_" + i, a.MinMm);
                 mm.SetNum("mc_max_" + i, a.MaxMm);
                 mm.SetNum("mc_vel_" + i, a.MaxVel);
                 mm.SetNum("mc_acc_" + i, a.Acc);
                 mm.SetNum("mc_home_" + i, a.HomeMm);
+
+                m.Card?.Configure(a);
             }
-            mm.Log("信息", "已恢复出厂轴参数");
+            // 同步到 Ops 的 axN_* 参数域，保持两套键名一致
+            Ops.PullAxisConfigsToModel();
+            mm.Log("信息", "已恢复出厂轴参数并重新下发控制卡（" + m.Axes.Count + " 轴）");
         }
     }
 }

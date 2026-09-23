@@ -156,7 +156,10 @@ namespace HandlerGuide.Views
         public string Bg { get; set; }
         public string Fg { get; set; }
         public string FontWeight { get; set; }
-        public Thickness BorderThickness { get; set; }
+
+        /// <summary>描边宽度；为 null 表示 XAML 里没写，此时保留样式自带的描边。</summary>
+        public Thickness? BorderThickness { get; set; }
+
         public string Cmd { get; set; }
         public string Arg { get; set; }
         public override object ProvideValue(IServiceProvider sp)
@@ -170,11 +173,16 @@ namespace HandlerGuide.Views
                 Margin = new Thickness(0, 2, 8, 2),
                 Command = PageCommands.Command(Cmd, Arg),
                 Width = Width > 0 ? Width : double.NaN,
-                Height = Height > 0 ? Height : double.NaN,
-                Background = BrushUtil.BrushOf(Bg),
-                Foreground = BrushUtil.BrushOf(Fg),
-                BorderThickness = BorderThickness
+                Height = Height > 0 ? Height : double.NaN
             };
+            // 温启志 18719361399：没写 Bg / Fg / BorderThickness 时不要赋值，
+            // 否则会把 ButtonElement.ApplyStyleDefaults 补好的样式配色抹掉。
+            var bg = BrushUtil.BrushOf(Bg);
+            if (bg != null) b.Background = bg;
+            var fg = BrushUtil.BrushOf(Fg);
+            if (fg != null) b.Foreground = fg;
+            if (BorderThickness.HasValue) b.BorderThickness = BorderThickness.Value;
+
             if (!string.IsNullOrEmpty(FontWeight))
             {
                 var conv = new FontWeightConverter();
@@ -196,7 +204,8 @@ namespace HandlerGuide.Views
         public string Bg { get; set; }
         public string Fg { get; set; }
         public string FontWeight { get; set; }
-        public Thickness BorderThickness { get; set; }
+        /// <summary>描边宽度；为 null 表示 XAML 里没写，此时保留样式自带的描边。</summary>
+        public Thickness? BorderThickness { get; set; }
         public string Cmd { get; set; }
         public string Arg { get; set; }
         public override object ProvideValue(IServiceProvider sp)
@@ -210,11 +219,14 @@ namespace HandlerGuide.Views
                 Margin = new Thickness(0, 2, 6, 2),
                 Width = Width > 0 ? Width : double.NaN,
                 Height = Height > 0 ? Height : double.NaN,
-                Background = BrushUtil.BrushOf(Bg),
-                Foreground = BrushUtil.BrushOf(Fg),
-                BorderThickness = BorderThickness,
                 Command = PageCommands.Command(Cmd, Arg)
             };
+            // 温启志 18719361399：同上，没写就不赋值，避免抹掉样式默认配色。
+            var bg = BrushUtil.BrushOf(Bg);
+            if (bg != null) b.Background = bg;
+            var fg = BrushUtil.BrushOf(Fg);
+            if (fg != null) b.Foreground = fg;
+            if (BorderThickness.HasValue) b.BorderThickness = BorderThickness.Value;
             if (!string.IsNullOrEmpty(FontWeight))
             {
                 var conv = new FontWeightConverter();

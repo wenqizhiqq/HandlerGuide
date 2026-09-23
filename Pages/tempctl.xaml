@@ -7,7 +7,8 @@
     <vm:GroupElement Title="加热器工作条件">
         <vw:Radios Key="tc_mode" OptionsText="室温(25°C)|高温(50°C)" />
         <vm:SpacerElement H="10" />
-        <vw:Btn Text="应用" Cmd="ApplyTemp" />
+        <vw:MiniBtn Text="恢复" Cmd="Reset" Arg="tempctl" />
+        <vw:Btn Text="应用" Cmd="Apply" Arg="tempctl" />
     </vm:GroupElement>
     <vm:GroupElement Title="说明">
         <vm:TextElement Text="该窗口用于选择加热器的工作条件。选择“高温”后，主界面 Temp 区域会显示高温模式与温度范围。" FontSize="11.5" Foreground="#6E6E73" Wrap="Wrap" />

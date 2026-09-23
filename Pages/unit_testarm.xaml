@@ -57,8 +57,8 @@
     </vm:GroupElement>
 
     <vm:StackElement Orientation="Horizontal">
-        <vw:MiniBtn Text="恢复" />
-        <vw:Btn Text="应用" Cmd="Log" Arg="测试臂参数已应用" />
+        <vw:MiniBtn Text="恢复" Cmd="Reset" Arg="unit_testarm" />
+        <vw:Btn Text="应用" Cmd="Apply" Arg="unit_testarm" />
     </vm:StackElement>
 
     <vw:Watermark />

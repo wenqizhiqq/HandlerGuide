@@ -100,6 +100,9 @@ namespace HandlerGuide.ViewModels
         public static readonly Brush BandGrey = new SolidColorBrush(Color.FromRgb(0xF0, 0xF0, 0xF3));
         public static readonly Brush BandRed = new SolidColorBrush(Color.FromRgb(0xFD, 0xEA, 0xE9));
 
+        /// <summary>列表选中行底色（温启志 18719361399）。</summary>
+        public static readonly Brush SelectedRow = new SolidColorBrush(Color.FromRgb(0xE0, 0xE0, 0xE4));
+
         public static readonly Brush HeadBlue = new SolidColorBrush(Color.FromRgb(0xCF, 0xE3, 0xFB));
         public static readonly Brush HeadGreen = new SolidColorBrush(Color.FromRgb(0xCF, 0xEF, 0xD8));
         public static readonly Brush HeadAmber = new SolidColorBrush(Color.FromRgb(0xF5, 0xDC, 0xA8));

@@ -60,12 +60,12 @@ namespace HandlerGuide.ViewModels
             };
         }
 
-        /// <summary>数值框 + 取当前位置按钮（手册中的 [&lt;]）。</summary>
-        private static Element Val(string key, double def, double w = 86)
-            => E.H(E.Num(key, def, w), E.MiniBtn("<", () => E.M.Log("信息", "获取当前位置 → " + key), 28));
+        /// <summary>数值框 + 取当前位置按钮（手册中的 [&lt;]）。axis 为空时按键名约定解析。</summary>
+        private static Element Val(string key, double def, double w = 86, string axis = null)
+            => E.H(E.Num(key, def, w), E.MiniBtn("<", () => Ops.CapturePosTo(key, axis), 28));
 
-        private static Element ValCell(string key, double def, double w = 86, double h = 28)
-            => Cell(E.H(E.Num(key, def, w), E.MiniBtn("<", () => E.M.Log("信息", "获取当前位置 → " + key), 28)), h);
+        private static Element ValCell(string key, double def, double w = 86, double h = 28, string axis = null)
+            => Cell(E.H(E.Num(key, def, w), E.MiniBtn("<", () => Ops.CapturePosTo(key, axis), 28)), h);
 
         // ==================================================================
         //  1. 工作基点 (image82 / image84 / image93)
@@ -82,6 +82,7 @@ namespace HandlerGuide.ViewModels
         // ---- 测试区域 ----
         private static Element TestAreaBase()
         {
+            var wqzForm = Ops.PageForm("工作基点-测试区域", "mb_");
             var car = E.Grid().Cols("86", "112", "46", "112", "46", "112", "46");
             car.Add(Label("", 26, TextAlignment.Left, E.CardBg), 0, 0);
             car.Add(Label("入口", 26, TextAlignment.Center, E.CardBg), 0, 1);
@@ -158,8 +159,8 @@ namespace HandlerGuide.ViewModels
                 E.Group("运料小车(mm)", car),
                 E.Group("Gate基点(以第一列为基准)", gate),
                 E.Group("测试臂(mm)", arm),
-                E.H(E.MiniBtn("恢复", () => E.M.Log("信息", "恢复测试区域工作基点")),
-                    E.Btn("应用", () => E.M.Log("信息", "测试区域工作基点已应用"))),
+                E.H(E.MiniBtn("恢复", wqzForm.Restore),
+                    E.Btn("应用", () => { wqzForm.Apply(); Ops.ApplyBasePoints(); })),
                 E.Group("说明",
                     E.T("运料小车入口：小车运行到上料区域接料位置，同时下料运料小车 1/2 位于测试臂放料位置；出口：小车运行到下料区域出料位置，同时上料运料小车 1/2 位于测试臂取料位置；读码器为选装功能，获取小车第一个槽为拍照基点。\n" +
                         "Gate 基点：获取小车 A/B 的入口、出口、纵向检测位置的基点。\n" +
@@ -170,6 +171,7 @@ namespace HandlerGuide.ViewModels
         // ---- 上料臂 / 下料臂 ----
         private static Element ArmBase(bool loader)
         {
+            var wqzForm = Ops.PageForm(loader ? "工作基点-上料臂" : "工作基点-下料臂", "mb_");
             string p = loader ? "mb_ld" : "mb_ul";
             string head = loader ? "#3" : "#2";
             string title = loader ? "上料臂" : "下料臂";
@@ -217,7 +219,9 @@ namespace HandlerGuide.ViewModels
             for (int c = 0; c < 8; c++)
             {
                 zg.Add(Cell(E.H(E.T("Z" + (c + 1), 11.5, E.P, false, TextWrapping.NoWrap), E.Num(p + "_zin" + c, 0, 66)), 28), zBase, c + 1);
-                zg.Add(Cell(E.H(E.MiniBtn("Top", null, 40), E.MiniBtn("TZ", null, 40)), 28), zBase + 1, c + 1);
+                int hc = c;
+                zg.Add(Cell(E.H(E.MiniBtn("Top", () => Ops.ArmZPos(loader, hc, true), 40),
+                                 E.MiniBtn("TZ", () => Ops.ArmZPos(loader, hc, false), 40)), 28), zBase + 1, c + 1);
             }
 
             var zBox = E.V(
@@ -231,11 +235,13 @@ namespace HandlerGuide.ViewModels
                     E.T("归零后间距PY", 11.5, E.P, false, TextWrapping.NoWrap), E.Num(p + "_py", loader ? 58.5 : 0, 86)),
                 E.Spacer(8),
                 E.H(
-                    E.MiniBtn("更改", () => E.M.Log("信息", title + "：更改基点")),
-                    E.MiniBtn("获取", () => E.M.Log("信息", title + "：获取当前位置")),
-                    E.MiniBtn("恢复", null), E.MiniBtn("恢复全部", null),
-                    E.MiniBtn("Top-All", null), E.MiniBtn("TZ-All", null),
-                    E.Btn("应用", () => E.M.Log("信息", title + "工作基点已应用"))),
+                    E.MiniBtn("更改", () => Ops.ApplyArmXYChange(loader)),
+                    E.MiniBtn("获取", () => Ops.CaptureArmXY(loader)),
+                    E.MiniBtn("恢复", wqzForm.Restore),
+                    E.MiniBtn("恢复全部", wqzForm.Restore),
+                    E.MiniBtn("Top-All", () => Ops.ArmZAll(loader, true)),
+                    E.MiniBtn("TZ-All", () => Ops.ArmZAll(loader, false)),
+                    E.Btn("应用", () => { wqzForm.Apply(); Ops.ApplyBasePoints(); })),
                 E.T("当前选中位置为：" + (loader ? "上料TrayLoader" : "自动盘1-B0点(左上角)"), 11.5, E.Sec));
 
             return E.V(
@@ -250,10 +256,14 @@ namespace HandlerGuide.ViewModels
                             E.T("X:", 12, E.P, false, TextWrapping.NoWrap), E.Num(p + "_cx", 259.056, 96),
                             E.T("Y:", 12, E.P, false, TextWrapping.NoWrap), E.Num(p + "_cy", 642.69, 96)),
                         E.Spacer(6),
-                        E.H(E.MiniBtn("获取", null), E.MiniBtn("更改", null),
-                            E.MiniBtn("恢复", null), E.MiniBtn("恢复全部", null)),
+                        E.H(E.T("当前激活项", 11.5, E.P, false, TextWrapping.NoWrap),
+                            E.Cmb(p + "_sel", xyRows, 190, 0)),
+                        E.Spacer(6),
+                        E.H(E.MiniBtn("获取", () => Ops.CaptureArmXY(loader)),
+                            E.MiniBtn("更改", () => Ops.ApplyArmXYChange(loader)),
+                            E.MiniBtn("恢复", wqzForm.Restore), E.MiniBtn("恢复全部", wqzForm.Restore)),
                         E.Spacer(4),
-                        E.T("当前选中位置为：入料盘(左上角)", 11.5, E.Sec)), 0, 0)
+                        E.T("当前选中位置为：" + (loader ? "上料TrayLoader" : "自动盘1-B0点(左上角)"), 11.5, E.Sec)), 0, 0)
                     .Add(E.Group("Z1/Z2/Z3/Z4/Z5/Z6/Z7/Z8(mm)", zBox), 0, 1),
                 E.Group("说明",
                     E.T("X/Y 文本框：当上方 X-Y 轴基点列表框中的当前激活项改变时，此文本框内的值自动变更为激活项的值；" +
@@ -266,6 +276,7 @@ namespace HandlerGuide.ViewModels
         // ---- 料盘搬运臂 ----
         private static Element TrayArmBase()
         {
+            var wqzForm = Ops.PageForm("工作基点-料盘搬运臂", "mb_");
             var g = E.Grid().Cols("150", "112", "46");
             g.Add(Head("位置"), 0, 0);
             g.Add(Head("基点(mm)"), 0, 1);
@@ -276,13 +287,14 @@ namespace HandlerGuide.ViewModels
             {
                 g.Add(Label(pos[r]), r + 1, 0);
                 g.Add(Cell(E.Num("mb_ta_" + pos[r], val[r], 104)), r + 1, 1);
-                g.Add(Cell(E.MiniBtn("<", () => E.M.Log("信息", "获取当前位置 → " + pos[r]), 28)), r + 1, 2);
+                g.Add(Cell(E.MiniBtn("<", () => Ops.CapturePosTo("mb_ta_" + pos[r], "料盘传送臂"), 28)), r + 1, 2);
             }
 
             return E.V(
                 
                 E.Group("料盘传送臂", g),
-                E.H(E.MiniBtn("恢复", null), E.Btn("应用", () => E.M.Log("信息", "料盘传送臂工作基点已应用"))),
+                E.H(E.MiniBtn("恢复", wqzForm.Restore),
+                    E.Btn("应用", () => { wqzForm.Apply(); Ops.ApplyBasePoints(); })),
                 E.Group("说明",
                     E.T("Safe：料盘传送臂的安全位基点。Loader / Empty / Buffer / Auto1 / Auto2 / Auto3：料盘传送臂在对应位置的基点。",
                         11.5, E.Sec, false, TextWrapping.Wrap)));
@@ -302,6 +314,7 @@ namespace HandlerGuide.ViewModels
 
         private static Element SafeGeneral()
         {
+            var wqzForm = Ops.PageForm("安全设定-通用", "sf_");
             return E.V(
                 E.Group("登出与权限",
                     E.Chk("sf_auto_logout", "是否自动登出", false),
@@ -330,11 +343,12 @@ namespace HandlerGuide.ViewModels
                     E.Row("Userid", E.Text("sf_ftp_user", "handler", 190), 110),
                     E.Row("Password", E.Text("sf_ftp_pwd", "", 190), 110),
                     E.Row("Upload", E.Text("sf_ftp_upload", "/handler/upload", 260), 110)),
-                E.H(E.MiniBtn("恢复", null), E.Btn("应用", () => E.M.Log("信息", "安全设定（通用）已应用"))));
+                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", wqzForm.Apply)));
         }
 
         private static Element SafeTestArea()
         {
+            var wqzForm = Ops.PageForm("安全设定-测试区域", "st_");
             return E.V(
                 E.Group("报警与处理",
                     E.Row("开门处理时间", E.Num("st_door_t", 30, 86, "0"), 170, "s"),
@@ -351,11 +365,12 @@ namespace HandlerGuide.ViewModels
                     E.Chk("st_cont_same_bin", "连续次品判定-相同BIN", true)),
                 E.Group("加热与温度",
                     E.Chk("st_arm_hold", "测试臂提起等待（加热模式保持 IC 温度稳定）", false)),
-                E.H(E.MiniBtn("恢复", null), E.Btn("应用", () => E.M.Log("信息", "安全设定（测试区域）已应用"))));
+                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", wqzForm.Apply)));
         }
 
         private static Element SafeArm()
         {
+            var wqzForm = Ops.PageForm("安全设定-上/下料臂", "sa_");
             return E.V(
                 E.Group("偏移限定",
                     E.Row("允许最小偏移", E.Num("sa_off_min", -5, 86), 150, "mm"),
@@ -365,18 +380,19 @@ namespace HandlerGuide.ViewModels
                     E.Row("每次下行距离", E.Num("sa_retry_dz", 0.2, 86), 150, "mm")),
                 E.Group("其它",
                     E.Chk("sa_last_seq", "最后料盘顺序放置IC@清出", false)),
-                E.H(E.MiniBtn("恢复", null), E.Btn("应用", () => E.M.Log("信息", "安全设定（上/下料臂）已应用"))));
+                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", wqzForm.Apply)));
         }
 
         private static Element SafeTray()
         {
+            var wqzForm = Ops.PageForm("安全设定-进出盘", "sr_");
             return E.V(
                 E.Group("进出盘设定",
                     E.Chk("sr_manual_tray", "手动取盘（跳过IC）：Loader 上有【取料失败跳过】报警，盘空后需手动取走，不会自动换盘", false),
                     E.Chk("sr_knock_loader", "启用上料盘敲击（选装）", false),
                     E.Chk("sr_knock_auto", "启用自动盘敲击（选装）", false),
                     E.Chk("sr_fwd_pick", "删料后正向取料@入料盘", true)),
-                E.H(E.MiniBtn("恢复", null), E.Btn("应用", () => E.M.Log("信息", "安全设定（进出盘）已应用"))));
+                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", wqzForm.Apply)));
         }
 
         // ==================================================================
@@ -384,6 +400,7 @@ namespace HandlerGuide.ViewModels
         // ==================================================================
         public static Element MaintTempOffset()
         {
+            var wqzForm = Ops.PageForm("温度偏移", "mt_");
             string[] zones = { "预热盘 #1", "预热盘 #2", "小车 A", "小车 B",
                                "测试臂 A1", "测试臂 A2", "测试臂 A3", "测试臂 A4",
                                "测试臂 A5", "测试臂 A6", "测试臂 A7", "测试臂 A8",
@@ -421,7 +438,7 @@ namespace HandlerGuide.ViewModels
                         .Add(E.Row("基点#4", E.Num("mt_b4", 125, 96), 92), 1, 0)),
                 E.Group("目标区域偏移值", E.Scroll(g, 380, System.Windows.Controls.ScrollBarVisibility.Disabled,
                     System.Windows.Controls.ScrollBarVisibility.Auto)),
-                E.H(E.MiniBtn("恢复", null), E.Btn("应用", () => E.M.Log("信息", "温度偏移参数已应用"))));
+                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", wqzForm.Apply)));
         }
 
         // ==================================================================
@@ -429,6 +446,7 @@ namespace HandlerGuide.ViewModels
         // ==================================================================
         public static Element MaintForce()
         {
+            var wqzForm = Ops.PageForm("接触力校准", "mf_");
             double[] force = { 0.00, 0.58, 1.16, 1.74, 2.32, 2.90, 3.48, 4.06, 4.64, 5.22,
                                5.80, 6.38, 6.96, 7.54, 8.12, 8.70, 9.28, 9.86, 10.44, 11.02 };
             double[] a1 = { 2.000, 2.000, 2.000, 2.000, 1.900, 2.000, 2.100, 2.300, 2.300, 2.300,
@@ -448,7 +466,8 @@ namespace HandlerGuide.ViewModels
             }
 
             var right = E.V(
-                E.H(E.MiniBtn("Default", null, 96)),
+                E.H(E.MiniBtn("Default", Ops.DefaultContactForce, 96),
+                    E.MiniBtn("恢复", wqzForm.Restore, 72)),
                 E.Spacer(8),
                 E.Grid().Cols("120", "86", "56", "96", "56")
                     .Add(E.T("", 11), 0, 0)
@@ -489,9 +508,9 @@ namespace HandlerGuide.ViewModels
                 E.Spacer(8),
                 E.H(
                     E.V(E.Radios("mf_arm", new[] { "臂1", "臂2" }, true, 0),
-                        E.Btn("自动校准", () => E.M.Log("信息", "启动测试臂接触力自动校准过程（约 4 分钟）")),
+                        E.Btn("自动校准", Ops.StartTestArmCalibration),
                         E.Spacer(6),
-                        E.Btn("应用", () => E.M.Log("信息", "接触力校准数据已应用"))),
+                        E.Btn("应用", wqzForm.Apply)),
                     E.Group("自动校准步骤",
                         E.T("① 在“品种 → 测试模式”中正确设定当前测试制具对应的测试模式。\n" +
                             "② 在“品种 → 测试臂”中正确设定测试臂制具缓冲气缸直径。\n" +
@@ -508,21 +527,21 @@ namespace HandlerGuide.ViewModels
         // ==================================================================
         public static Element MaintUser()
         {
-            string[,] users = { { "Admin", "333", "Admin" }, { "Engineer", "222", "Engineer" }, { "Operator", "111", "Operator" } };
+            var wqzForm = Ops.PageForm("用户 / 权限", "mu_");
             var ug = E.Grid().Cols("200", "200", "200", "*");
             ug.Add(Head("User"), 0, 0);
             ug.Add(Head("Pass"), 0, 1);
-            ug.Add(Head("Confirm"), 0, 2);
+            ug.Add(Head("Level"), 0, 2);
             ug.Add(Head(""), 0, 3);
-            for (int r = 0; r < 3; r++)
+            for (int r = 0; r < 8; r++)
             {
-                ug.Add(Label(users[r, 0]), r + 1, 0);
-                ug.Add(Label(users[r, 1]), r + 1, 1);
-                ug.Add(Label(users[r, 2]), r + 1, 2);
-                ug.Add(Label(""), r + 1, 3);
+                for (int c = 0; c < 3; c++)
+                {
+                    int rr = r, cc = c;
+                    ug.Add(Cell(E.Live(_ => Ops.UserCell(rr, cc), null, 190, E.CardBg, E.P, 11.5), 26), r + 1, c);
+                }
+                ug.Add(Label("", 26), r + 1, 3);
             }
-            for (int r = 3; r < 6; r++)
-                for (int c = 0; c < 4; c++) ug.Add(Label("", 26), r + 1, c);
 
             string[,] priv =
             {
@@ -562,18 +581,19 @@ namespace HandlerGuide.ViewModels
                     E.H(
                         E.Text("mu_user", "", 150), E.Text("mu_pass", "", 150),
                         E.Cmb("mu_level", lv, 130, 0),
-                        E.MiniBtn("删除", () => E.M.Log("信息", "删除选中用户（内置用户不可删除）")),
-                        E.MiniBtn("修改", () => E.M.Log("信息", "修改 / 添加用户")),
-                        E.MiniBtn("导出", null), E.MiniBtn("导入", null))),
+                        E.MiniBtn("删除", Ops.DeleteUser),
+                        E.MiniBtn("修改", Ops.AddOrUpdateUser),
+                        E.MiniBtn("导出", Ops.ExportUsersDialog),
+                        E.MiniBtn("导入", Ops.ImportUsersDialog))),
                 E.Group("权限管理",
                     E.Scroll(pg, 300, System.Windows.Controls.ScrollBarVisibility.Disabled,
                         System.Windows.Controls.ScrollBarVisibility.Auto),
                     E.Spacer(6),
                     E.H(E.Cmb("mu_priv_level", lv, 130, 0),
-                        E.MiniBtn("设定", () => E.M.Log("信息", "设定选中权限等级"))),
+                        E.MiniBtn("设定", Ops.SetPrivilegeLevel)),
                     E.Spacer(4),
-                    E.H(E.MiniBtn("导出", null), E.MiniBtn("导入", null))),
-                E.H(E.Btn("应用", () => E.M.Log("信息", "用户 / 权限设定已应用"))),
+                    E.H(E.MiniBtn("导出", Ops.ExportUsersDialog), E.MiniBtn("导入", Ops.ImportUsersDialog))),
+                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", Ops.ApplyUsers)),
                 E.Group("说明",
                     E.T("该窗口用于对本机用户进行维护。用户 “Administrator” 和 “Engineer” 为内置用户，无法被删除；只有 “Administrator” 可进入此界面。\n" +
                         "添加用户：在“用户名”和“口令”文本框中输入信息后点击[修改]按钮即可添加新用户，用户名不分大小写，不可与内置用户名相同，前后空字符会被自动截断去除。\n" +
@@ -586,6 +606,7 @@ namespace HandlerGuide.ViewModels
         // ==================================================================
         public static Element MaintLight()
         {
+            var wqzForm = Ops.PageForm("信号灯设定", "ml_");
             string[] states = { "运行", "卡料", "暂停", "警告" };
             string[] opts = { "OFF", "BLINK", "ON" };
             int[,] def = { { 0, 0, 2, 0 }, { 1, 0, 0, 2 }, { 0, 2, 0, 0 }, { 0, 1, 0, 2 } };
@@ -606,7 +627,7 @@ namespace HandlerGuide.ViewModels
             return E.V(
                 
                 E.Group("信号灯定义", g),
-                E.H(E.Btn("应用", () => E.M.Log("信息", "信号灯设定已应用"))),
+                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", Ops.ApplyLightSetting)),
                 E.Group("说明",
                     E.T("状态：表示设备处于某种状态时，包括运行、卡料、暂停和警告。\n" +
                         "红色 / 黄色 / 绿色：可定义信号灯的三种颜色灯在对应状态下所触发的状态，包括长亮(ON)、闪烁(BLINK)以及不激活(OFF)。\n" +

@@ -24,7 +24,8 @@
     <vm:StackElement Orientation="Horizontal">
         <vw:MiniBtn Text="全选" Cmd="SelectAllRecipes" />
         <vw:MiniBtn Text="全不选" Cmd="DeselectAllRecipes" />
-        <vw:Btn Text="应用" Cmd="Log" Arg="单元参数已应用到所选品种" />
+        <vw:MiniBtn Text="恢复" Cmd="Reset" Arg="unit_apply" />
+        <vw:Btn Text="应用" Cmd="Apply" Arg="unit_apply" />
     </vm:StackElement>
 
     <vw:Watermark />
