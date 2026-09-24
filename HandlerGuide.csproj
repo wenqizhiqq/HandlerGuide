@@ -38,6 +38,15 @@
     <None Update="image\OK.bmp">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <!-- 三温标准机 3D 整机渲染图，用于「模块平面仿真」页的 3D 视角：
+         1920×1050 JPEG，运行时由 LayoutPages.BuildLayoutCanvas3D() 以
+         pack://siteoforigin:,,,/image/handler_3d.jpg 加载为画布背景。 -->
+    <None Update="image\handler_3d.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="image\handler_top.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>

@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using HandlerGuide.Motion;
 
 namespace HandlerGuide.ViewModels
@@ -152,7 +153,6 @@ namespace HandlerGuide.ViewModels
         /// <summary>整机模块平面仿真页（motion_layout）。</summary>
         public static Element LayoutPage()
         {
-            var canvas = BuildLayoutCanvas();
 
             return E.V(
                 E.H(
@@ -177,12 +177,20 @@ namespace HandlerGuide.ViewModels
                         10, E.Sec, false, TextWrapping.Wrap)),
 
                 // ---- 主画布 + 右侧说明栏 ----
-                // 两列网格：左列 * 吃满剩余宽度（画布尽量大），右列固定 490
-                // 让「命令中心 / 批次管理」的 WrapPanel 拿到有界宽度从而正常换行。
+                // 两列网格：左列 * 吃满剩余宽度，右列固定 490。
+                // 左列里再放「2D平面图 / 3D整机图」两个标签页 ——
+                // 3D 标签加载 image\handler_3d.jpg，料盘与龙门架随节拍动；
+                // 2D 标签仍走 BuildLayoutCanvas() 的 11 模组 540×438 工程图。
+                // 右侧命令中心 / 图例 / 模组动作对照两套视图共用。
                 E.Grid()
                     .Cols("*", "490")
                     .Rows("Auto")
-                    .Add(canvas, 0, 0)
+                    .Add(
+                        E.Tabs(
+                            ("2D平面图", () => BuildLayoutCanvas()),
+                            ("整机俯视图", () => BuildLayoutCanvasTop()),
+                            ("3D整机图", () => BuildLayoutCanvas3D())),
+                        0, 0)
                     .Add(
                         E.V(
                             // ---- 命令中心（生产控制 + 批次管理）从主界面搬到本仿真页右侧 ----
@@ -925,6 +933,220 @@ namespace HandlerGuide.ViewModels
             };
 
             // 先画一帧，保证静态截图 / 首次显示就有内容（不依赖快速通道）。
+            cv.Refresh();
+            return cv;
+        }
+
+        /// <summary>
+        /// 构建 3D 整机渲染画布：把 image\handler_3d.jpg 作为画布背景，
+        /// 在「料盘」与「龙门架」位置上叠加半透明高亮矩形，由 MotionManager 实例
+        /// 驱动的 Draw 回调让料盘横向走料、龙门架随节拍上下起降。
+        /// 画布 1498×819（保持原图 1920:1050≈1.83 的宽高比），
+        /// 刚好嵌进 2D 视图左侧的「标签页」区域，与 2D 平面图共用右侧说明栏。
+        /// </summary>
+        private static CanvasElement BuildLayoutCanvas3D()
+        {
+            // 1498×819 ≈ 原图 1920×1050 等比缩放（×0.78），既能在 1920 视口完整显示
+            // 又不把页面顶到出现竖向滚动条。
+            const double CW = 1498;
+            const double CH = 819;
+
+            var cv = new CanvasElement { CanvasWidth = CW, CanvasHeight = CH };
+
+            // ---- 背景：image/handler_3d.jpg（运行时由 .csproj CopyToOutputDirectory
+            // 复制到 exe 同级目录，pack://siteoforigin 从那里加载）----
+            ImageBrush bgBrush;
+            try
+            {
+                var bmp = new BitmapImage();
+                bmp.BeginInit();
+                bmp.UriSource = new Uri("pack://siteoforigin:,,,/image/handler_3d.jpg");
+                bmp.CacheOption = BitmapCacheOption.OnLoad;
+                bmp.EndInit();
+                bmp.Freeze();
+                bgBrush = new ImageBrush(bmp) { Stretch = Stretch.Fill };
+            }
+            catch
+            {
+                // 兜底：找不到图时画一个深灰底+提示文字，绝不黑屏
+                bgBrush = new ImageBrush();
+            }
+            var bg = new RectItem { X = 0, Y = 0, W = CW, H = CH, Fill = bgBrush };
+            cv.Items.Add(bg);
+
+            // 找不到图时叠一行大字提示
+            if (bgBrush.ImageSource == null)
+            {
+                cv.Items.Add(new RectItem
+                {
+                    X = 0, Y = 0, W = CW, H = CH,
+                    Fill = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x30))
+                });
+                cv.Items.Add(new TextItem
+                {
+                    Text = "image/handler_3d.jpg 加载失败", X = CW / 2 - 200, Y = CH / 2,
+                    TextSize = 18, TextWidth = 400, Align = TextAlignment.Center,
+                    Foreground = new SolidColorBrush(Color.FromRgb(0xE0, 0xE0, 0xE0))
+                });
+            }
+
+            // ---- 料盘高亮：6 个半透明橙色矩形，叠在原图下排黑色托盘（料盘）位置上 ----
+            // 原图 1920×1050 中「黑色料盘」y≈600..820；折算 1498×819 → y≈490..670
+            var trayHilites = new List<RectItem>();
+            double trayY = 510, trayW = 150, trayH = 110;
+            double[] trayBaseX = { 110, 320, 530, 740, 950, 1160 };
+            var trayFill = new SolidColorBrush(Color.FromArgb(110, 0xFF, 0x99, 0x00));
+            var trayStroke = new SolidColorBrush(Color.FromRgb(0xFF, 0x66, 0x00));
+            for (int i = 0; i < trayBaseX.Length; i++)
+            {
+                var rh = new RectItem
+                {
+                    X = trayBaseX[i], Y = trayY, W = trayW, H = trayH,
+                    Radius = 6,
+                    Fill = trayFill,
+                    Stroke = trayStroke,
+                    StrokeThickness = 3,
+                };
+                cv.Items.Add(rh);
+                trayHilites.Add(rh);
+            }
+
+            // ---- 龙门架高亮：中央灰色框的蓝色半透明矩形，随节拍上下起降 ----
+            // 原图「龙门架」x≈580..1020, y≈90..500；折算 1498×819 → x≈453..796, y≈70..390
+            const double gantryBaseY = 90;
+            const double gantrySpan = 50;     // 上下移动幅度
+            var gantryStroke = new SolidColorBrush(Color.FromRgb(0x00, 0x66, 0xCC));
+            var gantryHilite = new RectItem
+            {
+                X = 480, Y = gantryBaseY, W = 540, H = 320,
+                Radius = 8,
+                Fill = new SolidColorBrush(Color.FromArgb(70, 0x00, 0xAA, 0xFF)),
+                Stroke = gantryStroke,
+                StrokeThickness = 3,
+            };
+            cv.Items.Add(gantryHilite);
+
+            // ---- 标签 ----
+            cv.Items.Add(new TextItem
+            {
+                Text = "料盘流动方向 →", X = 10, Y = 8, TextSize = 13, TextWidth = 180,
+                Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x66, 0x00)),
+            });
+            cv.Items.Add(new TextItem
+            {
+                Text = "龙门架升降 ↑↓", X = 480, Y = 60, TextSize = 13, TextWidth = 160,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x00, 0x66, 0xCC)),
+            });
+            cv.Items.Add(new TextItem
+            {
+                Text = "温启志 18719361399 · 3D 整机仿真", X = 10, Y = CH - 22,
+                TextSize = 10, TextWidth = 300,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80))
+            });
+
+            // ---- 逐帧动画：与 2D 画布共享同一套 MotionManager / 三角波节拍 ----
+            long last = Environment.TickCount64;
+            double t = 0;
+            bool demoKicked = false;
+            int kickDelay = 0;
+
+            cv.Draw = c =>
+            {
+                long now = Environment.TickCount64;
+                double dt = (now - last) / 1000.0;
+                last = now;
+                if (dt <= 0 || dt > 0.5) dt = 0.05;
+                t += dt;
+
+                var m = MotionManager.Instance;
+
+                // 打开本页后自动启动安全演示节拍（与 2D 画布相同的 1 秒延迟）
+                if (!demoKicked)
+                {
+                    kickDelay++;
+                    if (kickDelay > 20)
+                    {
+                        demoKicked = true;
+                        if (!m.EStop && !m.AnyAlarm() && !m.AutoCycle) m.StartDemo();
+                    }
+                }
+
+                // 料盘横向摆动（每个相位不同，模拟传送带上的料盘依次进给）
+                for (int i = 0; i < trayHilites.Count; i++)
+                {
+                    double phase = i * 0.42;
+                    double osc = Math.Sin((t + phase) * 2.2) * 24;
+                    trayHilites[i].X = trayBaseX[i] + osc;
+                    // 透明度脉冲（0.25..0.55 之间呼吸）
+                    byte a = (byte)(70 + 70 * (0.5 + 0.5 * Math.Sin((t + phase) * 3.0)));
+                    trayFill.Color = Color.FromArgb(a, 0xFF, 0x99, 0x00);
+                }
+
+                // 龙门架随三角波上下起降（与 2D 画布左右立柱同步）
+                double tri = Triangle(t * 0.24);
+                gantryHilite.Y = gantryBaseY + (1 - tri) * gantrySpan;
+                // 到顶 / 到底时边框变红，表示压到位
+                bool atEnd = tri > 0.92 || tri < 0.08;
+                gantryStroke.Color = atEnd
+                    ? Color.FromRgb(0xFF, 0x33, 0x33)
+                    : Color.FromRgb(0x00, 0x66, 0xCC);
+            };
+
+            // 先画一帧，保证首次显示就有内容（不依赖快速通道）
+            cv.Refresh();
+            return cv;
+        }
+
+        /// <summary>
+        /// 构建整机俯视图画布：把 image\handler_top.jpg（1920×1259）作为画布背景。
+        /// 与 3D 画布同高（819），按 1.525 宽高比得到 CW=1249，避免页面顶出滚动条。
+        /// 一模一样 —— 用户贴的原图，不画任何高亮、不做任何动画。
+        /// </summary>
+        private static CanvasElement BuildLayoutCanvasTop()
+        {
+            const double CW = 1249;
+            const double CH = 819;
+
+            var cv = new CanvasElement { CanvasWidth = CW, CanvasHeight = CH };
+
+            // ---- 背景：image/handler_top.jpg（运行时由 .csproj CopyToOutputDirectory
+            // 复制到 exe 同级目录，pack://siteoforigin 从那里加载）----
+            ImageBrush bgBrush;
+            try
+            {
+                var bmp = new BitmapImage();
+                bmp.BeginInit();
+                bmp.UriSource = new Uri("pack://siteoforigin:,,,/image/handler_top.jpg");
+                bmp.CacheOption = BitmapCacheOption.OnLoad;
+                bmp.EndInit();
+                bmp.Freeze();
+                bgBrush = new ImageBrush(bmp) { Stretch = Stretch.Fill };
+            }
+            catch
+            {
+                bgBrush = new ImageBrush();
+            }
+            var bg = new RectItem { X = 0, Y = 0, W = CW, H = CH, Fill = bgBrush };
+            cv.Items.Add(bg);
+
+            // 找不到图时叠深灰底 + 提示文字，绝不黑屏
+            if (bgBrush.ImageSource == null)
+            {
+                cv.Items.Add(new RectItem
+                {
+                    X = 0, Y = 0, W = CW, H = CH,
+                    Fill = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x30))
+                });
+                cv.Items.Add(new TextItem
+                {
+                    Text = "image/handler_top.jpg 加载失败", X = CW / 2 - 200, Y = CH / 2,
+                    TextSize = 18, TextWidth = 400, Align = TextAlignment.Center,
+                    Foreground = new SolidColorBrush(Color.FromRgb(0xE0, 0xE0, 0xE0))
+                });
+            }
+
+            // 一模一样 —— 不画任何高亮、不挂动画回调（构造函数已自动 RegisterFast，
+            // 没动画时快速通道只是无操作重绘，安全且不耗 CPU）。
             cv.Refresh();
             return cv;
         }
