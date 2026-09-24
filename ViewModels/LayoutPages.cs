@@ -183,6 +183,9 @@ namespace HandlerGuide.ViewModels
                     canvas,
                     E.SpacerW(20),
                     E.V(
+                        // ---- 命令中心（生产控制 + 批次管理）从主界面搬到本仿真页右侧 ----
+                        HomePages.CommandCenter(),
+                        E.Spacer(10),
                         E.T("图例", 12, E.P, true),
                         BuildLegend(),
                         E.Spacer(10),

@@ -250,9 +250,8 @@ namespace HandlerGuide.ViewModels
                     new SolidColorBrush(Color.FromRgb(0x9B, 0x1B, 0x1B)), null, 0, 6,
                     new Thickness(10, 4, 10, 4), new Thickness(0, 8, 0, 0)));
 
-            var outer = E.Grid().Rows("Auto", "*", "Auto");
+            var outer = E.Grid().Rows("*", "Auto");
             outer.VAlign = VerticalAlignment.Stretch;
-            outer.Add(CommandCenter(), 0);
             outer.Add(root, 1);
             outer.Add(bottom, 2);
             return outer;
