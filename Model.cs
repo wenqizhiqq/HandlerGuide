@@ -97,13 +97,103 @@ namespace HandlerGuide
         public Dictionary<string, int> Choices { get; } = new();
 
         public double GetNum(string k, double d = 0) => Nums.TryGetValue(k, out var v) ? v : d;
-        public void SetNum(string k, double v) => Nums[k] = v;
+        public void SetNum(string k, double v) { Nums[k] = v; MarkDirty(); }
         public string GetText(string k, string d = "") => Texts.TryGetValue(k, out var v) ? v : d;
-        public void SetText(string k, string v) => Texts[k] = v;
+        public void SetText(string k, string v) { Texts[k] = v; MarkDirty(); }
         public bool GetToggle(string k, bool d = false) => Toggles.TryGetValue(k, out var v) ? v : d;
-        public void SetToggle(string k, bool v) => Toggles[k] = v;
+        public void SetToggle(string k, bool v) { Toggles[k] = v; MarkDirty(); }
         public int GetChoice(string k, int d = 0) => Choices.TryGetValue(k, out var v) ? v : d;
-        public void SetChoice(string k, int v) => Choices[k] = v;
+        public void SetChoice(string k, int v) { Choices[k] = v; MarkDirty(); }
+
+        // ===== 参数自动保存 / 载入（配方参数 + 系统参数 一并持久化） =====
+        // 温启志 18719361399 · 参数持久化（AppData/Local/HandlerGuide/params.json）
+        private static readonly string _paramFile = System.IO.Path.Combine(
+            System.AppContext.BaseDirectory, "params.json");
+
+        private System.Timers.Timer _saveTimer;
+        private bool _dirty;
+        private bool _loaded;
+
+        private void MarkDirty()
+        {
+            _dirty = true;
+            if (_saveTimer == null)
+            {
+                _saveTimer = new System.Timers.Timer(800) { AutoReset = false };
+                _saveTimer.Elapsed += (s, e) => { _saveTimer.Stop(); FlushSave(); };
+            }
+            _saveTimer.Stop();
+            _saveTimer.Start();
+        }
+
+        private void FlushSave()
+        {
+            try { Save(); _dirty = false; }
+            catch (System.Exception ex) { System.Diagnostics.Debug.WriteLine("参数保存失败: " + ex.Message); }
+        }
+
+        /// <summary>把四个参数字典 + 关键配置属性序列化到 JSON（配方参数与系统参数一并保存）。</summary>
+        public void Save()
+        {
+            if (!_dirty) return;
+            var cfg = new System.Collections.Generic.Dictionary<string, object>
+            {
+                ["Mode"] = Mode, ["Recipe"] = Recipe, ["UserLevel"] = UserLevel,
+                ["TempMode"] = TempMode, ["Operator"] = Operator, ["Customer"] = Customer,
+                ["BatchNo"] = BatchNo, ["SubBatchNo"] = SubBatchNo, ["Shift"] = Shift,
+                ["OutputType"] = OutputType, ["StartMode"] = StartMode, ["Chinese"] = Chinese,
+                ["KeyboardLocked"] = KeyboardLocked, ["RescanMode"] = RescanMode,
+                ["LotSize"] = LotSize, ["Pressure"] = Pressure
+            };
+            var bag = new System.Collections.Generic.Dictionary<string, object>
+            {
+                ["Nums"] = Nums, ["Texts"] = Texts, ["Toggles"] = Toggles, ["Choices"] = Choices,
+                ["Config"] = cfg
+            };
+            var json = System.Text.Json.JsonSerializer.Serialize(bag, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            var dir = System.IO.Path.GetDirectoryName(_paramFile);
+            if (!string.IsNullOrEmpty(dir)) System.IO.Directory.CreateDirectory(dir);
+            System.IO.File.WriteAllText(_paramFile, json);
+        }
+
+        /// <summary>从 JSON 载入并合并到现有字典/配置（缺失项保留代码默认值）。</summary>
+        public void Load()
+        {
+            if (_loaded) return;
+            _loaded = true;
+            try
+            {
+                if (!System.IO.File.Exists(_paramFile)) return;
+                var json = System.IO.File.ReadAllText(_paramFile);
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("Nums", out var nums)) foreach (var p in nums.EnumerateObject()) Nums[p.Name] = p.Value.GetDouble();
+                if (root.TryGetProperty("Texts", out var texts)) foreach (var p in texts.EnumerateObject()) Texts[p.Name] = p.Value.GetString() ?? "";
+                if (root.TryGetProperty("Toggles", out var tog)) foreach (var p in tog.EnumerateObject()) Toggles[p.Name] = p.Value.GetBoolean();
+                if (root.TryGetProperty("Choices", out var ch)) foreach (var p in ch.EnumerateObject()) Choices[p.Name] = p.Value.GetInt32();
+                if (root.TryGetProperty("Config", out var cfg))
+                {
+                    if (cfg.TryGetProperty("Mode", out var v)) Mode = v.GetString();
+                    if (cfg.TryGetProperty("Recipe", out var v2)) Recipe = v2.GetString();
+                    if (cfg.TryGetProperty("UserLevel", out var v3)) UserLevel = v3.GetString();
+                    if (cfg.TryGetProperty("TempMode", out var v4)) TempMode = v4.GetString();
+                    if (cfg.TryGetProperty("Operator", out var v5)) Operator = v5.GetString();
+                    if (cfg.TryGetProperty("Customer", out var v6)) Customer = v6.GetString();
+                    if (cfg.TryGetProperty("BatchNo", out var v7)) BatchNo = v7.GetString();
+                    if (cfg.TryGetProperty("SubBatchNo", out var v8)) SubBatchNo = v8.GetString();
+                    if (cfg.TryGetProperty("Shift", out var v9)) Shift = v9.GetString();
+                    if (cfg.TryGetProperty("OutputType", out var v10)) OutputType = v10.GetString();
+                    if (cfg.TryGetProperty("StartMode", out var v11)) StartMode = v11.GetString();
+                    if (cfg.TryGetProperty("Chinese", out var v12)) Chinese = v12.GetBoolean();
+                    if (cfg.TryGetProperty("KeyboardLocked", out var v13)) KeyboardLocked = v13.GetBoolean();
+                    if (cfg.TryGetProperty("RescanMode", out var v14)) RescanMode = v14.GetBoolean();
+                    if (cfg.TryGetProperty("LotSize", out var v15)) LotSize = v15.GetInt32();
+                    if (cfg.TryGetProperty("Pressure", out var v16)) Pressure = v16.GetDouble();
+                }
+            }
+            catch (System.Exception ex) { System.Diagnostics.Debug.WriteLine("参数载入失败: " + ex.Message); }
+        }
+
 
         // ---- 运行时状态(带通知，驱动主界面/诊断实时刷新) ----
         private string _runState = "停止";
@@ -239,6 +329,7 @@ namespace HandlerGuide
         {
             InitMotors();
             InitBins();
+            Load();
             Logs.Add(new LogEntry { Time = DateTime.Now, Level = "信息", Message = "控制程序启动完成" });
         }
 

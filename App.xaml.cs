@@ -68,6 +68,8 @@ namespace HandlerGuide
             }
 
             base.OnStartup(e);
+            // 退出时兜底保存参数（自动保存的防丢网：万一 800ms 防抖还没触发）
+            this.Exit += (s, ex) => { try { MachineModel.Instance.Save(); } catch { } };
         }
 
         /// <summary>把窗口内容渲染成 PNG（开发期自检用）。</summary>
