@@ -792,8 +792,6 @@ namespace HandlerGuide.ViewModels
             // =============================================================
             long last = Environment.TickCount64;
             double t = 0;
-            bool demoKicked = false;
-            int kickDelay = 0;
 
             cv.Draw = c =>
             {
@@ -801,20 +799,11 @@ namespace HandlerGuide.ViewModels
                 double dt = (now - last) / 1000.0;
                 last = now;
                 if (dt <= 0 || dt > 0.5) dt = 0.05;
-                t += dt;
 
                 var m = MotionManager.Instance;
 
-                // 打开本页后自动启动安全演示节拍（等约 1 秒让界面先画出来）
-                if (!demoKicked)
-                {
-                    kickDelay++;
-                    if (kickDelay > 20)
-                    {
-                        demoKicked = true;
-                        if (!m.EStop && !m.AnyAlarm() && !m.AutoCycle) m.StartDemo();
-                    }
-                }
+                // 只有点击「启动演示节拍」后（AutoCycle=true）才推进动画；否则保持静态初态
+                if (m.AutoCycle) t += dt;
 
                 // ---- 流水线走料（时间驱动，料盘沿导轨流动） ----
                 double flow = t * 13;      // 原图像素/秒
@@ -1047,8 +1036,6 @@ namespace HandlerGuide.ViewModels
             // ---- 逐帧动画：与 2D 画布共享同一套 MotionManager / 三角波节拍 ----
             long last = Environment.TickCount64;
             double t = 0;
-            bool demoKicked = false;
-            int kickDelay = 0;
 
             cv.Draw = c =>
             {
@@ -1056,20 +1043,11 @@ namespace HandlerGuide.ViewModels
                 double dt = (now - last) / 1000.0;
                 last = now;
                 if (dt <= 0 || dt > 0.5) dt = 0.05;
-                t += dt;
 
                 var m = MotionManager.Instance;
 
-                // 打开本页后自动启动安全演示节拍（与 2D 画布相同的 1 秒延迟）
-                if (!demoKicked)
-                {
-                    kickDelay++;
-                    if (kickDelay > 20)
-                    {
-                        demoKicked = true;
-                        if (!m.EStop && !m.AnyAlarm() && !m.AutoCycle) m.StartDemo();
-                    }
-                }
+                // 只有点击「启动演示节拍」后（AutoCycle=true）才推进动画；否则保持静态初态
+                if (m.AutoCycle) t += dt;
 
                 // 料盘横向摆动（每个相位不同，模拟传送带上的料盘依次进给）
                 for (int i = 0; i < trayHilites.Count; i++)

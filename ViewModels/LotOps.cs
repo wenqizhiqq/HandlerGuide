@@ -521,7 +521,7 @@ namespace HandlerGuide.ViewModels
         {
             var sb = new StringBuilder();
             sb.AppendLine("=== HandlerGuide " + title + " " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " ===");
-            sb.AppendLine("温启志 18719361399 · 共 " + list.Count + " 条");
+            sb.AppendLine("共 " + list.Count + " 条");
             sb.AppendLine();
             foreach (var l in list)
                 sb.AppendLine(l.Time.ToString("yyyy-MM-dd HH:mm:ss.fff") + "  [" + l.Level + "]  " + l.Message);
@@ -535,7 +535,6 @@ namespace HandlerGuide.ViewModels
             sb.AppendLine("==============================================");
             sb.AppendLine("  HandlerGuide 批次汇总 / Lot Summary");
             sb.AppendLine("  " + (r.End.Year > 1 ? r.End.ToString("yyyy-MM-dd HH:mm:ss") : DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
-            sb.AppendLine("  温启志 18719361399");
             sb.AppendLine("==============================================");
             sb.AppendLine("批号 Lot No.      : " + r.LotNo + (string.IsNullOrEmpty(r.SubLotNo) ? "" : " / " + r.SubLotNo));
             sb.AppendLine("客户 Customer     : " + r.Customer);

@@ -98,7 +98,7 @@ namespace HandlerGuide.ViewModels
             // 用户表（内置 Admin/Engineer/Operator，可在「维护配置 → 用户管理」里增删）
             LoadUsers();
 
-            M.Log("信息", "操作层已就绪（温启志 18719361399）");
+            M.Log("信息", "操作层已就绪");
         }
 
         // ==================================================================
@@ -769,7 +769,6 @@ namespace HandlerGuide.ViewModels
                 foreach (var e in M.Logs)
                     sb.AppendLine(e.Time.ToString("HH:mm:ss") + "  [" + e.Level + "]  " + e.Message);
                 sb.AppendLine(new string('-', 78));
-                sb.AppendLine("温启志 18719361399");
                 File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
                 Info("信息记录已导出到：" + path);
             }
@@ -2314,7 +2313,6 @@ namespace HandlerGuide.ViewModels
                 foreach (var e in M.Logs)
                     sb.AppendLine(e.Time.ToString("HH:mm:ss") + "  [" + e.Level + "]  " + e.Message);
                 sb.AppendLine(new string('-', 78));
-                sb.AppendLine("温启志 18719361399");
                 File.WriteAllText(f, sb.ToString(), Encoding.UTF8);
                 Info("信息记录已导出：" + f);
                 return f;

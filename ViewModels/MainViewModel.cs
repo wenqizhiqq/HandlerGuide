@@ -75,8 +75,7 @@ namespace HandlerGuide.ViewModels
             }
             var body = Build != null ? Build() : new StackElement();
             body.VAlign = System.Windows.VerticalAlignment.Stretch;
-            // 每一个页面底部都附上作者水印（温启志 18719361399）
-            var wrap = E.V(body, E.OwnerWatermark());
+            var wrap = body;
             wrap.VAlign = System.Windows.VerticalAlignment.Stretch;
             return wrap;
         }
@@ -259,7 +258,7 @@ namespace HandlerGuide.ViewModels
                     "页面与布局依据《Pick and Place Handler 9000 用户手册》复刻：\n" +
                     "命令中心工具条 · 品种设定 · 单元设定 · 诊断 · 维护配置 ·\n" +
                     "设定模式 · 使能设定 · 温控设定 · 电机归零 · 信息记录 · 显示控制板\n\n" +
-                    "作者 / 版权：温启志 18719361399\n" + WenQiZhiCopyright);
+                    "本软件由 温启志 编写（联系方式：18719361399）\n" + WenQiZhiCopyright);
         });
 
         public RelayCommand ManualCommand => new RelayCommand(() => Navigate(ManualPage));
@@ -329,7 +328,7 @@ namespace HandlerGuide.ViewModels
         public string WenQiZhiStamped => Owner.WenQiZhiStamped();
 
         /// <summary>窗口标题（含作者水印 温启志 18719361399）。</summary>
-        public string WenQiZhiTitle => TitleText + "   ·   " + WenQiZhiMark;
+        public string WenQiZhiTitle => TitleText;
 
         // ---------------- 状态栏 ----------------
 
@@ -410,7 +409,7 @@ namespace HandlerGuide.ViewModels
             Raise(nameof(CanSingleStep));
         }
 
-        public string VersionText => "Version: 2.0.23.709   ·   " + WenQiZhiMark;
+        public string VersionText => "Version: 2.0.23.709";
 
         /// <summary>由界面定时器驱动：推进仿真 + 刷新实时读数。</summary>
         public void Tick()

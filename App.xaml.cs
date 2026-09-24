@@ -112,7 +112,7 @@ namespace HandlerGuide
                 _bindWarnings = 0;
 
                 Log("selftest start");
-            Log("温启志 18719361399 · 版权所有 " + ViewModels.Owner.WenQiZhiCopyright);
+            Log("版权所有 " + ViewModels.Owner.WenQiZhiCopyright);
                 var win = new Views.MainWindow();
                 win.Show();
                 win.UpdateLayout();
