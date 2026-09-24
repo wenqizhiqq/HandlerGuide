@@ -275,8 +275,8 @@ namespace HandlerGuide.ViewModels
                     if (bg != null) b.Background = bg;
                     if (fg != null) b.Foreground = fg;
                     if (bold) b.FontWeight = FontWeights.SemiBold;
-                    b.Padding = new Thickness(14, 5, 14, 5);
-                    b.Margin = new Thickness(0, 2, 5, 2);
+                    b.Padding = new Thickness(10, 4, 10, 4);
+                    b.Margin = new Thickness(0, 2, 4, 2);
                     b.ToolTip = tip;
                     return b;
                 };
@@ -289,7 +289,7 @@ namespace HandlerGuide.ViewModels
             var blue = new SolidColorBrush(Color.FromRgb(0x2F, 0x7C, 0xD6));
             var grey = new SolidColorBrush(Color.FromRgb(0x6E, 0x6E, 0x73));
 
-            var row = E.H();
+            var row = E.Wrap();
             row.Children.Add(E.T("命令中心", 12.5, E.Sec).Margin(0, 0, 10, 0));
             row.Children.Add(E.LiveBadge(x => x.RunState, x => Ops.RunStateBrush(x.RunState), 62, 13));
 
@@ -305,7 +305,6 @@ namespace HandlerGuide.ViewModels
             row.Children.Add(mk("单步", () => Ops.SingleStep(), null, null, false,
                 () => Ops.CanSingleStepProduction, "单步执行一拍，方便观察动作顺序"));
 
-            row.Children.Add(sep());
 
             // ---- 归零 ----
             row.Children.Add(mk("全部归零", () => Ops.HomeAll(), null, null, false,
@@ -315,7 +314,6 @@ namespace HandlerGuide.ViewModels
             row.Children.Add(mk("全部停止", () => Ops.StopAllAxes(), null, null, false, null,
                 "只停轴，不改运行状态"));
 
-            row.Children.Add(sep());
 
             // ---- 报警 / 急停 ----
             row.Children.Add(mk("报警解除", () => Ops.ClearAlarm(), null, null, false, null,
@@ -325,7 +323,6 @@ namespace HandlerGuide.ViewModels
             row.Children.Add(mk("急停", () => Ops.EmergencyStop(), Palette.OnRed, Brushes.White, true, null,
                 "立即断使能、停全部轴、红灯 + 蜂鸣"));
 
-            row.Children.Add(sep());
 
             // ---- 计数 ----
             row.Children.Add(mk("计数清零", () => Ops.ResetCounters(), null, null, false, null,
@@ -334,7 +331,7 @@ namespace HandlerGuide.ViewModels
             // ---------------- 第 2 行：批次管理 ----------------
             // 温启志 18719361399：开批 / 结批 / 中止批 / 清盘 / 换载带 / 重扫 / KGD / OTF 归零，
             // 全部对应《ASTI Hexa Maxx System Manual》Chapter 4 Operator's Menu 的功能。
-            var row2 = E.H();
+            var row2 = E.Wrap();
             row2.Children.Add(E.T("批次管理", 12.5, E.Sec).Margin(0, 0, 10, 0));
             row2.Children.Add(E.LiveBadge(x => LotOps.LotStateText, x => Ops.RunStateBrush(x.RunState), 76, 12.5));
 
@@ -349,7 +346,6 @@ namespace HandlerGuide.ViewModels
             row2.Children.Add(mk("清料完成", () => LotOps.FinishPurge(), null, null, false,
                 () => m.Purging, "清料流程收尾，结束 Purge/Abort 状态"));
 
-            row2.Children.Add(sep());
 
             row2.Children.Add(mk("换载带#1", () => LotOps.ChangeCarrier(1), null, null, false,
                 () => m.OutputType == "Tape", "更换载带 #1 并把计数器清零"));
@@ -362,15 +358,14 @@ namespace HandlerGuide.ViewModels
             row2.Children.Add(mk("OTF归零", () => LotOps.OtfHoming(), null, null, false,
                 () => !Ops.IsRunning, "不按急停也让各机械臂回到原点"));
 
-            row2.Children.Add(sep());
 
             row2.Children.Add(mk("打印汇总", () => LotOps.ExportLotSummaryDialog("手动"), null, null, false, null,
                 "导出当前批次汇总"));
             row2.Children.Add(mk("自动打印", () => LotOps.SetAutoPrinting(!m.AutoPrinting), null, null, false, null,
                 "开批 / 结批时自动输出批次汇总"));
 
-            return E.Box(E.V(row, E.Spacer(6), row2), E.CardBg, E.Div, 1, 12,
-                         new Thickness(12, 8, 12, 8), new Thickness(0, 0, 0, 10));
+            return E.Box(E.V(row, E.Spacer(4), row2), E.CardBg, E.Div, 1, 10,
+                         new Thickness(10, 6, 10, 6), new Thickness(0, 0, 0, 8));
         }
     }
 }

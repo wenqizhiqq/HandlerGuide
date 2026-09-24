@@ -172,25 +172,28 @@ namespace HandlerGuide.ViewModels
                         E.Btn("全部回零", () => MotionManager.Instance.HomeAll(), "PrimaryButton", 12),
                         E.Btn("全部停止", () => MotionManager.Instance.StopAll(), "PrimaryButton", 12),
                         E.Btn("清除报警", () => MotionManager.Instance.ClearAlarm(), "PrimaryButton", 12)),
-                    E.T("本页打开后会自动启动演示节拍，便于观察模组动作；点「停止演示」即回到静态。"
-                        + "所有动作都经 SafetyCheck 互锁裁决，越界或干涉指令会被直接拒绝，因此不会撞机。",
-                        10.5, E.Sec, false, TextWrapping.Wrap)),
+                    E.T("打开本页即自动演示节拍；点「停止演示」回到静态。"
+                        + "所有动作经 SafetyCheck 互锁裁决，越界指令会被拒绝，不会撞机。",
+                        10, E.Sec, false, TextWrapping.Wrap)),
 
                 // ---- 主画布 + 右侧说明栏 ----
-                // 整机图本身接近正方形，而页面可用区域是宽屏；
-                // 并排放反而能让画布保持足够大，又不浪费右边的空白。
-                E.H(
-                    canvas,
-                    E.SpacerW(20),
-                    E.V(
-                        // ---- 命令中心（生产控制 + 批次管理）从主界面搬到本仿真页右侧 ----
-                        HomePages.CommandCenter(),
-                        E.Spacer(10),
-                        E.T("图例", 12, E.P, true),
-                        BuildLegend(),
-                        E.Spacer(10),
-                        E.T("模组动作对照（每个方框内都能看到动的零件）", 12, E.P, true),
-                        BuildModuleTable())),
+                // 两列网格：左列 * 吃满剩余宽度（画布尽量大），右列固定 490
+                // 让「命令中心 / 批次管理」的 WrapPanel 拿到有界宽度从而正常换行。
+                E.Grid()
+                    .Cols("*", "490")
+                    .Rows("Auto")
+                    .Add(canvas, 0, 0)
+                    .Add(
+                        E.V(
+                            // ---- 命令中心（生产控制 + 批次管理）从主界面搬到本仿真页右侧 ----
+                            HomePages.CommandCenter(),
+                            E.Spacer(6),
+                            E.T("图例", 12, E.P, true),
+                            BuildLegend(),
+                            E.Spacer(6),
+                            E.T("模组动作对照（每个方框内都能看到动的零件）", 12, E.P, true),
+                            BuildModuleTable()).Margin(12, 0, 0, 0),
+                        0, 1),
 
                 E.T("温启志 18719361399 · 平面仿真页", 10.5, E.Sec));
         }
@@ -261,14 +264,14 @@ namespace HandlerGuide.ViewModels
         /// </remarks>
         private static CanvasElement BuildLayoutCanvas()
         {
-            // ---- 原图 540×438 → 画布 952×728 ----
+            // ---- 原图 540×438 → 画布 1188×964（K=2.2，左侧尽量放大）----
             // 机台外框（原图 66..472 × 62..396）换算后落在 70..882 × 30..698，
             // 四周各留一点边距放读数条与标尺。
-            const double K = 2.0;      // 缩放
-            const double OX = -62.0;   // 水平偏移
-            const double OY = -94.0;   // 垂直偏移
-            const double CW = 952;
-            const double CH = 728;
+            const double K = 2.2;      // 缩放（原图 540×438 → 画布 1188×964，左侧尽量放大）
+            const double OX = -68.0;   // 水平偏移（按 K 同比）
+            const double OY = -103.0;  // 垂直偏移（按 K 同比）
+            const double CW = 1188;
+            const double CH = 964;
 
             // ---- 模组几何（原图像素） ----
             // 下面这组数字不是拍脑袋来的：都是把原图 machine.jpg(540×438) 放大 3 倍逐段量出来的。
