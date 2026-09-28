@@ -471,6 +471,13 @@ namespace HandlerGuide.ViewModels
         public FontWeight FontWeight { get; set; } = FontWeights.Normal;
 
         /// <summary>
+        /// 按钮文字换行方式（温启志 18719361399）。
+        /// 默认 NoWrap 保持旧行为；列宽不够的长文字按钮（如操作面板）
+        /// 置为 Wrap 后会自动折行，避免文字被裁掉。
+        /// </summary>
+        public TextWrapping Wrap { get; set; } = TextWrapping.NoWrap;
+
+        /// <summary>
         /// 动态可用性（温启志 18719361399）。
         /// 为 null 时按钮始终可用；非 null 时每个刷新周期重新求值，
         /// 让「主界面命令中心」的启动/暂停/继续/停止等按钮能跟着运行状态自动灰显。

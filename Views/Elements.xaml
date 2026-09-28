@@ -310,8 +310,7 @@
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type vm:ButtonElement}">
-        <Button Content="{Binding Text}"
-                Command="{Binding Command}"
+        <Button Command="{Binding Command}"
                 IsEnabled="{Binding IsEnabled}"
                 Style="{Binding StyleKey, Converter={StaticResource StyleKey}}"
                 FontSize="{Binding FontSize}"
@@ -325,7 +324,12 @@
                 BorderThickness="{Binding BorderThickness, Converter={StaticResource UnsetIfNull}}"
                 HorizontalAlignment="{Binding HAlign}" VerticalAlignment="{Binding VAlign}"
                 Cursor="Hand" 
-                ToolTip="{Binding ToolTip}" />
+                ToolTip="{Binding ToolTip}">
+            <!-- 内容用 TextBlock 承载：Wrap=Wrap 时长文字自动折行，不再被列宽裁掉 -->
+            <TextBlock Text="{Binding Text}"
+                       TextWrapping="{Binding Wrap}"
+                       TextAlignment="Center" />
+        </Button>
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type vm:SliderElement}">

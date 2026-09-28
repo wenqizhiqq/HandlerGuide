@@ -308,6 +308,7 @@ namespace HandlerGuide.ViewModels
                     b.Padding = new Thickness(2, 4, 2, 4);
                     b.Margin = new Thickness(1, 0, 1, 0);
                     b.HAlign = HorizontalAlignment.Stretch;
+                    b.Wrap = TextWrapping.Wrap;   // 列宽不够时长文字折行，避免被裁掉
                     b.ToolTip = tip;
 
                     // 温启志 18719361399 · 按钮下方小字说明（手册定义摘要），悬停看完整说明
@@ -430,6 +431,7 @@ namespace HandlerGuide.ViewModels
             knob.Padding = new Thickness(4, 6, 4, 6);
             knob.Margin = new Thickness(6, 0, 6, 0);
             knob.HAlign = HorizontalAlignment.Stretch;
+            knob.Wrap = TextWrapping.Wrap;   // 宽度不够时折行显示
             knob.ToolTip = "旋钮：切换前面板 / 后面板。后面板有效时旋钮内指示灯亮，前面板（红框内）按钮无效";
             var knobRow = E.H(
                 E.V(frontLamp, SideCap("前面板")),
