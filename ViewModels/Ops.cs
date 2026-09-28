@@ -108,6 +108,14 @@ namespace HandlerGuide.ViewModels
         /// <summary>启动生产。会先做安全前置判断，再启动运控节拍并把运行状态置「运行」。</summary>
         public static bool StartProduction()
         {
+            // 《手册》<出盘>：<出盘>请求激活后再按<开始运行>，指示灯熄灭并开始清盘
+            if (TrayOutRequested)
+            {
+                M.SetChoice("tray_out_req", 0);
+                Info("出盘请求生效：开始清出下料自动盘区域的料盘");
+                return LotOps.PurgeTrays();
+            }
+
             if (Mm.EStop) { Warn("急停未复位，无法启动"); return false; }
             if (!Mm.Connected) { Warn("运动控制卡未连接，无法启动"); return false; }
             if (Mm.AnyAlarm()) { Warn("存在伺服报警，请先「报警解除」再启动"); return false; }
@@ -2480,6 +2488,129 @@ namespace HandlerGuide.ViewModels
             if (string.IsNullOrEmpty(key) || !_ranges.TryGetValue(key, out var r)) return false;
             min = r[0]; max = r[1];
             return !double.IsInfinity(min) || !double.IsInfinity(max);
+        }
+
+        // ==================================================================
+        //  操作面板：前/后切换旋钮、电源、出盘请求、上/下料臂步进（温启志 18719361399）
+        //  《Pick and Place Handler 9000 User Manual》操作按钮面板章节的最小落地：
+        //  - 旋钮切前/后面板；后面板有效时前面板（红框内）按钮无效
+        //  - 电源开启两级：第 1 次部件上电 → 第 2 次控制电脑开机；<电源关闭>整机制断电
+        //  - <出盘>：停机时激活出盘请求，再按<开始运行>开始清盘
+        //  - 后面板 Step/步进（下料臂）、T.Start/测试（上料臂）：
+        //    启动后每按一次走一拍；「报警清除 + Step/T.Start」组合退出（报警清除后 3 秒内按下生效）
+        // ==================================================================
+
+        // ---- 前 / 后面板切换（旋钮） ----
+
+        /// <summary>后面板是否有效（true=旋钮切到后面板，前面板红框内按钮无效）。</summary>
+        public static bool PanelRear => M.GetChoice("op_panel_rear") == 1;
+
+        /// <summary>旋钮切换前 / 后面板。</summary>
+        public static void TogglePanelSide()
+        {
+            int v = PanelRear ? 0 : 1;
+            M.SetChoice("op_panel_rear", v);
+            Info(v == 1 ? "操作面板已切到【后面板】：前面板（红框内）按钮无效"
+                        : "操作面板已切到【前面板】");
+        }
+
+        // ---- 电源（前面板上端） ----
+
+        /// <summary>电源级：0=输入断电；1=断路器合（输入电源开）；2=控制部件已上电；3=控制电脑已开机。</summary>
+        public static int PowerStage => M.GetChoice("pwr_stage");
+
+        /// <summary>&lt;电源关闭&gt;指示灯：机器输入电源开启（后面断路器打开）时亮。</summary>
+        public static bool PowerInputOn => PowerStage >= 1;
+
+        /// <summary>&lt;电源开启&gt;指示灯：传感器 / 电机等控制部件上电后亮。</summary>
+        public static bool PowerComponentsOn => PowerStage >= 2;
+
+        /// <summary>控制电脑已开机。</summary>
+        public static bool PowerPcOn => PowerStage >= 3;
+
+        /// <summary>&lt;电源开启&gt;：第 1 次按下给控制部件上电，第 2 次按下启动控制电脑。</summary>
+        public static void PowerKeyOn()
+        {
+            switch (PowerStage)
+            {
+                case 0: Warn("机器输入电源未开（后面断路器未合），无法上电"); break;
+                case 1: M.SetChoice("pwr_stage", 2); Info("电源开启：传感器 / 电机等控制部件已上电"); break;
+                case 2: M.SetChoice("pwr_stage", 3); Info("电源开启：控制电脑开机中…"); break;
+                default: Info("控制电脑已处于开机状态"); break;
+            }
+        }
+
+        /// <summary>&lt;电源关闭&gt;：控制部件与控制电脑一起下电。</summary>
+        public static void PowerKeyOff()
+        {
+            if (PowerStage == 0) { Info("机器输入电源已是关闭状态"); return; }
+            M.SetChoice("pwr_stage", 0);
+            Warn("电源关闭：控制部件与控制电脑已下电");
+        }
+
+        // ---- 出盘请求（<出盘> 激活 → <开始运行> 开始清盘） ----
+
+        /// <summary>出盘请求是否已激活（停机状态下按&lt;出盘&gt;激活，指示灯亮）。</summary>
+        public static bool TrayOutRequested => M.GetChoice("tray_out_req") == 1;
+
+        /// <summary>&lt;出盘&gt;键：运行中直接清盘；停机时激活 / 取消出盘请求。</summary>
+        public static void TrayOutKey()
+        {
+            if (IsRunning) { if (!LotOps.PurgeTrays()) Warn("清盘未能启动"); }
+            else RequestTrayOut();
+        }
+
+        /// <summary>停机状态下激活 / 取消出盘请求（激活后再按&lt;开始运行&gt;开始清盘）。</summary>
+        public static void RequestTrayOut()
+        {
+            bool now = !TrayOutRequested;
+            M.SetChoice("tray_out_req", now ? 1 : 0);
+            Info(now ? "出盘请求已激活：按<开始运行>开始清出下料自动盘区域的料盘"
+                     : "出盘请求已取消");
+        }
+
+        // ---- 上 / 下料臂步进（后面板 Step / T.Start） ----
+
+        /// <summary>下料臂步进进行中（后面板 Step/步进，指示灯闪亮）。</summary>
+        public static bool StepLowerActive => M.GetToggle("step_lower");
+
+        /// <summary>上料臂步进进行中（后面板 T.Start/测试，指示灯闪亮）。</summary>
+        public static bool StepUpperActive => M.GetToggle("step_upper");
+
+        private static DateTime _clearArmedUntil = DateTime.MinValue;
+
+        /// <summary>后面板&lt;报警清除&gt;：清报警，并开启 3 秒时间窗用于「报警清除 + Step/T.Start」退出步进。</summary>
+        public static void RearAlarmClear()
+        {
+            ClearAlarm();
+            _clearArmedUntil = DateTime.Now.AddSeconds(3);
+        }
+
+        /// <summary>
+        /// 后面板 Step/步进（upper=false，下料臂）与 T.Start/测试（upper=true，上料臂）：
+        /// 未启动时启动该臂步进；已启动时每按一次走一拍；
+        /// 「报警清除」后 3 秒内按下则退出该臂步进。
+        /// </summary>
+        public static void RearStepKey(bool upper)
+        {
+            string key = upper ? "step_upper" : "step_lower";
+            string arm = upper ? "上料臂" : "下料臂";
+            bool active = M.GetToggle(key);
+
+            if (active && DateTime.Now <= _clearArmedUntil)
+            {
+                M.SetToggle(key, false);
+                Info(arm + "步进已退出");
+                return;
+            }
+            if (!active)
+            {
+                if (IsRunning) { Warn(arm + "步进只能在停止 / 暂停状态下启动"); return; }
+                M.SetToggle(key, true);
+                Info(arm + "步进已启动：每次取放后暂停，再按一次继续走一拍");
+                return;
+            }
+            SingleStep();
         }
     }
 

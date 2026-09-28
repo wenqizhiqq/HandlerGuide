@@ -3,6 +3,8 @@
 //  保留所有权利；界面与源码中的署名水印均指向温启志 18719361399。
 // ============================================================================
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 using HandlerGuide.Motion;
@@ -34,7 +36,7 @@ namespace HandlerGuide.ViewModels
         public static Element MainScreen()
         {
             var m = E.M;
-            var root = E.Grid().Cols("460", "*", "260", "320").Rows("*");
+            var root = E.Grid().Cols("430", "*", "260", "360").Rows("*");
             root.VAlign = VerticalAlignment.Stretch;
 
             // ---------------- 左列 ----------------
@@ -266,9 +268,12 @@ namespace HandlerGuide.ViewModels
         }
 
         /// <summary>
-        /// 温启志 18719361399 · 主界面右侧「操作按钮面板」：复刻实体操作按钮面板
-        /// （4 列 × 5 行圆角按钮 + 状态 LED）。按钮命令接入 Ops / LotOps / MotionManager，
-        /// 可用性跟随运行状态自动灰显，LED 实时反映机台状态。
+        /// 温启志 18719361399 · 主界面右侧「操作按钮面板」：复刻实体操作面板
+        /// —— 前面板板块（红框，含上端电源键）+ 后面板板块 + 前/后切换旋钮。
+        /// 《手册》要点：每颗按钮上方状态 LED、下方小字说明；
+        /// 旋钮内指示灯在后面板有效时亮，前面板指示灯在前面板有效时亮；
+        /// 后面板有效时前面板红框内按钮全部无效（电源键在上端不受影响）；
+        /// 归零 / 清机 / 步进 / 报警确认进行中指示灯闪亮（400ms 相位）。
         /// </summary>
         public static Element OperationPanel()
         {
@@ -278,76 +283,181 @@ namespace HandlerGuide.ViewModels
             // 温启志 18719361399 · 复用命令中心的配色
             Brush grey = new SolidColorBrush(Color.FromRgb(0x6E, 0x6E, 0x73));
             Brush amber = new SolidColorBrush(Color.FromRgb(0xE0, 0xA0, 0x30));
+            Brush redFrame = new SolidColorBrush(Color.FromRgb(0xC0, 0x20, 0x2A));
 
-            // 构造「LED + 按钮」单元：按钮横向撑满单元格，上方居中一颗状态灯。
-            // 温启志 18719361399 · en/bg/fg 允许为 null（部分按钮无可用性门禁或未自定义底色/文字色）
-            Func<string, Action, Func<bool>?, Func<MachineModel, bool>, bool, Brush?, Brush?, string, Element> cell =
-                (label, act, en, ledGet, ledRed, bg, fg, tip) =>
+            // 闪亮相位：RefreshFast 每 50ms 刷新一次读数，按 400ms 相位取反即可看到闪烁
+            Func<Func<MachineModel, bool>, Func<MachineModel, bool>> blink =
+                f => mm => f(mm) && (Environment.TickCount64 / 400) % 2 == 0;
+
+            // 面板侧别门禁：前面板键只在前面板有效时可用，后面板键反之
+            Func<Func<bool>?, Func<bool>> fen = f => () => !Ops.PanelRear && (f == null || f());
+            Func<Func<bool>?, Func<bool>> ren = f => () => Ops.PanelRear && (f == null || f());
+
+            // 「LED + 按钮 + 小字说明」单元：en/bg/fg 允许 null
+            Func<string, Action, Func<bool>?, Func<MachineModel, bool>, bool, Brush?, Brush?, string, string, Element> cell =
+                (label, act, en, ledGet, ledRed, bg, fg, cap, tip) =>
                 {
-                    var led = E.LiveLamp(ledGet, ledRed, false, 11);
+                    var led = E.LiveLamp(ledGet, ledRed, false, 10);
                     led.HAlign = HorizontalAlignment.Center;
-                    led.Margin = new Thickness(0, 0, 0, 4);
+                    led.Margin = new Thickness(0, 0, 0, 3);
 
-                    var b = E.Btn(label, act, "CmdButton", 12, en);
+                    var b = E.Btn(label, act, "CmdButton", 11.5, en);
                     if (bg != null) b.Background = bg;
                     if (fg != null) b.Foreground = fg;
                     b.FontWeight = FontWeights.SemiBold;
-                    b.Padding = new Thickness(3, 5, 3, 5);
-                    b.Margin = new Thickness(2, 1, 2, 1);
+                    b.Padding = new Thickness(2, 4, 2, 4);
+                    b.Margin = new Thickness(1, 0, 1, 0);
                     b.HAlign = HorizontalAlignment.Stretch;
                     b.ToolTip = tip;
 
-                    var v = E.V(led, b);
+                    // 温启志 18719361399 · 按钮下方小字说明（手册定义摘要），悬停看完整说明
+                    var cap2 = E.T(cap, 8.5, E.Sec, false, TextWrapping.Wrap, TextAlignment.Center, HorizontalAlignment.Center);
+                    cap2.Margin = new Thickness(1, 2, 1, 0);
+
+                    var v = E.V(led, b, cap2);
                     v.HAlign = HorizontalAlignment.Stretch;
                     return v;
                 };
 
-            // 温启志 18719361399 · 20 个操作按钮（顺序即面板 4×5 排布）
-            // en/bg/fg 标注可空：部分按钮（复位/急停/报警清除…）不需要可用性门禁或自定义底色/文字色。
+            // 把按钮定义铺成 cols 列的栅格
+            Func<IEnumerable<(string label, Action act, Func<bool>? en, Func<MachineModel, bool> led,
+                bool ledRed, Brush? bg, Brush? fg, string cap, string tip)>, int, Element> gridOf =
+                (items, cols) =>
+                {
+                    var list = items.ToArray();
+                    int rows = (list.Length + cols - 1) / cols;
+                    var g = E.Grid().Cols(string.Join(",", Enumerable.Repeat("1*", cols)))
+                                   .Rows(string.Join(",", Enumerable.Repeat("Auto", rows)));
+                    for (int i = 0; i < list.Length; i++)
+                        g.Add(cell(list[i].label, list[i].act, list[i].en, list[i].led, list[i].ledRed,
+                                   list[i].bg, list[i].fg, list[i].cap, list[i].tip), i / cols, i % cols);
+                    return g;
+                };
+
+            Element SideCap(string text) =>
+                E.T(text, 10.5, E.Sec, false, TextWrapping.NoWrap, TextAlignment.Center, HorizontalAlignment.Center);
+
+            // ---- 前面板红框内 20 键（4×5），后面板有效时全部无效 ----
             var defs = new (string label, Action act, Func<bool>? en,
-                Func<MachineModel, bool> led, bool ledRed, Brush? bg, Brush? fg, string tip)[]
+                Func<MachineModel, bool> led, bool ledRed, Brush? bg, Brush? fg, string cap, string tip)[]
             {
-                ("开始运行", () => Ops.StartProduction(), () => Ops.CanStartProduction, mm => Ops.IsRunning, false, Palette.OnGreen, Brushes.White, "启动生产：安全前置判断后跑取放料节拍并开始计产"),
-                ("停止",     () => Ops.StopProduction(),  () => Ops.CanStopProduction, mm => Ops.IsIdle,    false, grey, Brushes.White, "停止生产并停全部轴"),
-                ("暂停",     () => Ops.PauseProduction(), () => Ops.CanPauseProduction, mm => Ops.IsPaused,  false, amber, Brushes.White, "暂停：保持当前位置，节拍与计产都停"),
-                ("复位",     () => Ops.ClearAlarm(),      null, mm => Mm.AnyAlarm(),  true,  null, null, "消除一般性报警（红灯亮起时需先复位）"),
+                ("开始运行", () => Ops.StartProduction(), fen(() => Ops.CanStartProduction), mm => Ops.IsRunning, false, Palette.OnGreen, Brushes.White,
+                    "无报警时启动自动运行", "当设备无报警状态时，按下该按钮，设备开始自动运行；自动运行中该按钮指示灯亮起"),
+                ("停止",     () => Ops.StopProduction(),  fen(() => Ops.CanStopProduction), mm => Ops.IsIdle && !Ops.HomeActive, false, grey, Brushes.White,
+                    "停止运行 / 终止归零", "运行中按下停止自动运行；归零中按下也可终止归零；停止状态下该按钮指示灯亮起"),
+                ("暂停",     () => Ops.PauseProduction(), fen(() => Ops.CanPauseProduction), mm => Ops.IsPaused, false, amber, Brushes.White,
+                    "暂停节拍与计产", "保持当前位置，节拍与计产都停止"),
+                ("复位",     () => Ops.ClearAlarm(),      fen(null), mm => Mm.AnyAlarm(), true, null, null,
+                    "消除一般性报警", "设备有报警需要清除时指示灯亮起：如安全门关闭后、伺服报警条件消除后，按此键复位报警"),
 
-                ("归零",     () => Ops.HomeAll(),         () => Ops.CanHomeAxes, mm => Ops.HomeActive, false, null, null, "全部轴回零（先 Z 抬起再水平轴）"),
-                ("急停",     () => Ops.EmergencyStop(),   null, mm => Mm.EStop,      true,  Palette.OnRed, Brushes.White, "立即断使能、停全部轴、红灯 + 蜂鸣"),
-                ("报警清除", () => { Ops.ClearAlarm(); Mm.ResetAllOutputs(); Ops.Info("报警已清除，输出已复位"); }, null, mm => Mm.AnyAlarm(), true, null, null, "清报警 + 复位全部输出点"),
-                ("全部停止", () => Ops.StopAllAxes(),      null, mm => Mm.AnyBusy(), true,  null, null, "只停轴，不改运行状态"),
+                ("归零",     () => Ops.HomeAll(),         fen(() => Ops.CanHomeAxes), blink(mm => Ops.HomeActive), false, null, null,
+                    "确认后全部轴归零", "停止状态下按下弹出是否归零的确认窗口，再次按下执行归零；归零过程中指示灯闪亮"),
+                ("急停",     () => Ops.EmergencyStop(),   fen(null), mm => Mm.EStop, true, Palette.OnRed, Brushes.White,
+                    "断使能停全部轴", "立即断使能、停全部轴、红灯 + 蜂鸣"),
+                ("报警清除", () => { Ops.ClearAlarm(); Mm.ResetAllOutputs(); Ops.Info("报警已清除，输出已复位"); }, fen(null), mm => Mm.AnyAlarm(), true, null, null,
+                    "清报警并复位输出", "清除报警并复位全部输出点"),
+                ("全部停止", () => Ops.StopAllAxes(),     fen(null), mm => Mm.AnyBusy(), true, null, null,
+                    "只停轴不停生产", "停止全部轴运动，不改变运行状态"),
 
-                ("清机",     () => LotOps.PurgeTrays(),   () => m.BatchOpen, mm => m.Purging, false, null, null, "进入清机模式：上料停止送料，下料正常直到机内无料"),
-                ("清出",     () => LotOps.AbortLot(),     () => m.BatchOpen, mm => false,      false, null, null, "中止批次：机台内器件按默认流程走完后收尾"),
-                ("跳过",     () => Ops.Info("跳过：忽略当前报警并继续"), null, mm => false, false, null, null, "报警处理确认：跳过当前受影响器件"),
-                ("重试",     () => Ops.Info("重试：重新执行上次受影响的动作"), null, mm => false, false, null, null, "报警处理确认：重试上次动作"),
+                ("清机",     () => LotOps.PurgeTrays(),   fen(() => m.BatchOpen), blink(mm => m.Purging), false, null, null,
+                    "清机模式，走完即停", "触发清机模式，指示灯闪亮：上料臂停止送料，测试区下料正常工作，机内无料后自动进入停止状态"),
+                ("清出",     () => LotOps.AbortLot(),     fen(() => m.BatchOpen), mm => m.Purging, false, null, null,
+                    "清出模式，走完自退", "激活清出模式，指示灯点亮：上料盘堆叠不再进盘，机内料全部完成后自动退出并且指示灯熄灭"),
+                ("跳过",     () => Ops.Info("跳过：忽略当前报警并继续"), fen(null), blink(mm => Mm.AnyAlarm()), false, null, null,
+                    "跳过当前受影响器件", "报警需人工确认时弹窗提示，激活的按钮指示灯闪亮；如吸料失败且该位置无料时按此键跳过"),
+                ("重试",     () => Ops.Info("重试：重新执行上次受影响的动作"), fen(null), blink(mm => Mm.AnyAlarm()), false, null, null,
+                    "重试上次受影响动作", "报警需人工确认时弹窗提示，激活的按钮指示灯闪亮；如吸料失败且料盘有料时按此键重新吸取"),
 
-                ("结盘",     () => LotOps.FinishPurge(),  () => m.Purging, mm => m.BatchOpen, false, null, null, "结束清料 / 清盘流程，退出 Purge 状态"),
-                ("出盘",     () => Ops.Info("出盘：下料自动盘区域的料盘送出机舱"), null, mm => false, false, null, null, "清出下料自动盘区域的料盘"),
-                ("单步",     () => Ops.SingleStep(),      () => Ops.CanSingleStepProduction, mm => Ops.IsPaused || Ops.IsIdle, false, null, null, "单步执行一拍，方便观察动作顺序"),
-                ("计数清零", () => Ops.ResetCounters(),   null, mm => false, false, null, null, "把好品 / 次品 / 处理数等统计清零"),
+                ("结盘",     () => LotOps.FinishPurge(),  fen(() => m.Purging), mm => m.BatchOpen, false, null, null,
+                    "结束上料盘取放", "上料盘无料造成报警后按下：结束该盘取放并将空盘传送到上料出盘位置"),
+                ("出盘",     () => Ops.TrayOutKey(),      fen(null), mm => Ops.TrayOutRequested, false, null, null,
+                    "清出下料自动盘料盘", "运行中直接清出下料自动盘有料料盘；停机时按下激活出盘请求（指示灯亮），再按<开始运行>开始清盘"),
+                ("单步",     () => Ops.TestArmStep(),     fen(() => Ops.TestArmCalibrating), mm => Ops.TestArmCalibrating, false, null, null,
+                    "校准模式下切换位置", "测试臂「自动校准模式」下激活，控制测试臂到测试位置的切换"),
+                ("测试",     () => Ops.ManualTestTrigger(), fen(() => Ops.TestArmCalibrating), mm => Ops.TestArmCalibrating, false, null, null,
+                    "校准模式下触发测试", "测试臂「自动校准模式」下激活，手动触发测试信号"),
 
-                ("照明",     () => Mm.ToggleOut(24),     null, mm => Mm.ReadOut(24), false, null, null, "照明灯开 / 关（IO Out24）"),
-                ("拆卸",     () => Ops.DisassembleArm(),  () => !Ops.IsRunning, mm => false, false, null, null, "测试臂抬起，armA 移至小车上方，armB 移至测试区中间"),
-                ("SNAP",     () => Ops.SnapMachineState(),null, mm => false, false, null, null, "异常时生成 log 记录机器状态"),
-                ("测试",     () => Ops.ManualTestTrigger(), null, mm => Mm.ReadOut(0), false, null, null, "手动触发一次测试（SOT 脉冲，OUT0）"),
+                ("照明",     () => Mm.ToggleOut(24),      fen(null), mm => Mm.ReadOut(24), false, null, null,
+                    "开/关机内照明灯", "按下照明灯亮起，再次按下关闭；照明控制打开时指示灯亮"),
+                ("拆卸",     () => Ops.DisassembleArm(),  fen(() => !Ops.IsRunning), mm => false, false, null, null,
+                    "测试臂抬起复位", "测试臂抬起：armA 移至小车上方，armB 移至测试区中间"),
+                ("SNAP",     () => Ops.SnapMachineState(), fen(null), mm => false, false, null, null,
+                    "记录机器状态 log", "异常时生成 log 记录机器状态"),
+                ("计数清零", () => Ops.ResetCounters(),   fen(null), mm => false, false, null, null,
+                    "统计计数清零", "把好品 / 次品 / 处理数等统计清零"),
             };
 
-            var g = E.Grid().Cols("1*", "1*", "1*", "1*").Rows("Auto", "Auto", "Auto", "Auto", "Auto");
-            for (int i = 0; i < defs.Length; i++)
+            // ---- 前面板上端：电源两键（上端电源区，不受前/后面板侧别禁用影响） ----
+            var pwrDefs = new (string label, Action act, Func<bool>? en,
+                Func<MachineModel, bool> led, bool ledRed, Brush? bg, Brush? fg, string cap, string tip)[]
             {
-                int r = i / 4, c = i % 4;
-                g.Add(cell(defs[i].label, defs[i].act, defs[i].en, defs[i].led, defs[i].ledRed,
-                           defs[i].bg, defs[i].fg, defs[i].tip), r, c);
-            }
+                ("电源关闭", () => Ops.PowerKeyOff(), null, mm => Ops.PowerInputOn, false, grey, Brushes.White,
+                    "断开整机电源", "机器输入电源开启（后面断路器打开）时指示灯亮；按下断开整机电源"),
+                ("电源开启", () => Ops.PowerKeyOn(),  null, mm => Ops.PowerComponentsOn, false, Palette.OnGreen, Brushes.White,
+                    "部件上电 / 电脑开机", "第 1 次按下：机器内所有传感器、电机等控制部件上电（指示灯亮）；第 2 次按下：控制电脑开机"),
+            };
+
+            // ---- 后面板板块（旋钮切到后面板时有效） ----
+            var rearDefs = new (string label, Action act, Func<bool>? en,
+                Func<MachineModel, bool> led, bool ledRed, Brush? bg, Brush? fg, string cap, string tip)[]
+            {
+                ("Step/步进",    () => Ops.RearStepKey(false), ren(null), blink(mm => Ops.StepLowerActive), false, null, null,
+                    "下料臂步进走一拍", "启动下料臂步进功能：每次取放后暂停，再按一次继续走一拍；<报警清除>+本键退出"),
+                ("T.Start/测试", () => Ops.RearStepKey(true),  ren(null), blink(mm => Ops.StepUpperActive), false, null, null,
+                    "上料臂步进走一拍", "启动上料臂步进功能：每次取放后暂停，再按一次继续走一拍；<报警清除>+本键退出"),
+                ("报警清除",     () => Ops.RearAlarmClear(),   ren(null), mm => Mm.AnyAlarm(), true, null, null,
+                    "清报警，可退步进", "清除报警；按下后 3 秒内按 Step/T.Start 退出对应步进功能"),
+                ("报警复位",     () => Ops.ClearAlarm(),       ren(null), mm => Mm.AnyAlarm(), true, null, null,
+                    "消除一般性报警", "消除一般性报警（安全门 / 伺服报警等条件消除后）"),
+
+                ("停止",         () => Ops.StopProduction(),   ren(() => Ops.CanStopProduction), mm => Ops.IsIdle && !Ops.HomeActive, false, grey, Brushes.White,
+                    "停止 / 终止归零", "停止自动运行；归零中按下终止归零"),
+                ("归零",         () => Ops.HomeAll(),          ren(() => Ops.CanHomeAxes), blink(mm => Ops.HomeActive), false, null, null,
+                    "全部轴回零", "全部轴回零；归零过程中指示灯闪亮"),
+                ("出盘",         () => Ops.TrayOutKey(),       ren(null), mm => Ops.TrayOutRequested, false, null, null,
+                    "清出下料自动盘", "运行中直接清盘；停机时激活出盘请求，再按<开始运行>清盘"),
+                ("结盘",         () => LotOps.FinishPurge(),   ren(() => m.Purging), mm => m.BatchOpen, false, null, null,
+                    "结束上料盘取放", "结束上料盘取放操作，空盘送出到上料出盘位置"),
+            };
+
+            // ---- 前 / 后切换旋钮行：旋钮内指示灯（后面板有效时亮）+ 前面板指示灯（前面板有效时亮） ----
+            var frontLamp = E.LiveLamp(mm => !Ops.PanelRear, false, false, 11);
+            frontLamp.HAlign = HorizontalAlignment.Center;
+            var knobLamp = E.LiveLamp(mm => Ops.PanelRear, true, false, 11);
+            knobLamp.HAlign = HorizontalAlignment.Center;
+            var knob = E.Btn("前/后切换旋钮", Ops.TogglePanelSide, "CmdButton", 11, null);
+            knob.FontWeight = FontWeights.SemiBold;
+            knob.Padding = new Thickness(4, 6, 4, 6);
+            knob.Margin = new Thickness(6, 0, 6, 0);
+            knob.HAlign = HorizontalAlignment.Stretch;
+            knob.ToolTip = "旋钮：切换前面板 / 后面板。后面板有效时旋钮内指示灯亮，前面板（红框内）按钮无效";
+            var knobRow = E.H(
+                E.V(frontLamp, SideCap("前面板")),
+                E.SpacerW(4),
+                E.V(knobLamp, knob),
+                E.SpacerW(4),
+                E.V(E.Spacer(11), SideCap("后面板")));
+
+            // ---- 组装：旋钮行 + 前面板红框（电源区 + 20 键）+ 后面板板块 ----
+            var frontBlock = E.Box(
+                E.V(gridOf(pwrDefs, 2), E.Spacer(5), gridOf(defs, 4)),
+                null, redFrame, 1.5, 10, new Thickness(6));
+            frontBlock.ToolTip = "红框内为前面板按钮：后面板有效时全部无效";
+
+            var rearBlock = E.Box(
+                E.V(E.T("后面板板块", 10.5, E.Sec, true).Margin(0, 0, 0, 4), gridOf(rearDefs, 4)),
+                null, E.Div, 1, 10, new Thickness(6));
 
             var panel = E.V(
-                E.T("操作面板", 13, E.P, true).Margin(0, 0, 0, 8),
-                g);
-            // 温启志 18719361399 · Element.VAlign 默认是 Center，会让面板内容在整列里垂直居中，
-            // 与左/中/右三张「顶部对齐」的卡片不齐。这里显式顶对齐，与其他列同一条起始线。
+                E.T("操作面板", 13, E.P, true).Margin(0, 0, 0, 6),
+                knobRow,
+                E.Spacer(5),
+                frontBlock,
+                E.Spacer(6),
+                rearBlock);
+            // 温启志 18719361399 · Element.VAlign 默认 Center 会垂直居中；显式顶对齐与其他卡片同起始线
             panel.VAlign = VerticalAlignment.Top;
-            var box = E.Box(panel, E.CardBg, null, 0, 12, new Thickness(10));
+            var box = E.Box(panel, E.CardBg, null, 0, 12, new Thickness(8));
             box.VAlign = VerticalAlignment.Stretch;
             return box;
         }
