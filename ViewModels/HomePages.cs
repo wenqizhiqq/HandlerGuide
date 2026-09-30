@@ -36,7 +36,7 @@ namespace HandlerGuide.ViewModels
         public static Element MainScreen()
         {
             var m = E.M;
-            var root = E.Grid().Cols("430", "*", "260", "360").Rows("*");
+            var root = E.Grid().Cols("430", "*", "260", "400").Rows("*");
             root.VAlign = VerticalAlignment.Stretch;
 
             // ---------------- 左列 ----------------
@@ -440,22 +440,36 @@ namespace HandlerGuide.ViewModels
                 E.SpacerW(4),
                 E.V(E.Spacer(11), SideCap("后面板")));
 
-            // ---- 组装：旋钮行 + 前面板红框（电源区 + 20 键）+ 后面板板块 ----
+            // ---- 组装：上面 = 前面板红框，下面 = 后面板（含旋钮）----
+            // 前面板：上端电源区（《手册》：前面板上端有<电源关闭>、<电源开启>） + 20 键红框
             var frontBlock = E.Box(
-                E.V(gridOf(pwrDefs, 2), E.Spacer(5), gridOf(defs, 4)),
+                E.V(
+                    E.H(
+                        E.T("前面板", 10.5, E.Sec, true),
+                        E.SpacerW(6),
+                        E.T("·  电源 / 运行 / 报警 / 批次", 9.5, E.Sec, false,
+                            TextWrapping.NoWrap, TextAlignment.Left, HorizontalAlignment.Left)),
+                    E.Spacer(3),
+                    gridOf(pwrDefs, 2),
+                    E.Spacer(5),
+                    gridOf(defs, 4)),
                 null, redFrame, 1.5, 10, new Thickness(6));
-            frontBlock.ToolTip = "红框内为前面板按钮：后面板有效时全部无效";
+            frontBlock.ToolTip = "红框内为前面板按钮：后面板有效时全部无效（电源键不受前/后切换影响）";
 
+            // 后面板：前/后切换旋钮（《手册》：通过后面板的一个旋钮进行前后面板的切换） + 8 键
             var rearBlock = E.Box(
-                E.V(E.T("后面板板块", 10.5, E.Sec, true).Margin(0, 0, 0, 4), gridOf(rearDefs, 4)),
+                E.V(
+                    E.T("后面板", 10.5, E.Sec, true).Margin(0, 0, 0, 4),
+                    knobRow,
+                    E.Spacer(4),
+                    gridOf(rearDefs, 4)),
                 null, E.Div, 1, 10, new Thickness(6));
 
+            // 组装：上面 = 前面板（红框），下面 = 后面板（《手册》章节顺序：前面板 → 后面板）
             var panel = E.V(
                 E.T("操作面板", 13, E.P, true).Margin(0, 0, 0, 6),
-                knobRow,
-                E.Spacer(5),
                 frontBlock,
-                E.Spacer(6),
+                E.Spacer(8),
                 rearBlock);
             // 温启志 18719361399 · Element.VAlign 默认 Center 会垂直居中；显式顶对齐与其他卡片同起始线
             panel.VAlign = VerticalAlignment.Top;
