@@ -1,11 +1,1569 @@
 <vm:StackElement xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                 xmlns:vm="clr-namespace:HandlerGuide.ViewModels;assembly=HandlerGuide"
-                 xmlns:vw="clr-namespace:HandlerGuide.Views;assembly=HandlerGuide">
+                xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                xmlns:vm="clr-namespace:HandlerGuide.ViewModels;assembly=HandlerGuide"
+                xmlns:vw="clr-namespace:HandlerGuide.Views;assembly=HandlerGuide">
 
-    <!-- 温启志 18719361399 · 工作基点：复用 MaintPages.MaintBase() 生成（含 4 个页签与取位按钮） -->
-    <vw:D Method="MaintBase" />
-
-    <vw:Watermark />
+  <!-- 温启志 18719361399 · 工作基点（纯声明式 XAML；原 MaintPages.MaintBase 生成器已删除） -->
+  <vm:TabsElement>
+    <vm:TabItemVm Title="工作基点设定-测试区域">
+      <vm:StackElement>
+        <vm:GroupElement Title="运料小车(mm)">
+          <vm:GridElement ColsSpec="86,112,46,112,46,112,46" RowsSpec="Auto">
+              <vm:GridChild Row="0" Col="0">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="1">
+                <vw:Cell Text="入口" Ta="Center" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="2">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="3">
+                <vw:Cell Text="读码器(中心)" Ta="Center" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="4">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="5">
+                <vw:Cell Text="出口" Ta="Center" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="6">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="0">
+                <vw:Cell Text="小车A" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="1">
+                <vw:Cell Height="26">
+                  <vm:StackElement Orientation="Horizontal">
+                    <vw:Num Key="mb_car_in_0" Default="-2.11" Width="86" />
+            <vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_car_in_0" Width="28" />
+                  </vm:StackElement>
+                </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="2">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="3">
+                <vw:Cell Height="26">
+                  <vm:StackElement Orientation="Horizontal">
+                    <vw:Num Key="mb_car_bcr_0" Default="202.28" Width="86" />
+            <vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_car_bcr_0" Width="28" />
+                  </vm:StackElement>
+                </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="4">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="5">
+                <vw:Cell Height="26">
+                  <vm:StackElement Orientation="Horizontal">
+                    <vw:Num Key="mb_car_out_0" Default="408.03" Width="86" />
+            <vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_car_out_0" Width="28" />
+                  </vm:StackElement>
+                </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="6">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="0">
+                <vw:Cell Text="小车B" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="1">
+                <vw:Cell Height="26">
+                  <vm:StackElement Orientation="Horizontal">
+                    <vw:Num Key="mb_car_in_1" Default="-2.11" Width="86" />
+            <vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_car_in_1" Width="28" />
+                  </vm:StackElement>
+                </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="2">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="3">
+                <vw:Cell Height="26">
+                  <vm:StackElement Orientation="Horizontal">
+                    <vw:Num Key="mb_car_bcr_1" Default="204.62" Width="86" />
+            <vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_car_bcr_1" Width="28" />
+                  </vm:StackElement>
+                </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="4">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="5">
+                <vw:Cell Height="26">
+                  <vm:StackElement Orientation="Horizontal">
+                    <vw:Num Key="mb_car_out_1" Default="407.94" Width="86" />
+            <vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_car_out_1" Width="28" />
+                  </vm:StackElement>
+                </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="6">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+          </vm:GridElement>
+        </vm:GroupElement>
+        <vm:GroupElement Title="Gate基点(以第一列为基准)">
+          <vm:GridElement ColsSpec="86,112,46,112,46,112,46" RowsSpec="Auto">
+              <vm:GridChild Row="0" Col="0">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="1">
+                <vw:Cell Text="入口(中心)" Ta="Center" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="2">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="3">
+                <vw:Cell Text="出口横向(中心)" Ta="Center" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="4">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="5">
+                <vw:Cell Text="出口纵向(中心)" Ta="Center" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="6">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="0">
+                <vw:Cell Text="小车A" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="1">
+                <vw:Cell Height="26">
+                  <vm:StackElement Orientation="Horizontal">
+                    <vw:Num Key="mb_gate_in_0" Default="172.26" Width="86" />
+            <vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_gate_in_0" Width="28" />
+                  </vm:StackElement>
+                </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="2">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="3">
+                <vw:Cell Height="26">
+                  <vm:StackElement Orientation="Horizontal">
+                    <vw:Num Key="mb_gate_h_0" Default="237.06" Width="86" />
+            <vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_gate_h_0" Width="28" />
+                  </vm:StackElement>
+                </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="4">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="5">
+                <vw:Cell Height="26">
+                  <vm:StackElement Orientation="Horizontal">
+                    <vw:Num Key="mb_gate_v_0" Default="239.18" Width="86" />
+            <vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_gate_v_0" Width="28" />
+                  </vm:StackElement>
+                </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="6">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="0">
+                <vw:Cell Text="小车B" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="1">
+                <vw:Cell Height="26">
+                  <vm:StackElement Orientation="Horizontal">
+                    <vw:Num Key="mb_gate_in_1" Default="171.86" Width="86" />
+            <vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_gate_in_1" Width="28" />
+                  </vm:StackElement>
+                </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="2">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="3">
+                <vw:Cell Height="26">
+                  <vm:StackElement Orientation="Horizontal">
+                    <vw:Num Key="mb_gate_h_1" Default="236.42" Width="86" />
+            <vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_gate_h_1" Width="28" />
+                  </vm:StackElement>
+                </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="4">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="5">
+                <vw:Cell Height="26">
+                  <vm:StackElement Orientation="Horizontal">
+                    <vw:Num Key="mb_gate_v_1" Default="237.66" Width="86" />
+            <vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_gate_v_1" Width="28" />
+                  </vm:StackElement>
+                </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="6">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+          </vm:GridElement>
+        </vm:GroupElement>
+        <vm:GroupElement Title="测试臂(mm)">
+          <vm:GridElement ColsSpec="86,112,46,118,46,118,46,100,46" RowsSpec="Auto">
+              <vm:GridChild Row="0" Col="0">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="1">
+                <vw:Cell Text="至小车" Ta="Center" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="2">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="3">
+                <vw:Cell Text="至测试位(单臂压测)" Ta="Center" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="4">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="5">
+                <vw:Cell Text="至测试位(双臂压测)" Ta="Center" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="6">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="7">
+                <vw:Cell Text="至安全位" Ta="Center" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="8">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="0">
+                <vw:Cell Text="Y1" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="1">
+                <vw:Cell Height="26">
+                  <vm:StackElement Orientation="Horizontal">
+                    <vw:Num Key="mb_y0_car" Default="-2.347" Width="86" />
+            <vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_y0_car" Width="28" />
+                  </vm:StackElement>
+                </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="2">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="3">
+                <vw:Cell Height="26">
+                  <vm:StackElement Orientation="Horizontal">
+                    <vw:Num Key="mb_y0_1" Default="232.642" Width="86" />
+            <vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_y0_1" Width="28" />
+                  </vm:StackElement>
+                </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="4">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="5">
+                <vw:Cell Height="26">
+                  <vm:StackElement Orientation="Horizontal">
+                    <vw:Num Key="mb_y0_2" Default="162.142" Width="86" />
+            <vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_y0_2" Width="28" />
+                  </vm:StackElement>
+                </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="6">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="7">
+                <vw:Cell Height="26">
+                  <vm:StackElement Orientation="Horizontal">
+                    <vw:Num Key="mb_y0_safe" Default="0" Width="86" />
+            <vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_y0_safe" Width="28" />
+                  </vm:StackElement>
+                </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="8">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="0">
+                <vw:Cell Text="Y2" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="1">
+                <vw:Cell Height="26">
+                  <vm:StackElement Orientation="Horizontal">
+                    <vw:Num Key="mb_y1_car" Default="2.03" Width="86" />
+            <vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_y1_car" Width="28" />
+                  </vm:StackElement>
+                </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="2">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="3">
+                <vw:Cell Height="26">
+                  <vm:StackElement Orientation="Horizontal">
+                    <vw:Num Key="mb_y1_1" Default="-232.75" Width="86" />
+            <vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_y1_1" Width="28" />
+                  </vm:StackElement>
+                </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="4">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="5">
+                <vw:Cell Height="26">
+                  <vm:StackElement Orientation="Horizontal">
+                    <vw:Num Key="mb_y1_2" Default="-162.25" Width="86" />
+            <vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_y1_2" Width="28" />
+                  </vm:StackElement>
+                </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="6">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="7">
+                <vw:Cell Height="26">
+                  <vm:StackElement Orientation="Horizontal">
+                    <vw:Num Key="mb_y1_safe" Default="0" Width="86" />
+            <vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_y1_safe" Width="28" />
+                  </vm:StackElement>
+                </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="8">
+                <vw:Cell Text="" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="3">
+                <vw:Cell Text="Z1基准点" Ta="Right" Height="28" />
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="5">
+                <vw:Cell Height="28">
+                  <vm:StackElement Orientation="Horizontal">
+                    <vw:Num Key="mb_z1_base" Default="-148.864" Width="86" />
+            <vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_z1_base" Width="28" />
+                  </vm:StackElement>
+                </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="6">
+                <vw:Cell Text="" Ta="Left" Height="28" />
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="3">
+                <vw:Cell Text="Z2基准点" Ta="Right" Height="28" />
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="5">
+                <vw:Cell Height="28">
+                  <vm:StackElement Orientation="Horizontal">
+                    <vw:Num Key="mb_z2_base" Default="-148.265" Width="86" />
+            <vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_z2_base" Width="28" />
+                  </vm:StackElement>
+                </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="6">
+                <vw:Cell Text="" Ta="Left" Height="28" />
+              </vm:GridChild>
+          </vm:GridElement>
+        </vm:GroupElement>
+        <vm:StackElement Orientation="Horizontal">
+          <vw:MiniBtn Text="恢复" Cmd="Reset" Arg="maint_base" />
+          <vw:Btn Text="应用" Cmd="ApplyBase" Arg="maint_base" />
+        </vm:StackElement>
+        <vm:GroupElement Title="说明">
+          <vm:TextElement Text="运料小车入口：小车运行到上料区域接料位置，同时下料运料小车 1/2 位于测试臂放料位置；出口：小车运行到下料区域出料位置，同时上料运料小车 1/2 位于测试臂取料位置；读码器为选装功能，获取小车第一个槽为拍照基点。&#x0a;Gate 基点：获取小车 A/B 的入口、出口、纵向检测位置的基点。&#x0a;Z1/Z2 基准点：测试臂及小车未上 Kit 时，设定测试臂 Kit 安装基面与小车入料托盘安装基面重合时 Z 轴坐标为零点，此位置也是“高位”位置。" FontSize="11.5" Foreground="#6E6E73" Wrap="Wrap" />
+        </vm:GroupElement>
+      </vm:StackElement>
+    </vm:TabItemVm>
+    <vm:TabItemVm Title="工作基点设定-上料臂">
+      <vm:StackElement>
+        <vm:TextElement Text="上料臂工作基点设定（以吸头 #3 为基准，方向以站在机器操作员位置从上往下看为准）。" FontSize="11.5" Foreground="#6E6E73" Wrap="Wrap" />
+        <vm:SpacerElement H="8" />
+        <vm:GridElement ColsSpec="500,*" RowsSpec="Auto">
+          <vm:GridChild Row="0" Col="0">
+            <vm:GroupElement Title="X-Y轴(mm)">
+              <vm:ScrollElement ViewHeight="300" HScroll="Auto" VScroll="Auto">
+                <vm:GridElement ColsSpec="190,112,112" RowsSpec="Auto">
+              <vm:GridChild Row="0" Col="0">
+                    <vw:Cell Text="基点描述" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="1">
+                    <vw:Cell Text="X(mm)" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="2">
+                    <vw:Cell Text="Y(mm)" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="0">
+                    <vw:Cell Text="小车A入口(中心)" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_x_0" Default="354.717" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_y_0" Default="32.25" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="0">
+                    <vw:Cell Text="小车B入口(中心)" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_x_1" Default="355.811" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_y_1" Default="503.13" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="0">
+                    <vw:Cell Text="上料盘入口(中心)" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_x_2" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_y_2" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="0">
+                    <vw:Cell Text="上料入盘CDA底部清洁(中心)" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_x_3" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_y_3" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="0">
+                    <vw:Cell Text="预热盘1(右下角)" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_x_4" Default="173.907" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_y_4" Default="430.905" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="0">
+                    <vw:Cell Text="预热盘2(右下角)" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_x_5" Default="174.078" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_y_5" Default="840.413" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="0">
+                    <vw:Cell Text="上料旋转台(中心)" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_x_6" Default="370.125" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_y_6" Default="201.713" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="8" Col="0">
+                    <vw:Cell Text="清洁盘(左上角)" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="8" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_x_7" Default="270.756" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="8" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_y_7" Default="222.165" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="9" Col="0">
+                    <vw:Cell Text="入料盘(左上角)" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="9" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_x_8" Default="259.056" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="9" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_y_8" Default="642.69" Width="104" /></vw:Cell>
+              </vm:GridChild>
+                </vm:GridElement>
+              </vm:ScrollElement>
+              <vm:SpacerElement H="6" />
+              <vm:StackElement Orientation="Horizontal">
+                <vm:TextElement Text="X:" FontSize="12" Foreground="#1D1D1F" /><vw:Num Key="mb_ld_cx" Default="259.056" Width="96" />
+                <vm:TextElement Text="Y:" FontSize="12" Foreground="#1D1D1F" /><vw:Num Key="mb_ld_cy" Default="642.69" Width="96" />
+              </vm:StackElement>
+              <vm:SpacerElement H="6" />
+              <vm:StackElement Orientation="Horizontal">
+                <vm:TextElement Text="当前激活项" FontSize="11.5" Foreground="#1D1D1F" />
+                <vw:Cmb Key="mb_ld_sel" OptionsText="小车A入口(中心)|小车B入口(中心)|上料盘入口(中心)|上料入盘CDA底部清洁(中心)|预热盘1(右下角)|预热盘2(右下角)|上料旋转台(中心)|清洁盘(左上角)|入料盘(左上角)" Width="190" Default="0" />
+              </vm:StackElement>
+              <vm:SpacerElement H="6" />
+              <vm:StackElement Orientation="Horizontal">
+                <vw:MiniBtn Text="获取" Cmd="CaptureArmXY" Arg="True" />
+                <vw:MiniBtn Text="更改" Cmd="ApplyArmXYChange" Arg="True" />
+                <vw:MiniBtn Text="恢复" Cmd="Reset" Arg="maint_base" />
+                <vw:MiniBtn Text="恢复全部" Cmd="Reset" Arg="maint_base" />
+              </vm:StackElement>
+              <vm:SpacerElement H="4" />
+              <vm:TextElement Text="当前选中位置为：上料TrayLoader" FontSize="11.5" Foreground="#6E6E73" />
+            </vm:GroupElement>
+          </vm:GridChild>
+          <vm:GridChild Row="0" Col="1">
+            <vm:GroupElement Title="Z1/Z2/Z3/Z4/Z5/Z6/Z7/Z8(mm)">
+              <vm:ScrollElement ViewHeight="250" HScroll="Auto" VScroll="Auto">
+                <vm:GridElement ColsSpec="170,78,78,78,78,78,78,78,78" RowsSpec="Auto">
+              <vm:GridChild Row="0" Col="0">
+                    <vw:Cell Text="基点描述" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="1">
+                    <vw:Cell Text="Z1(mm)" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="2">
+                    <vw:Cell Text="Z2(mm)" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="3">
+                    <vw:Cell Text="Z3(mm)" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="4">
+                    <vw:Cell Text="Z4(mm)" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="5">
+                    <vw:Cell Text="Z5(mm)" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="6">
+                    <vw:Cell Text="Z6(mm)" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="7">
+                    <vw:Cell Text="Z7(mm)" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="8">
+                    <vw:Cell Text="Z8(mm)" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="0">
+                    <vw:Cell Text="小车A入口" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z1_0" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z2_0" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="3">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z3_0" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="4">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z4_0" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="5">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z5_0" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="6">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z6_0" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="7">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z7_0" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="8">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z8_0" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="0">
+                    <vw:Cell Text="小车B入口" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z1_1" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z2_1" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="3">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z3_1" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="4">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z4_1" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="5">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z5_1" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="6">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z6_1" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="7">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z7_1" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="8">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z8_1" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="0">
+                    <vw:Cell Text="预热盘1" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z1_2" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z2_2" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="3">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z3_2" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="4">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z4_2" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="5">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z5_2" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="6">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z6_2" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="7">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z7_2" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="8">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z8_2" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="0">
+                    <vw:Cell Text="预热盘2" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z1_3" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z2_3" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="3">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z3_3" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="4">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z4_3" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="5">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z5_3" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="6">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z6_3" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="7">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z7_3" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="8">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z8_3" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="0">
+                    <vw:Cell Text="上料旋转台" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z1_4" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z2_4" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="3">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z3_4" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="4">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z4_4" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="5">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z5_4" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="6">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z6_4" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="7">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z7_4" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="8">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z8_4" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="0">
+                    <vw:Cell Text="清洁盘" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z1_5" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z2_5" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="3">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z3_5" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="4">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z4_5" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="5">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z5_5" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="6">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z6_5" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="7">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z7_5" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="8">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z8_5" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="0">
+                    <vw:Cell Text="上料TrayLoader" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z1_6" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z2_6" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="3">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z3_6" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="4">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z4_6" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="5">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z5_6" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="6">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z6_6" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="7">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z7_6" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="8">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ld_z8_6" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="8" Col="1">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vm:TextElement Text="Z1" FontSize="11.5" Foreground="#1D1D1F" />
+                      <vw:Num Key="mb_ld_zin0" Default="0" Width="66" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="9" Col="1">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vw:MiniBtn Text="Top" Cmd="ArmZPos" Arg="True|0|True" Width="40" />
+                      <vw:MiniBtn Text="TZ" Cmd="ArmZPos" Arg="True|0|False" Width="40" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="8" Col="2">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vm:TextElement Text="Z2" FontSize="11.5" Foreground="#1D1D1F" />
+                      <vw:Num Key="mb_ld_zin1" Default="0" Width="66" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="9" Col="2">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vw:MiniBtn Text="Top" Cmd="ArmZPos" Arg="True|1|True" Width="40" />
+                      <vw:MiniBtn Text="TZ" Cmd="ArmZPos" Arg="True|1|False" Width="40" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="8" Col="3">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vm:TextElement Text="Z3" FontSize="11.5" Foreground="#1D1D1F" />
+                      <vw:Num Key="mb_ld_zin2" Default="0" Width="66" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="9" Col="3">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vw:MiniBtn Text="Top" Cmd="ArmZPos" Arg="True|2|True" Width="40" />
+                      <vw:MiniBtn Text="TZ" Cmd="ArmZPos" Arg="True|2|False" Width="40" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="8" Col="4">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vm:TextElement Text="Z4" FontSize="11.5" Foreground="#1D1D1F" />
+                      <vw:Num Key="mb_ld_zin3" Default="0" Width="66" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="9" Col="4">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vw:MiniBtn Text="Top" Cmd="ArmZPos" Arg="True|3|True" Width="40" />
+                      <vw:MiniBtn Text="TZ" Cmd="ArmZPos" Arg="True|3|False" Width="40" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="8" Col="5">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vm:TextElement Text="Z5" FontSize="11.5" Foreground="#1D1D1F" />
+                      <vw:Num Key="mb_ld_zin4" Default="0" Width="66" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="9" Col="5">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vw:MiniBtn Text="Top" Cmd="ArmZPos" Arg="True|4|True" Width="40" />
+                      <vw:MiniBtn Text="TZ" Cmd="ArmZPos" Arg="True|4|False" Width="40" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="8" Col="6">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vm:TextElement Text="Z6" FontSize="11.5" Foreground="#1D1D1F" />
+                      <vw:Num Key="mb_ld_zin5" Default="0" Width="66" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="9" Col="6">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vw:MiniBtn Text="Top" Cmd="ArmZPos" Arg="True|5|True" Width="40" />
+                      <vw:MiniBtn Text="TZ" Cmd="ArmZPos" Arg="True|5|False" Width="40" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="8" Col="7">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vm:TextElement Text="Z7" FontSize="11.5" Foreground="#1D1D1F" />
+                      <vw:Num Key="mb_ld_zin6" Default="0" Width="66" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="9" Col="7">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vw:MiniBtn Text="Top" Cmd="ArmZPos" Arg="True|6|True" Width="40" />
+                      <vw:MiniBtn Text="TZ" Cmd="ArmZPos" Arg="True|6|False" Width="40" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="8" Col="8">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vm:TextElement Text="Z8" FontSize="11.5" Foreground="#1D1D1F" />
+                      <vw:Num Key="mb_ld_zin7" Default="0" Width="66" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="9" Col="8">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vw:MiniBtn Text="Top" Cmd="ArmZPos" Arg="True|7|True" Width="40" />
+                      <vw:MiniBtn Text="TZ" Cmd="ArmZPos" Arg="True|7|False" Width="40" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+                </vm:GridElement>
+              </vm:ScrollElement>
+              <vm:SpacerElement H="6" />
+              <vw:Chk Key="mb_ld_quick" Label="Get Quickly" />
+              <vm:SpacerElement H="6" />
+              <vm:StackElement Orientation="Horizontal">
+                <vm:TextElement Text="归零后间距PX" FontSize="11.5" Foreground="#1D1D1F" /><vw:Num Key="mb_ld_px" Default="39.25" Width="86" />
+                <vm:TextElement Text="归零后间距PY" FontSize="11.5" Foreground="#1D1D1F" /><vw:Num Key="mb_ld_py" Default="58.5" Width="86" />
+              </vm:StackElement>
+              <vm:SpacerElement H="8" />
+              <vm:StackElement Orientation="Horizontal">
+                <vw:MiniBtn Text="更改" Cmd="ApplyArmXYChange" Arg="True" />
+                <vw:MiniBtn Text="获取" Cmd="CaptureArmXY" Arg="True" />
+                <vw:MiniBtn Text="恢复" Cmd="Reset" Arg="maint_base" />
+                <vw:MiniBtn Text="恢复全部" Cmd="Reset" Arg="maint_base" />
+                <vw:MiniBtn Text="Top-All" Cmd="ArmZAll" Arg="True|True" />
+                <vw:MiniBtn Text="TZ-All" Cmd="ArmZAll" Arg="True|False" />
+                <vw:Btn Text="应用" Cmd="ApplyBase" Arg="maint_base" />
+              </vm:StackElement>
+              <vm:TextElement Text="当前选中位置为：上料TrayLoader" FontSize="11.5" Foreground="#6E6E73" />
+            </vm:GroupElement>
+          </vm:GridChild>
+        </vm:GridElement>
+        <vm:GroupElement Title="说明">
+          <vm:TextElement Text="X/Y 文本框：当上方 X-Y 轴基点列表框中的当前激活项改变时，此文本框内的值自动变更为激活项的值；点击[获取]按钮将当前 X-Y 轴坐标值自动填入 X/Y 文本框内；点击[更改]按钮时，使用当前 X/Y 文本框内值替换更改列表框内激活项的值。&#x0a;Get Quickly：吸头高度基点快速获取功能。机台机械位置调整过后，机台内所有位置的平面和料臂之间是相对水平的，先不勾选 Get Quickly 正常获取小车A位置的所有吸头基点并应用；之后勾选 Get Quickly，选择其他位置，点击【基准吸头】基点的获取，其他吸头的基点位置将自动计算，之后更改应用。" FontSize="11.5" Foreground="#6E6E73" Wrap="Wrap" />
+        </vm:GroupElement>
+      </vm:StackElement>
+    </vm:TabItemVm>
+    <vm:TabItemVm Title="工作基点设定-下料臂">
+      <vm:StackElement>
+        <vm:TextElement Text="下料臂工作基点设定（以吸头 #2 为基准，方向以站在机器操作员位置从上往下看为准）。" FontSize="11.5" Foreground="#6E6E73" Wrap="Wrap" />
+        <vm:SpacerElement H="8" />
+        <vm:GridElement ColsSpec="500,*" RowsSpec="Auto">
+          <vm:GridChild Row="0" Col="0">
+            <vm:GroupElement Title="X-Y轴(mm)">
+              <vm:ScrollElement ViewHeight="300" HScroll="Auto" VScroll="Auto">
+                <vm:GridElement ColsSpec="190,112,112" RowsSpec="Auto">
+              <vm:GridChild Row="0" Col="0">
+                    <vw:Cell Text="基点描述" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="1">
+                    <vw:Cell Text="X(mm)" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="2">
+                    <vw:Cell Text="Y(mm)" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="0">
+                    <vw:Cell Text="#0-空闲位" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_x_0" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_y_0" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="0">
+                    <vw:Cell Text="#1-小车A出口(中心)" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_x_1" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_y_1" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="0">
+                    <vw:Cell Text="#2-小车B出口(中心)" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_x_2" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_y_2" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="0">
+                    <vw:Cell Text="#3-自动盘1-B0点(左上角)" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_x_3" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_y_3" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="0">
+                    <vw:Cell Text="#6-自动盘2-B0点(左上角)" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_x_4" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_y_4" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="0">
+                    <vw:Cell Text="#9-自动盘3-B0点(左上角)" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_x_5" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_y_5" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="0">
+                    <vw:Cell Text="#12-固定盘1-B0点(左上角)" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_x_6" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_y_6" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="8" Col="0">
+                    <vw:Cell Text="#15-固定盘2-B0点(左上角)" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="8" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_x_7" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="8" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_y_7" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="9" Col="0">
+                    <vw:Cell Text="#18-固定盘3-B0点(左上角)" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="9" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_x_8" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="9" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_y_8" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="10" Col="0">
+                    <vw:Cell Text="#21-旋转台(左上角)" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="10" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_x_9" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="10" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_y_9" Default="0.0" Width="104" /></vw:Cell>
+              </vm:GridChild>
+                </vm:GridElement>
+              </vm:ScrollElement>
+              <vm:SpacerElement H="6" />
+              <vm:StackElement Orientation="Horizontal">
+                <vm:TextElement Text="X:" FontSize="12" Foreground="#1D1D1F" /><vw:Num Key="mb_ul_cx" Default="259.056" Width="96" />
+                <vm:TextElement Text="Y:" FontSize="12" Foreground="#1D1D1F" /><vw:Num Key="mb_ul_cy" Default="642.69" Width="96" />
+              </vm:StackElement>
+              <vm:SpacerElement H="6" />
+              <vm:StackElement Orientation="Horizontal">
+                <vm:TextElement Text="当前激活项" FontSize="11.5" Foreground="#1D1D1F" />
+                <vw:Cmb Key="mb_ul_sel" OptionsText="#0-空闲位|#1-小车A出口(中心)|#2-小车B出口(中心)|#3-自动盘1-B0点(左上角)|#6-自动盘2-B0点(左上角)|#9-自动盘3-B0点(左上角)|#12-固定盘1-B0点(左上角)|#15-固定盘2-B0点(左上角)|#18-固定盘3-B0点(左上角)|#21-旋转台(左上角)" Width="190" Default="0" />
+              </vm:StackElement>
+              <vm:SpacerElement H="6" />
+              <vm:StackElement Orientation="Horizontal">
+                <vw:MiniBtn Text="获取" Cmd="CaptureArmXY" Arg="False" />
+                <vw:MiniBtn Text="更改" Cmd="ApplyArmXYChange" Arg="False" />
+                <vw:MiniBtn Text="恢复" Cmd="Reset" Arg="maint_base" />
+                <vw:MiniBtn Text="恢复全部" Cmd="Reset" Arg="maint_base" />
+              </vm:StackElement>
+              <vm:SpacerElement H="4" />
+              <vm:TextElement Text="当前选中位置为：自动盘1-B0点(左上角)" FontSize="11.5" Foreground="#6E6E73" />
+            </vm:GroupElement>
+          </vm:GridChild>
+          <vm:GridChild Row="0" Col="1">
+            <vm:GroupElement Title="Z1/Z2/Z3/Z4/Z5/Z6/Z7/Z8(mm)">
+              <vm:ScrollElement ViewHeight="250" HScroll="Auto" VScroll="Auto">
+                <vm:GridElement ColsSpec="170,78,78,78,78,78,78,78,78" RowsSpec="Auto">
+              <vm:GridChild Row="0" Col="0">
+                    <vw:Cell Text="基点描述" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="1">
+                    <vw:Cell Text="Z1(mm)" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="2">
+                    <vw:Cell Text="Z2(mm)" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="3">
+                    <vw:Cell Text="Z3(mm)" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="4">
+                    <vw:Cell Text="Z4(mm)" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="5">
+                    <vw:Cell Text="Z5(mm)" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="6">
+                    <vw:Cell Text="Z6(mm)" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="7">
+                    <vw:Cell Text="Z7(mm)" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="8">
+                    <vw:Cell Text="Z8(mm)" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="0">
+                    <vw:Cell Text="小车A出口" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z1_0" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z2_0" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="3">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z3_0" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="4">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z4_0" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="5">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z5_0" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="6">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z6_0" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="7">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z7_0" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="8">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z8_0" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="0">
+                    <vw:Cell Text="小车B出口" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z1_1" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z2_1" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="3">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z3_1" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="4">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z4_1" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="5">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z5_1" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="6">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z6_1" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="7">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z7_1" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="8">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z8_1" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="0">
+                    <vw:Cell Text="预热盘1" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z1_2" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z2_2" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="3">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z3_2" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="4">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z4_2" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="5">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z5_2" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="6">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z6_2" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="7">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z7_2" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="8">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z8_2" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="0">
+                    <vw:Cell Text="预热盘2" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z1_3" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z2_3" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="3">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z3_3" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="4">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z4_3" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="5">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z5_3" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="6">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z6_3" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="7">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z7_3" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="8">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z8_3" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="0">
+                    <vw:Cell Text="自动盘1" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z1_4" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z2_4" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="3">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z3_4" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="4">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z4_4" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="5">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z5_4" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="6">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z6_4" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="7">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z7_4" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="8">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z8_4" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="0">
+                    <vw:Cell Text="自动盘2" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z1_5" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z2_5" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="3">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z3_5" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="4">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z4_5" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="5">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z5_5" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="6">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z6_5" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="7">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z7_5" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="8">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z8_5" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="0">
+                    <vw:Cell Text="自动盘3" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z1_6" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z2_6" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="3">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z3_6" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="4">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z4_6" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="5">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z5_6" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="6">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z6_6" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="7">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z7_6" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="8">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z8_6" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="8" Col="0">
+                    <vw:Cell Text="固定盘1" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="8" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z1_7" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="8" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z2_7" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="8" Col="3">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z3_7" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="8" Col="4">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z4_7" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="8" Col="5">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z5_7" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="8" Col="6">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z6_7" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="8" Col="7">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z7_7" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="8" Col="8">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z8_7" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="9" Col="0">
+                    <vw:Cell Text="固定盘2" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="9" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z1_8" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="9" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z2_8" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="9" Col="3">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z3_8" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="9" Col="4">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z4_8" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="9" Col="5">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z5_8" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="9" Col="6">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z6_8" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="9" Col="7">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z7_8" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="9" Col="8">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z8_8" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="10" Col="0">
+                    <vw:Cell Text="固定盘3" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="10" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z1_9" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="10" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z2_9" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="10" Col="3">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z3_9" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="10" Col="4">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z4_9" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="10" Col="5">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z5_9" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="10" Col="6">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z6_9" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="10" Col="7">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z7_9" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="10" Col="8">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z8_9" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="11" Col="0">
+                    <vw:Cell Text="旋转台" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="11" Col="1">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z1_10" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="11" Col="2">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z2_10" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="11" Col="3">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z3_10" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="11" Col="4">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z4_10" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="11" Col="5">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z5_10" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="11" Col="6">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z6_10" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="11" Col="7">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z7_10" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="11" Col="8">
+                    <vw:Cell Height="26"><vw:Num Key="mb_ul_z8_10" Default="0" Width="72" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="12" Col="1">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vm:TextElement Text="Z1" FontSize="11.5" Foreground="#1D1D1F" />
+                      <vw:Num Key="mb_ul_zin0" Default="0" Width="66" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="13" Col="1">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vw:MiniBtn Text="Top" Cmd="ArmZPos" Arg="False|0|True" Width="40" />
+                      <vw:MiniBtn Text="TZ" Cmd="ArmZPos" Arg="False|0|False" Width="40" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="12" Col="2">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vm:TextElement Text="Z2" FontSize="11.5" Foreground="#1D1D1F" />
+                      <vw:Num Key="mb_ul_zin1" Default="0" Width="66" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="13" Col="2">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vw:MiniBtn Text="Top" Cmd="ArmZPos" Arg="False|1|True" Width="40" />
+                      <vw:MiniBtn Text="TZ" Cmd="ArmZPos" Arg="False|1|False" Width="40" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="12" Col="3">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vm:TextElement Text="Z3" FontSize="11.5" Foreground="#1D1D1F" />
+                      <vw:Num Key="mb_ul_zin2" Default="0" Width="66" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="13" Col="3">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vw:MiniBtn Text="Top" Cmd="ArmZPos" Arg="False|2|True" Width="40" />
+                      <vw:MiniBtn Text="TZ" Cmd="ArmZPos" Arg="False|2|False" Width="40" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="12" Col="4">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vm:TextElement Text="Z4" FontSize="11.5" Foreground="#1D1D1F" />
+                      <vw:Num Key="mb_ul_zin3" Default="0" Width="66" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="13" Col="4">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vw:MiniBtn Text="Top" Cmd="ArmZPos" Arg="False|3|True" Width="40" />
+                      <vw:MiniBtn Text="TZ" Cmd="ArmZPos" Arg="False|3|False" Width="40" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="12" Col="5">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vm:TextElement Text="Z5" FontSize="11.5" Foreground="#1D1D1F" />
+                      <vw:Num Key="mb_ul_zin4" Default="0" Width="66" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="13" Col="5">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vw:MiniBtn Text="Top" Cmd="ArmZPos" Arg="False|4|True" Width="40" />
+                      <vw:MiniBtn Text="TZ" Cmd="ArmZPos" Arg="False|4|False" Width="40" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="12" Col="6">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vm:TextElement Text="Z6" FontSize="11.5" Foreground="#1D1D1F" />
+                      <vw:Num Key="mb_ul_zin5" Default="0" Width="66" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="13" Col="6">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vw:MiniBtn Text="Top" Cmd="ArmZPos" Arg="False|5|True" Width="40" />
+                      <vw:MiniBtn Text="TZ" Cmd="ArmZPos" Arg="False|5|False" Width="40" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="12" Col="7">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vm:TextElement Text="Z7" FontSize="11.5" Foreground="#1D1D1F" />
+                      <vw:Num Key="mb_ul_zin6" Default="0" Width="66" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="13" Col="7">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vw:MiniBtn Text="Top" Cmd="ArmZPos" Arg="False|6|True" Width="40" />
+                      <vw:MiniBtn Text="TZ" Cmd="ArmZPos" Arg="False|6|False" Width="40" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="12" Col="8">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vm:TextElement Text="Z8" FontSize="11.5" Foreground="#1D1D1F" />
+                      <vw:Num Key="mb_ul_zin7" Default="0" Width="66" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="13" Col="8">
+                  <vw:Cell Height="28">
+                    <vm:StackElement Orientation="Horizontal">
+                      <vw:MiniBtn Text="Top" Cmd="ArmZPos" Arg="False|7|True" Width="40" />
+                      <vw:MiniBtn Text="TZ" Cmd="ArmZPos" Arg="False|7|False" Width="40" />
+                    </vm:StackElement>
+                  </vw:Cell>
+              </vm:GridChild>
+                </vm:GridElement>
+              </vm:ScrollElement>
+              <vm:SpacerElement H="6" />
+              <vw:Chk Key="mb_ul_quick" Label="Get Quickly" />
+              <vm:SpacerElement H="6" />
+              <vm:StackElement Orientation="Horizontal">
+                <vm:TextElement Text="归零后间距PX" FontSize="11.5" Foreground="#1D1D1F" /><vw:Num Key="mb_ul_px" Default="0" Width="86" />
+                <vm:TextElement Text="归零后间距PY" FontSize="11.5" Foreground="#1D1D1F" /><vw:Num Key="mb_ul_py" Default="0" Width="86" />
+              </vm:StackElement>
+              <vm:SpacerElement H="8" />
+              <vm:StackElement Orientation="Horizontal">
+                <vw:MiniBtn Text="更改" Cmd="ApplyArmXYChange" Arg="False" />
+                <vw:MiniBtn Text="获取" Cmd="CaptureArmXY" Arg="False" />
+                <vw:MiniBtn Text="恢复" Cmd="Reset" Arg="maint_base" />
+                <vw:MiniBtn Text="恢复全部" Cmd="Reset" Arg="maint_base" />
+                <vw:MiniBtn Text="Top-All" Cmd="ArmZAll" Arg="False|True" />
+                <vw:MiniBtn Text="TZ-All" Cmd="ArmZAll" Arg="False|False" />
+                <vw:Btn Text="应用" Cmd="ApplyBase" Arg="maint_base" />
+              </vm:StackElement>
+              <vm:TextElement Text="当前选中位置为：自动盘1-B0点(左上角)" FontSize="11.5" Foreground="#6E6E73" />
+            </vm:GroupElement>
+          </vm:GridChild>
+        </vm:GridElement>
+        <vm:GroupElement Title="说明">
+          <vm:TextElement Text="X/Y 文本框：当上方 X-Y 轴基点列表框中的当前激活项改变时，此文本框内的值自动变更为激活项的值；点击[获取]按钮将当前 X-Y 轴坐标值自动填入 X/Y 文本框内；点击[更改]按钮时，使用当前 X/Y 文本框内值替换更改列表框内激活项的值。&#x0a;Get Quickly：吸头高度基点快速获取功能。机台机械位置调整过后，机台内所有位置的平面和料臂之间是相对水平的，先不勾选 Get Quickly 正常获取小车A位置的所有吸头基点并应用；之后勾选 Get Quickly，选择其他位置，点击【基准吸头】基点的获取，其他吸头的基点位置将自动计算，之后更改应用。" FontSize="11.5" Foreground="#6E6E73" Wrap="Wrap" />
+        </vm:GroupElement>
+      </vm:StackElement>
+    </vm:TabItemVm>
+    <vm:TabItemVm Title="工作基点设定-料盘搬运臂">
+      <vm:StackElement>
+        <vm:GroupElement Title="料盘传送臂">
+          <vm:GridElement ColsSpec="150,112,46" RowsSpec="Auto">
+              <vm:GridChild Row="0" Col="0">
+                <vw:Cell Text="位置" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="1">
+                <vw:Cell Text="基点(mm)" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="0" Col="2">
+                <vw:Cell Text="" Ta="Center" Bg="#CFE3FB" Bold="True" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="0">
+                <vw:Cell Text="Safe" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="1">
+                <vw:Cell Height="26"><vw:Num Key="mb_ta_Safe" Default="-722.990" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="1" Col="2">
+                <vw:Cell Height="26"><vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_ta_Safe|料盘传送臂" Width="28" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="0">
+                <vw:Cell Text="Loader" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="1">
+                <vw:Cell Height="26"><vw:Num Key="mb_ta_Loader" Default="-1274.880" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="2" Col="2">
+                <vw:Cell Height="26"><vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_ta_Loader|料盘传送臂" Width="28" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="0">
+                <vw:Cell Text="Empty" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="1">
+                <vw:Cell Height="26"><vw:Num Key="mb_ta_Empty" Default="-950.520" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="3" Col="2">
+                <vw:Cell Height="26"><vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_ta_Empty|料盘传送臂" Width="28" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="0">
+                <vw:Cell Text="Buffer" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="1">
+                <vw:Cell Height="26"><vw:Num Key="mb_ta_Buffer" Default="-722.990" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="4" Col="2">
+                <vw:Cell Height="26"><vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_ta_Buffer|料盘传送臂" Width="28" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="0">
+                <vw:Cell Text="Auto1" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="1">
+                <vw:Cell Height="26"><vw:Num Key="mb_ta_Auto1" Default="-400.100" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="5" Col="2">
+                <vw:Cell Height="26"><vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_ta_Auto1|料盘传送臂" Width="28" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="0">
+                <vw:Cell Text="Auto2" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="1">
+                <vw:Cell Height="26"><vw:Num Key="mb_ta_Auto2" Default="-208.750" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="6" Col="2">
+                <vw:Cell Height="26"><vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_ta_Auto2|料盘传送臂" Width="28" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="0">
+                <vw:Cell Text="Auto3" Ta="Left" Height="26" />
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="1">
+                <vw:Cell Height="26"><vw:Num Key="mb_ta_Auto3" Default="-18.330" Width="104" /></vw:Cell>
+              </vm:GridChild>
+              <vm:GridChild Row="7" Col="2">
+                <vw:Cell Height="26"><vw:MiniBtn Text="&lt;" Cmd="CapturePos" Arg="mb_ta_Auto3|料盘传送臂" Width="28" /></vw:Cell>
+              </vm:GridChild>
+          </vm:GridElement>
+        </vm:GroupElement>
+        <vm:StackElement Orientation="Horizontal">
+          <vw:MiniBtn Text="恢复" Cmd="Reset" Arg="maint_base" />
+          <vw:Btn Text="应用" Cmd="ApplyBase" Arg="maint_base" />
+        </vm:StackElement>
+        <vm:GroupElement Title="说明">
+          <vm:TextElement Text="Safe：料盘传送臂的安全位基点。Loader / Empty / Buffer / Auto1 / Auto2 / Auto3：料盘传送臂在对应位置的基点。" FontSize="11.5" Foreground="#6E6E73" Wrap="Wrap" />
+        </vm:GroupElement>
+      </vm:StackElement>
+    </vm:TabItemVm>
+  </vm:TabsElement>
+  <vw:Watermark />
 <!-- 温启志 18719361399 · 本文件由温启志（18719361399）编写；界面与源码水印均指向该作者。 -->
 </vm:StackElement>

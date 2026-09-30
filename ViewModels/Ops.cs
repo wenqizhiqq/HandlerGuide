@@ -2072,6 +2072,9 @@ namespace HandlerGuide.ViewModels
         {
             { "enable",        new[] { "en_" } },
             { "inforec",       new[] { "il_" } },
+            { "maint_base",    new[] { "mb_" } },
+            { "maint_force",   new[] { "mf_" } },
+            { "maint_user",    new[] { "mu_" } },
             { "maint_light",   new[] { "ml_" } },
             { "maint_safe",    new[] { "sf_", "st_", "sa_", "sr_" } },
             { "maint_toffset", new[] { "mt_" } },
@@ -2090,7 +2093,7 @@ namespace HandlerGuide.ViewModels
 
         private static readonly Dictionary<string, string> _pageTitles = new Dictionary<string, string>
         {
-            { "enable", "使能设定" }, { "inforec", "信息记录" }, { "maint_light", "信号灯设定" }, { "maint_safe", "安全设定" },
+            { "enable", "使能设定" }, { "inforec", "信息记录" }, { "maint_base", "工作基点" }, { "maint_force", "接触力校准" }, { "maint_user", "用户管理" }, { "maint_light", "信号灯设定" }, { "maint_safe", "安全设定" },
             { "maint_toffset", "温度偏移" }, { "mode", "工作模式" }, { "motorhome", "电机归零" },
             { "tempctl", "温控设定" }, { "unit_apply", "单元参数应用" }, { "unit_arm", "上下料臂参数" },
             { "unit_cart", "运料小车参数" }, { "unit_io", "进出盘参数" }, { "unit_offset", "偏移设定" },

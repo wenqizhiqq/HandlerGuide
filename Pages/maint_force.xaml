@@ -1,11 +1,371 @@
 <vm:StackElement xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                 xmlns:vm="clr-namespace:HandlerGuide.ViewModels;assembly=HandlerGuide"
-                 xmlns:vw="clr-namespace:HandlerGuide.Views;assembly=HandlerGuide">
+                xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                xmlns:vm="clr-namespace:HandlerGuide.ViewModels;assembly=HandlerGuide"
+                xmlns:vw="clr-namespace:HandlerGuide.Views;assembly=HandlerGuide">
 
-    <!-- 温启志 18719361399 · 接触力校准：复用 MaintPages.MaintForce() 生成（含 Default/自动校准/应用） -->
-    <vw:D Method="MaintForce" />
-
+<!-- 温启志 18719361399 · 接触力校准（纯声明式 XAML；原 MaintPages.MaintForce 生成器已删除） -->
+    <vm:TextElement Text="该窗口用于校正测试臂下压反馈值，当未校准时所有校准值为 0。只有正确校准测试臂下压力矩反馈值之后，才可正常使用测试臂接触位置校准功能。" FontSize="11.5" Foreground="#6E6E73" Wrap="Wrap" />
+    <vm:SpacerElement H="10" />
+    <vm:GridElement ColsSpec="540,*" RowsSpec="Auto">
+      <vm:GridChild Row="0" Col="0">
+        <vm:ScrollElement ViewHeight="430" HScroll="Disabled" VScroll="Auto">
+          <vm:GridElement ColsSpec="170,170,170" RowsSpec="Auto">
+            <vm:GridChild Row="0" Col="0">
+                <vw:Cell Text="接触力(kgf)" Ta="Center" Bg="#CFE3FB" Bold="True" />
+            </vm:GridChild>
+            <vm:GridChild Row="0" Col="1">
+                <vw:Cell Text="测试臂#1" Ta="Center" Bg="#CFE3FB" Bold="True" />
+            </vm:GridChild>
+            <vm:GridChild Row="0" Col="2">
+                <vw:Cell Text="测试臂#2" Ta="Center" Bg="#CFE3FB" Bold="True" />
+            </vm:GridChild>
+            <vm:GridChild Row="1" Col="0">
+                <vw:Cell Text="0.00" Ta="Center" Bg="CardBgBrush" Height="24" />
+            </vm:GridChild>
+            <vm:GridChild Row="1" Col="1">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a1_0" Default="2.000" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="1" Col="2">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a2_0" Default="1.600" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="2" Col="0">
+                <vw:Cell Text="0.58" Ta="Center" Bg="CardBgBrush" Height="24" />
+            </vm:GridChild>
+            <vm:GridChild Row="2" Col="1">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a1_1" Default="2.000" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="2" Col="2">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a2_1" Default="1.500" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="3" Col="0">
+                <vw:Cell Text="1.16" Ta="Center" Bg="CardBgBrush" Height="24" />
+            </vm:GridChild>
+            <vm:GridChild Row="3" Col="1">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a1_2" Default="2.000" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="3" Col="2">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a2_2" Default="1.500" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="4" Col="0">
+                <vw:Cell Text="1.74" Ta="Center" Bg="CardBgBrush" Height="24" />
+            </vm:GridChild>
+            <vm:GridChild Row="4" Col="1">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a1_3" Default="2.000" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="4" Col="2">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a2_3" Default="1.500" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="5" Col="0">
+                <vw:Cell Text="2.32" Ta="Center" Bg="CardBgBrush" Height="24" />
+            </vm:GridChild>
+            <vm:GridChild Row="5" Col="1">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a1_4" Default="1.900" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="5" Col="2">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a2_4" Default="1.500" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="6" Col="0">
+                <vw:Cell Text="2.90" Ta="Center" Bg="CardBgBrush" Height="24" />
+            </vm:GridChild>
+            <vm:GridChild Row="6" Col="1">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a1_5" Default="2.000" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="6" Col="2">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a2_5" Default="1.500" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="7" Col="0">
+                <vw:Cell Text="3.48" Ta="Center" Bg="CardBgBrush" Height="24" />
+            </vm:GridChild>
+            <vm:GridChild Row="7" Col="1">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a1_6" Default="2.100" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="7" Col="2">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a2_6" Default="2.300" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="8" Col="0">
+                <vw:Cell Text="4.06" Ta="Center" Bg="CardBgBrush" Height="24" />
+            </vm:GridChild>
+            <vm:GridChild Row="8" Col="1">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a1_7" Default="2.300" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="8" Col="2">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a2_7" Default="2.700" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="9" Col="0">
+                <vw:Cell Text="4.64" Ta="Center" Bg="CardBgBrush" Height="24" />
+            </vm:GridChild>
+            <vm:GridChild Row="9" Col="1">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a1_8" Default="2.300" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="9" Col="2">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a2_8" Default="2.700" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="10" Col="0">
+                <vw:Cell Text="5.22" Ta="Center" Bg="CardBgBrush" Height="24" />
+            </vm:GridChild>
+            <vm:GridChild Row="10" Col="1">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a1_9" Default="2.300" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="10" Col="2">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a2_9" Default="2.400" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="11" Col="0">
+                <vw:Cell Text="5.80" Ta="Center" Bg="CardBgBrush" Height="24" />
+            </vm:GridChild>
+            <vm:GridChild Row="11" Col="1">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a1_10" Default="2.300" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="11" Col="2">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a2_10" Default="2.500" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="12" Col="0">
+                <vw:Cell Text="6.38" Ta="Center" Bg="CardBgBrush" Height="24" />
+            </vm:GridChild>
+            <vm:GridChild Row="12" Col="1">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a1_11" Default="2.300" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="12" Col="2">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a2_11" Default="2.500" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="13" Col="0">
+                <vw:Cell Text="6.96" Ta="Center" Bg="CardBgBrush" Height="24" />
+            </vm:GridChild>
+            <vm:GridChild Row="13" Col="1">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a1_12" Default="2.300" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="13" Col="2">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a2_12" Default="2.700" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="14" Col="0">
+                <vw:Cell Text="7.54" Ta="Center" Bg="CardBgBrush" Height="24" />
+            </vm:GridChild>
+            <vm:GridChild Row="14" Col="1">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a1_13" Default="2.300" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="14" Col="2">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a2_13" Default="2.600" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="15" Col="0">
+                <vw:Cell Text="8.12" Ta="Center" Bg="CardBgBrush" Height="24" />
+            </vm:GridChild>
+            <vm:GridChild Row="15" Col="1">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a1_14" Default="2.400" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="15" Col="2">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a2_14" Default="2.900" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="16" Col="0">
+                <vw:Cell Text="8.70" Ta="Center" Bg="CardBgBrush" Height="24" />
+            </vm:GridChild>
+            <vm:GridChild Row="16" Col="1">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a1_15" Default="2.400" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="16" Col="2">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a2_15" Default="2.800" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="17" Col="0">
+                <vw:Cell Text="9.28" Ta="Center" Bg="CardBgBrush" Height="24" />
+            </vm:GridChild>
+            <vm:GridChild Row="17" Col="1">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a1_16" Default="2.500" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="17" Col="2">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a2_16" Default="3.300" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="18" Col="0">
+                <vw:Cell Text="9.86" Ta="Center" Bg="CardBgBrush" Height="24" />
+            </vm:GridChild>
+            <vm:GridChild Row="18" Col="1">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a1_17" Default="2.600" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="18" Col="2">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a2_17" Default="3.300" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="19" Col="0">
+                <vw:Cell Text="10.44" Ta="Center" Bg="CardBgBrush" Height="24" />
+            </vm:GridChild>
+            <vm:GridChild Row="19" Col="1">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a1_18" Default="2.800" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="19" Col="2">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a2_18" Default="3.700" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="20" Col="0">
+                <vw:Cell Text="11.02" Ta="Center" Bg="CardBgBrush" Height="24" />
+            </vm:GridChild>
+            <vm:GridChild Row="20" Col="1">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a1_19" Default="2.800" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="20" Col="2">
+                <vw:Cell Height="24">
+                    <vw:Num Key="mf_a2_19" Default="3.700" Width="158" Format="0.000" />
+                </vw:Cell>
+            </vm:GridChild>
+          </vm:GridElement>
+        </vm:ScrollElement>
+      </vm:GridChild>
+      <vm:GridChild Row="0" Col="1">
+        <vm:StackElement>
+          <vm:StackElement Orientation="Horizontal">
+            <vw:MiniBtn Text="Default" Cmd="DefaultContactForce" Width="96" />
+            <vw:MiniBtn Text="恢复" Cmd="Reset" Arg="maint_force" Width="72" />
+          </vm:StackElement>
+          <vm:SpacerElement H="8" />
+          <vm:GridElement ColsSpec="120,86,56,96,56" RowsSpec="Auto">
+            <vm:GridChild Row="0" Col="1">
+                <vw:Cell Text="Socket" Ta="Center" Bg="#CFE3FB" Bold="True" />
+            </vm:GridChild>
+            <vm:GridChild Row="0" Col="2">
+                <vw:Cell Text="kgf" Ta="Center" />
+            </vm:GridChild>
+            <vm:GridChild Row="0" Col="3">
+                <vw:Cell Text="Shuttle" Ta="Center" Bg="#CFE3FB" Bold="True" />
+            </vm:GridChild>
+            <vm:GridChild Row="0" Col="4">
+                <vw:Cell Text="kgf" Ta="Center" />
+            </vm:GridChild>
+            <vm:GridChild Row="1" Col="0">
+                <vw:Cell Text="压力极限值" Ta="Left" />
+            </vm:GridChild>
+            <vm:GridChild Row="1" Col="1">
+                <vw:Cell><vw:Num Key="mf_lim_skt" Default="120" Width="78" /></vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="1" Col="3">
+                <vw:Cell><vw:Num Key="mf_lim_sht" Default="20" Width="78" /></vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="2" Col="0">
+                <vw:Cell Text="校高最小值" Ta="Left" />
+            </vm:GridChild>
+            <vm:GridChild Row="2" Col="1">
+                <vw:Cell><vw:Num Key="mf_min_h" Default="20" Width="78" /></vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="2" Col="2">
+                <vw:Cell Text="kgf" Ta="Center" />
+            </vm:GridChild>
+            <vm:GridChild Row="2" Col="3" ColSpan="2">
+                <vw:Cell Text="参考值kgf" />
+            </vm:GridChild>
+            <vm:GridChild Row="3" Col="0">
+                <vw:Cell Text="结束MPa" Ta="Left" />
+            </vm:GridChild>
+            <vm:GridChild Row="3" Col="1">
+                <vw:Cell><vw:Num Key="mf_end_mpa" Default="0.209" Width="78" Format="0.000" /></vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="3" Col="2">
+                <vw:Cell Text="MPa" Ta="Center" />
+            </vm:GridChild>
+            <vm:GridChild Row="3" Col="3">
+                <vw:Cell><vw:Display Text="121.22" Width="86" Bg="#F0F0F3" /></vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="4" Col="0">
+                <vw:Cell Text="延时(ms)" Ta="Left" />
+            </vm:GridChild>
+            <vm:GridChild Row="4" Col="1">
+                <vw:Cell><vw:Num Key="mf_delay" Default="500" Width="78" Format="0" /></vw:Cell>
+            </vm:GridChild>
+            <vm:GridChild Row="4" Col="2">
+                <vw:Cell Text="ms" Ta="Center" />
+            </vm:GridChild>
+            <vm:GridChild Row="4" Col="3">
+                <vw:Cell><vw:Display Text="120.60" Width="86" Bg="#F0F0F3" /></vw:Cell>
+            </vm:GridChild>
+          </vm:GridElement>
+          <vm:SpacerElement H="10" />
+          <vm:TextElement Text="压力极限值：测试臂最大可设定的压力值。自动校准时测试臂会缓慢下降到小车上试探吸取 IC，如果吸取到产品或压力反馈达到设定值则停止向下试探。" FontSize="11.5" Foreground="#6E6E73" Wrap="Wrap" />
+        </vm:StackElement>
+      </vm:GridChild>
+    </vm:GridElement>
+    <vm:SpacerElement H="8" />
+    <vm:StackElement Orientation="Horizontal">
+      <vm:StackElement>
+        <vw:Radios Key="mf_arm" OptionsText="臂1|臂2" Default="0" />
+        <vw:Btn Text="自动校准" Cmd="StartTestArmCalibration" />
+        <vm:SpacerElement H="6" />
+        <vw:Btn Text="应用" Cmd="Apply" Arg="maint_force" />
+      </vm:StackElement>
+      <vm:GroupElement Title="自动校准步骤">
+        <vm:TextElement Text="① 在“品种 → 测试模式”中正确设定当前测试制具对应的测试模式。&#x0a;② 在“品种 → 测试臂”中正确设定测试臂制具缓冲气缸直径。&#x0a;③ 在“结束MPa”中填入结束压力值，使其小于机器输入压力值，并使换算出的测试臂最大压力小于“压力极限值”。&#x0a;④ 手动或通过诊断界面移动测试臂到测试位接触位置，使气缸压缩量约 1mm，并让电机保持在该位置（Servo On）。&#x0a;⑤ 选中已就位（接触到测试位）的测试臂。&#x0a;⑥ 点击[自动校准]按钮启动校准，测试臂气缸依次加载 0~255 级压力并检测电机输出力矩反馈填入列表，约 4 分钟。&#x0a;⑦ 完成后切换到另外一支测试臂，重复 ④~⑥。两支测试臂均完成且参考值相同时，点击[应用]保存。" FontSize="11.5" Foreground="#6E6E73" Wrap="Wrap" />
+      </vm:GroupElement>
+    </vm:StackElement>
     <vw:Watermark />
 <!-- 温启志 18719361399 · 本文件由温启志（18719361399）编写；界面与源码水印均指向该作者。 -->
+
 </vm:StackElement>

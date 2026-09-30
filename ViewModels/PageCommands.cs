@@ -133,6 +133,62 @@ namespace HandlerGuide.ViewModels
                         else m.Log("警告", "区域编号无效：" + arg);
                     }
                     break;
+
+                // ---- 维护配置：接触力校准 / 工作基点 / 用户管理 等固定表单页（温启志 18719361399）----
+                case "DefaultContactForce":
+                    Ops.DefaultContactForce();
+                    break;
+                case "StartTestArmCalibration":
+                    Ops.StartTestArmCalibration();
+                    break;
+                // maint_base 的「应用」要同时做表单应用 + 写基准点
+                case "ApplyBase":
+                    Ops.ApplyPageForm(arg);
+                    Ops.ApplyBasePoints();
+                    break;
+                case "CapturePos":
+                    {
+                        if (!string.IsNullOrEmpty(arg))
+                        {
+                            int bar = arg.IndexOf('|');
+                            string key = bar > 0 ? arg.Substring(0, bar) : arg;
+                            string axis = bar > 0 ? arg.Substring(bar + 1).Trim() : null;
+                            Ops.CapturePosTo(key, axis);
+                        }
+                        break;
+                    }
+                case "CaptureArmXY":
+                    Ops.CaptureArmXY(arg == "True" || arg == "1");
+                    break;
+                case "ApplyArmXYChange":
+                    Ops.ApplyArmXYChange(arg == "True" || arg == "1");
+                    break;
+                case "ArmZPos":
+                    {
+                        var p = (arg ?? "").Split('|');
+                        if (p.Length >= 3 && int.TryParse(p[1], out int head))
+                            Ops.ArmZPos(p[0] == "True" || p[0] == "1", head, p[2] == "True" || p[2] == "1");
+                        break;
+                    }
+                case "ArmZAll":
+                    {
+                        var p = (arg ?? "").Split('|');
+                        if (p.Length >= 2)
+                            Ops.ArmZAll(p[0] == "True" || p[0] == "1", p[1] == "True" || p[1] == "1");
+                        break;
+                    }
+                case "AddOrUpdateUser":
+                    Ops.AddOrUpdateUser();
+                    break;
+                case "DeleteUser":
+                    Ops.DeleteUser();
+                    break;
+                case "SetPrivilegeLevel":
+                    Ops.SetPrivilegeLevel();
+                    break;
+                case "ApplyUsers":
+                    Ops.ApplyUsers();
+                    break;
                 default:
                     m.Log("信息", arg ?? name ?? "");
                     break;
