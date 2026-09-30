@@ -68,12 +68,13 @@ namespace HandlerGuide.ViewModels
                     E.H(E.Btn("关闭控制程序", () =>
                     {
                         // 温启志 18719361399：先过运控前置检查，运行中 / 有轴在动一律拒绝关闭
+                        // MVVM：对话框走 MainViewModel.Current 的 Alert/Confirm 服务，视图模型不依赖 MessageBox
                         if (!Ops.CanShutdown(out string why))
                         {
-                            MessageBox.Show(why, "关闭程序", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            MainViewModel.Current?.Alert("关闭程序", why);
                             return;
                         }
-                        if (MessageBox.Show("确定要关闭控制程序吗？", "关闭程序", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                        if (MainViewModel.Current == null || MainViewModel.Current.Confirm("关闭程序", "确定要关闭控制程序吗？"))
                         {
                             Ops.SaveParams();
                             Ops.Info("控制程序正常退出");
