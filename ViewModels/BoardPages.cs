@@ -61,76 +61,6 @@ namespace HandlerGuide.ViewModels
                 Content = E.T(s, 11, fg ?? E.P, false, TextWrapping.NoWrap, TextAlignment.Center, HorizontalAlignment.Center)
             };
 
-        /// <summary>状态窗口：标题 + 料格阵列。</summary>
-        private static Element Region(string title, int cols, int rows, double cw = 16, double ch = 16, bool titleOnly = false)
-        {
-            var sp = E.V(
-                E.T(title, 12.5, E.P, true, TextWrapping.NoWrap, TextAlignment.Center, HorizontalAlignment.Center),
-                E.CellGrid(rows, cols, cw, ch));
-            sp.Margin = new Thickness(0, 0, 20, 12);
-            return sp;
-        }
-
-        // ==================================================================
-        //  1. 料状态—测试区域 (image113)
-        // ==================================================================
-        public static Element BoardTestArea()
-        {
-            return E.V(
-                
-                E.H(
-                    Region("Load Arm", 1, 2, 18, 18),
-                    Region("Shuttle A Entry", 8, 2, 18, 18),
-                    Region("Test Hand #1", 1, 2, 18, 18),
-                    Region("Shuttle A Exit", 1, 2, 18, 18),
-                    Region("Offload Arm", 1, 2, 18, 18)),
-                E.H(
-                    Region("Shuttle B Entry", 8, 2, 18, 18),
-                    Region("Test Hand #2", 1, 2, 18, 18),
-                    Region("Shuttle B Exit", 1, 2, 18, 18)),
-                E.Group("图例",
-                    E.H(E.T("单元格白底无字：该位置没有料", 11.5, E.Sec),
-                        E.T("　绿底：该位置有料", 11.5, E.Sec),
-                        E.T("　数字：测试结果对应的 Bin#（NT 未测试 / ER 非法 Bin）", 11.5, E.Sec)),
-                    E.T("单元格背景红色表示为次品，绿色表示为好品，暗色背景表示使能关闭。", 11.5, E.Sec)));
-        }
-
-        // ==================================================================
-        //  2. 料状态—入料区域 (image114)
-        // ==================================================================
-        public static Element BoardInArea()
-        {
-            var clean = E.Grid().Cols("30", "30", "30", "30", "30");
-            for (int r = 0; r < 4; r++)
-            {
-                clean.Add(E.CellGrid(1, 1, 26, 26), r, 0);
-                for (int c = 1; c < 5; c++) clean.Add(E.CellGrid(1, 1, 26, 26), r, c);
-            }
-
-            return E.V(
-                
-                E.H(
-                    Region("Loader | 0", 8, 20, 15, 15),
-                    Region("CleanPlate", 1, 2, 26, 26),
-                    Region("", 4, 4, 26, 26)),
-                E.Group("图例",
-                    E.T("单元格为灰底无字表示该位置没有料；单元格为蓝底 NT 表示入料托盘中有料；CleanPlate 盘为白底、CP 字样表示该位置有清洁片。",
-                        11.5, E.Sec, false, TextWrapping.Wrap)));
-        }
-
-        // ==================================================================
-        //  3. 料状态—出料区域 (image115)
-        // ==================================================================
-        public static Element BoardOutArea()
-        {
-            return E.V(
-                
-                E.H(Region("Fix1 | 0", 8, 20, 15, 15), Region("Fix2 | 0", 8, 20, 15, 15), Region("Fix3 | 0", 8, 20, 15, 15)),
-                E.H(Region("Auto1 | 0", 8, 20, 15, 15), Region("Auto2 | 0", 8, 20, 15, 15), Region("Auto3 | 0", 8, 20, 15, 15)),
-                E.Group("图例",
-                    E.T("单元格为白底无字表示该位置没有料；绿底表示该位置有料；单元格中的数字表示测试结果对应的 Bin#。",
-                        11.5, E.Sec, false, TextWrapping.Wrap)));
-        }
 
         // ==================================================================
         //  4. 批次数据统计 (image119)
@@ -313,39 +243,6 @@ namespace HandlerGuide.ViewModels
                     System.Windows.Controls.ScrollBarVisibility.Auto));
         }
 
-        // ==================================================================
-        //  8. 温度监测 (image121)
-        // ==================================================================
-        public static Element BoardTemp()
-        {
-            var m = E.M;
-            var g = E.Grid().Cols("190", "130", "130");
-            g.Add(Head("温度模式", 190, 26), 0, 0);
-            g.Add(Num("室温", 0, 26, E.HeadAmber), 0, 1, 1, 2);
-            g.Add(Lab("初始加热/S", 190, 26, TextAlignment.Center, E.BandGrey), 1, 0);
-            g.Add(Num("0 / 60", 0, 26, E.HeadAmber), 1, 1, 1, 2);
-            g.Add(Lab("加热时间/S", 190, 26, TextAlignment.Center, E.BandGrey), 2, 0);
-            g.Add(Num("60", 0, 26, E.HeadAmber), 2, 1, 1, 2);
-            g.Add(Lab("设定温度/°C", 190, 26, TextAlignment.Center, E.BandGrey), 3, 0);
-            g.Add(Num("25", 0, 26, E.HeadAmber), 3, 1, 1, 2);
-
-            string[] chans = { "预温盘 #1/2", "小车 A/B",
-                               "测试臂 A1/A2", "测试臂 A3/A4", "测试臂 A5/A6", "测试臂 A7/A8",
-                               "测试臂 B1/B2", "测试臂 B3/B4", "测试臂 B5/B6", "测试臂 B7/B8",
-                               "测试板 1/2" };
-            for (int r = 0; r < chans.Length; r++)
-            {
-                g.Add(Lab(chans[r], 190, 26, TextAlignment.Center, E.BandGrey), r + 4, 0);
-                g.Add(Num("0.0", 130, 26), r + 4, 1);
-                g.Add(Num("0.0", 130, 26), r + 4, 2);
-            }
-
-            return E.V(
-                
-                E.Group("Temperature @610", E.Scroll(g, 460,
-                    System.Windows.Controls.ScrollBarVisibility.Disabled,
-                    System.Windows.Controls.ScrollBarVisibility.Auto)));
-        }
 
         // ==================================================================
         //  9. 料盘分类 (image118)

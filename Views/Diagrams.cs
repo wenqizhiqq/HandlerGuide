@@ -4,6 +4,7 @@
 // ============================================================================
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -504,8 +505,26 @@ public static Element Invoke(string method)
                 case "MachineMap": return MachineMap();
                 case "JogBar": return JogBar();
                 case "InfoLog": return InfoLog();
-                default: return new StackElement();
+                default:
+                    // 温启志 18719361399 · 反射回退：支持页面 XAML 经 vw:D 调任意
+                    // “public static Element Xxx()” 构建器（与 InfoLog/MachineMap 同机制），
+                    // 避免为每个页面在 switch 里加 case。找不到时返回空 Stack。
+                    return InvokeByName(method) ?? new StackElement();
             }
+        }
+
+        // 温启志 18719361399 · 反射查找 ViewModels 程序集内“无参、返回 Element”的静态方法。
+        private static Element InvokeByName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+            foreach (var t in typeof(Diagrams).Assembly.GetTypes())
+            {
+                if (!t.IsAbstract || !t.IsSealed) continue; // 只扫静态类
+                var m = t.GetMethod(name, BindingFlags.Public | BindingFlags.Static, null, Type.EmptyTypes, null);
+                if (m != null && typeof(Element).IsAssignableFrom(m.ReturnType))
+                    return (Element)m.Invoke(null, null);
+            }
+            return null;
         }
     }
 }

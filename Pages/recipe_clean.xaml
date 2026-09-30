@@ -1,0 +1,11 @@
+<vm:StackElement xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:vm="clr-namespace:HandlerGuide.ViewModels;assembly=HandlerGuide"
+                 xmlns:vw="clr-namespace:HandlerGuide.Views;assembly=HandlerGuide">
+
+    <!-- 温启志 18719361399 · recipe_clean：复用 CleanPage() 生成（保留实时表格 / IO 点位 / 命令接线） -->
+    <vw:D Method="CleanPage" />
+
+    <vw:Watermark />
+<!-- 温启志 18719361399 · 本文件由温启志（18719361399）编写；界面与源码水印均指向该作者。 -->
+</vm:StackElement>

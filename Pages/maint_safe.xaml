@@ -1,0 +1,166 @@
+<vm:StackElement xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                xmlns:vm="clr-namespace:HandlerGuide.ViewModels;assembly=HandlerGuide"
+                xmlns:vw="clr-namespace:HandlerGuide.Views;assembly=HandlerGuide">
+
+    <vm:TabsElement>
+        <!-- 温启志 18719361399 · 通用 -->
+        <vm:TabItemVm Title="通用">
+            <vm:StackElement>
+                <vm:GroupElement Title="登出与权限">
+                    <vw:Chk Key="sf_auto_logout" Label="是否自动登出" />
+                    <vm:StackElement Orientation="Horizontal">
+                        <vm:TextElement Text="自动登出时间(分钟)" FontSize="11.5" Foreground="#1D1D1F" Margin="0,0,8,0" />
+                        <vw:Num Key="sf_logout_min" Default="30" Width="86" />
+                    </vm:StackElement>
+                    <vw:Chk Key="sf_only_normal" Label="只在正常模式下登出" Default="True" />
+                    <vw:Chk Key="sf_switch_normal" Label="切换至正常模式登出" Default="True" />
+                    <vw:Chk Key="sf_bcr_only" Label="用户登录BCR限定" />
+                </vm:GroupElement>
+
+                <vm:GroupElement Title="启动与循环">
+                    <vm:FieldRowElement Label="慢速启动速度" LabelWidth="160" Unit="%">
+                        <vw:Num Key="sf_slow_spd" Default="20" Width="86" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="循环周期" LabelWidth="160" Unit="次">
+                        <vw:Num Key="sf_loop_cnt" Default="3" Width="86" Format="0" />
+                    </vm:FieldRowElement>
+                    <vw:Chk Key="sf_batch_check" Label="开批输入检查（检查 PN 或 OP 是否为空）" Default="True" />
+                    <vw:Chk Key="sf_lock_bin" Label="生产时禁止修改BIN设定和运行模式" Default="True" />
+                    <vw:Chk Key="sf_bin_legal" Label="BIN合法检查（Online 时好品次品不能放同一个盘）" Default="True" />
+                </vm:GroupElement>
+
+                <vm:GroupElement Title="物料与报警">
+                    <vw:Chk Key="sf_ion_check" Label="离子风机检测" Default="True" />
+                    <vw:Chk Key="sf_door_ion" Label="开门自动关闭离子风机" Default="True" />
+                    <vw:Chk Key="sf_skip_retry" Label="Skipped IC复检" Default="True" />
+                    <vw:Chk Key="sf_heat_empty" Label="检查加热盘空" />
+                    <vw:Chk Key="sf_fixed_offset" Label="固定偏移（切换品种时偏移参数不变动）" />
+                    <vm:FieldRowElement Label="QA取样后续提示时间" LabelWidth="170" Unit="min（0 为关闭）">
+                        <vw:Num Key="sf_qa_hint" Default="0" Width="86" Format="0" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="定时提示时间" LabelWidth="170" Unit="min（0 为关闭）">
+                        <vw:Num Key="sf_timer_hint" Default="0" Width="86" Format="0" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="离子风机清洁提示间隔" LabelWidth="170" Unit="h">
+                        <vw:Num Key="sf_ion_clean" Default="720" Width="86" Format="0" />
+                    </vm:FieldRowElement>
+                </vm:GroupElement>
+
+                <vm:GroupElement Title="FTP Server">
+                    <vm:FieldRowElement Label="FTP 地址" LabelWidth="110">
+                        <vw:TextInput Key="sf_ftp_ip" Def="192.168.0.100" Width="190" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="Server path" LabelWidth="110">
+                        <vw:TextInput Key="sf_ftp_path" Def="/handler/data" Width="260" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="Userid" LabelWidth="110">
+                        <vw:TextInput Key="sf_ftp_user" Def="handler" Width="190" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="Password" LabelWidth="110">
+                        <vw:TextInput Key="sf_ftp_pwd" Def="" Width="190" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="Upload" LabelWidth="110">
+                        <vw:TextInput Key="sf_ftp_upload" Def="/handler/upload" Width="260" />
+                    </vm:FieldRowElement>
+                </vm:GroupElement>
+
+                <vm:StackElement Orientation="Horizontal">
+                    <vw:MiniBtn Text="恢复" Cmd="Reset" Arg="maint_safe" />
+                    <vw:Btn Text="应用" Cmd="Apply" Arg="maint_safe" />
+                </vm:StackElement>
+            </vm:StackElement>
+        </vm:TabItemVm>
+
+        <!-- 温启志 18719361399 · 测试区域 -->
+        <vm:TabItemVm Title="测试区域">
+            <vm:StackElement>
+                <vm:GroupElement Title="报警与处理">
+                    <vm:FieldRowElement Label="开门处理时间" LabelWidth="170" Unit="s">
+                        <vw:Num Key="st_door_t" Default="30" Width="86" Format="0" />
+                    </vm:FieldRowElement>
+                    <vw:Chk Key="st_skt_empty" Label="测试座空检查" Default="True" />
+                    <vw:Chk Key="st_skt_blow" Label="测试座检查失败吹掉料" />
+                    <vw:Chk Key="st_ch_recheck" Label="强制取消“测试通道检查”@复测-连续模式" />
+                    <vw:Chk Key="st_auto_clear" Label="自动清机@良率报警（先清机，后报警）" Default="True" />
+                    <vw:Chk Key="st_pick_fail_skip" Label="取料失败跳过料空确认" />
+                    <vw:Chk Key="st_arm_drop_home" Label="测试臂掉料自动归零" Default="True" />
+                </vm:GroupElement>
+
+                <vm:GroupElement Title="限定值">
+                    <vm:FieldRowElement Label="管腿力限定" LabelWidth="170" Unit="kgf">
+                        <vw:Num Key="st_leg_force" Default="15" Width="86" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="校准高度调整限定" LabelWidth="170" Unit="mm">
+                        <vw:Num Key="st_cal_h" Default="5" Width="86" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="连续次品判定-相同BIN 阈值" LabelWidth="200" Unit="次">
+                        <vw:Num Key="st_cont_bin" Default="5" Width="86" Format="0" />
+                    </vm:FieldRowElement>
+                    <vw:Chk Key="st_cont_same_bin" Label="连续次品判定-相同BIN" Default="True" />
+                </vm:GroupElement>
+
+                <vm:GroupElement Title="加热与温度">
+                    <vw:Chk Key="st_arm_hold" Label="测试臂提起等待（加热模式保持 IC 温度稳定）" />
+                </vm:GroupElement>
+
+                <vm:StackElement Orientation="Horizontal">
+                    <vw:MiniBtn Text="恢复" Cmd="Reset" Arg="maint_safe" />
+                    <vw:Btn Text="应用" Cmd="Apply" Arg="maint_safe" />
+                </vm:StackElement>
+            </vm:StackElement>
+        </vm:TabItemVm>
+
+        <!-- 温启志 18719361399 · 上/下料臂 -->
+        <vm:TabItemVm Title="上/下料臂">
+            <vm:StackElement>
+                <vm:GroupElement Title="偏移限定">
+                    <vm:FieldRowElement Label="允许最小偏移" LabelWidth="150" Unit="mm">
+                        <vw:Num Key="sa_off_min" Default="-5" Width="86" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="允许最大偏移" LabelWidth="150" Unit="mm">
+                        <vw:Num Key="sa_off_max" Default="5" Width="86" />
+                    </vm:FieldRowElement>
+                </vm:GroupElement>
+
+                <vm:GroupElement Title="吸取重试限定">
+                    <vm:FieldRowElement Label="重试次数" LabelWidth="150" Unit="次">
+                        <vw:Num Key="sa_retry_cnt" Default="3" Width="86" Format="0" />
+                    </vm:FieldRowElement>
+                    <vm:FieldRowElement Label="每次下行距离" LabelWidth="150" Unit="mm">
+                        <vw:Num Key="sa_retry_dz" Default="0.2" Width="86" />
+                    </vm:FieldRowElement>
+                </vm:GroupElement>
+
+                <vm:GroupElement Title="其它">
+                    <vw:Chk Key="sa_last_seq" Label="最后料盘顺序放置IC@清出" />
+                </vm:GroupElement>
+
+                <vm:StackElement Orientation="Horizontal">
+                    <vw:MiniBtn Text="恢复" Cmd="Reset" Arg="maint_safe" />
+                    <vw:Btn Text="应用" Cmd="Apply" Arg="maint_safe" />
+                </vm:StackElement>
+            </vm:StackElement>
+        </vm:TabItemVm>
+
+        <!-- 温启志 18719361399 · 进出盘 -->
+        <vm:TabItemVm Title="进出盘">
+            <vm:StackElement>
+                <vm:GroupElement Title="进出盘设定">
+                    <vw:Chk Key="sr_manual_tray" Label="手动取盘（跳过IC）：Loader 上有【取料失败跳过】报警，盘空后需手动取走，不会自动换盘" />
+                    <vw:Chk Key="sr_knock_loader" Label="启用上料盘敲击（选装）" />
+                    <vw:Chk Key="sr_knock_auto" Label="启用自动盘敲击（选装）" />
+                    <vw:Chk Key="sr_fwd_pick" Label="删料后正向取料@入料盘" Default="True" />
+                </vm:GroupElement>
+
+                <vm:StackElement Orientation="Horizontal">
+                    <vw:MiniBtn Text="恢复" Cmd="Reset" Arg="maint_safe" />
+                    <vw:Btn Text="应用" Cmd="Apply" Arg="maint_safe" />
+                </vm:StackElement>
+            </vm:StackElement>
+        </vm:TabItemVm>
+    </vm:TabsElement>
+
+    <vw:Watermark />
+<!-- 温启志 18719361399 · 本文件由温启志（18719361399）编写；界面与源码水印均指向该作者。 -->
+</vm:StackElement>

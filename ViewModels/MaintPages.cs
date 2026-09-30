@@ -27,8 +27,7 @@ namespace HandlerGuide.ViewModels
     }
 
     // ==================================================================
-    //  “维护配置”工具条：工作基点 / 安全设定 / 温度偏移 / 接触力校准 /
-    //  用户管理 / 信号灯设定   —— 复刻 image82 ~ image106
+    //  “维护配置”工具条：工作基点 / 接触力校准 / 用户管理   —— 复刻 image82 ~ image106
     // ==================================================================
     // 温启志 18719361399 · 类 public static class MaintPages
     public static class MaintPages
@@ -300,150 +299,9 @@ namespace HandlerGuide.ViewModels
                         11.5, E.Sec, false, TextWrapping.Wrap)));
         }
 
-        // ==================================================================
-        //  2. 安全设定
-        // ==================================================================
-        public static Element MaintSafe()
-        {
-            return E.Tabs(
-                ("通用", SafeGeneral),
-                ("测试区域", SafeTestArea),
-                ("上/下料臂", SafeArm),
-                ("进出盘", SafeTray));
-        }
-
-        private static Element SafeGeneral()
-        {
-            var wqzForm = Ops.PageForm("安全设定-通用", "sf_");
-            return E.V(
-                E.Group("登出与权限",
-                    E.Chk("sf_auto_logout", "是否自动登出", false),
-                    E.H(E.T("自动登出时间(分钟)", 11.5, E.P, false, TextWrapping.NoWrap), E.Num("sf_logout_min", 30, 86)),
-                    E.Chk("sf_only_normal", "只在正常模式下登出", true),
-                    E.Chk("sf_switch_normal", "切换至正常模式登出", true),
-                    E.Chk("sf_bcr_only", "用户登录BCR限定", false)),
-                E.Group("启动与循环",
-                    E.Row("慢速启动速度", E.Num("sf_slow_spd", 20, 86), 160, "%"),
-                    E.Row("循环周期", E.Num("sf_loop_cnt", 3, 86, "0"), 160, "次"),
-                    E.Chk("sf_batch_check", "开批输入检查（检查 PN 或 OP 是否为空）", true),
-                    E.Chk("sf_lock_bin", "生产时禁止修改BIN设定和运行模式", true),
-                    E.Chk("sf_bin_legal", "BIN合法检查（Online 时好品次品不能放同一个盘）", true)),
-                E.Group("物料与报警",
-                    E.Chk("sf_ion_check", "离子风机检测", true),
-                    E.Chk("sf_door_ion", "开门自动关闭离子风机", true),
-                    E.Chk("sf_skip_retry", "Skipped IC复检", true),
-                    E.Chk("sf_heat_empty", "检查加热盘空", false),
-                    E.Chk("sf_fixed_offset", "固定偏移（切换品种时偏移参数不变动）", false),
-                    E.Row("QA取样后续提示时间", E.Num("sf_qa_hint", 0, 86, "0"), 170, "min（0 为关闭）"),
-                    E.Row("定时提示时间", E.Num("sf_timer_hint", 0, 86, "0"), 170, "min（0 为关闭）"),
-                    E.Row("离子风机清洁提示间隔", E.Num("sf_ion_clean", 720, 86, "0"), 170, "h")),
-                E.Group("FTP Server",
-                    E.Row("FTP 地址", E.Text("sf_ftp_ip", "192.168.0.100", 190), 110),
-                    E.Row("Server path", E.Text("sf_ftp_path", "/handler/data", 260), 110),
-                    E.Row("Userid", E.Text("sf_ftp_user", "handler", 190), 110),
-                    E.Row("Password", E.Text("sf_ftp_pwd", "", 190), 110),
-                    E.Row("Upload", E.Text("sf_ftp_upload", "/handler/upload", 260), 110)),
-                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", wqzForm.Apply)));
-        }
-
-        private static Element SafeTestArea()
-        {
-            var wqzForm = Ops.PageForm("安全设定-测试区域", "st_");
-            return E.V(
-                E.Group("报警与处理",
-                    E.Row("开门处理时间", E.Num("st_door_t", 30, 86, "0"), 170, "s"),
-                    E.Chk("st_skt_empty", "测试座空检查", true),
-                    E.Chk("st_skt_blow", "测试座检查失败吹掉料", false),
-                    E.Chk("st_ch_recheck", "强制取消“测试通道检查”@复测-连续模式", false),
-                    E.Chk("st_auto_clear", "自动清机@良率报警（先清机，后报警）", true),
-                    E.Chk("st_pick_fail_skip", "取料失败跳过料空确认", false),
-                    E.Chk("st_arm_drop_home", "测试臂掉料自动归零", true)),
-                E.Group("限定值",
-                    E.Row("管腿力限定", E.Num("st_leg_force", 15, 86), 170, "kgf"),
-                    E.Row("校准高度调整限定", E.Num("st_cal_h", 5, 86), 170, "mm"),
-                    E.Row("连续次品判定-相同BIN 阈值", E.Num("st_cont_bin", 5, 86, "0"), 200, "次"),
-                    E.Chk("st_cont_same_bin", "连续次品判定-相同BIN", true)),
-                E.Group("加热与温度",
-                    E.Chk("st_arm_hold", "测试臂提起等待（加热模式保持 IC 温度稳定）", false)),
-                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", wqzForm.Apply)));
-        }
-
-        private static Element SafeArm()
-        {
-            var wqzForm = Ops.PageForm("安全设定-上/下料臂", "sa_");
-            return E.V(
-                E.Group("偏移限定",
-                    E.Row("允许最小偏移", E.Num("sa_off_min", -5, 86), 150, "mm"),
-                    E.Row("允许最大偏移", E.Num("sa_off_max", 5, 86), 150, "mm")),
-                E.Group("吸取重试限定",
-                    E.Row("重试次数", E.Num("sa_retry_cnt", 3, 86, "0"), 150, "次"),
-                    E.Row("每次下行距离", E.Num("sa_retry_dz", 0.2, 86), 150, "mm")),
-                E.Group("其它",
-                    E.Chk("sa_last_seq", "最后料盘顺序放置IC@清出", false)),
-                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", wqzForm.Apply)));
-        }
-
-        private static Element SafeTray()
-        {
-            var wqzForm = Ops.PageForm("安全设定-进出盘", "sr_");
-            return E.V(
-                E.Group("进出盘设定",
-                    E.Chk("sr_manual_tray", "手动取盘（跳过IC）：Loader 上有【取料失败跳过】报警，盘空后需手动取走，不会自动换盘", false),
-                    E.Chk("sr_knock_loader", "启用上料盘敲击（选装）", false),
-                    E.Chk("sr_knock_auto", "启用自动盘敲击（选装）", false),
-                    E.Chk("sr_fwd_pick", "删料后正向取料@入料盘", true)),
-                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", wqzForm.Apply)));
-        }
-
-        // ==================================================================
-        //  3. 温度偏移
-        // ==================================================================
-        public static Element MaintTempOffset()
-        {
-            var wqzForm = Ops.PageForm("温度偏移", "mt_");
-            string[] zones = { "预热盘 #1", "预热盘 #2", "小车 A", "小车 B",
-                               "测试臂 A1", "测试臂 A2", "测试臂 A3", "测试臂 A4",
-                               "测试臂 A5", "测试臂 A6", "测试臂 A7", "测试臂 A8",
-                               "测试臂 B1", "测试臂 B2", "测试臂 B3", "测试臂 B4",
-                               "测试臂 B5", "测试臂 B6", "测试臂 B7", "测试臂 B8",
-                               "测试板 1", "测试板 2" };
-
-            var g = E.Grid().Cols("190", "112", "112");
-            g.Add(Head("目标区域"), 0, 0);
-            g.Add(Head("偏移值(°C)"), 0, 1);
-            g.Add(Head("实测值(°C)"), 0, 2);
-            for (int r = 0; r < zones.Length; r++)
-            {
-                g.Add(Label(zones[r]), r + 1, 0);
-                g.Add(Cell(E.Num("mt_off_" + r, 0, 104)), r + 1, 1);
-                g.Add(Cell(E.Live(mm => mm.TempSet, "0.0", 104, E.BandGrey, E.P, 11.5)), r + 1, 2);
-            }
-
-            return E.V(
-                E.T("温度偏移值校准参数：设定高温模式下各个目标区域的温度偏差值。当目标温度比设定温度低时，设定值为正值，否则为负值。" +
-                    "如目标区域实际测定值为 80 度而设定值为 95 度，则在该区域的偏移值处输入 +15。", 11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Spacer(10),
-                E.Group("校准方式",
-                    E.Radios("mt_mode", new[] { "1点", "2点", "3点" }, false, 0),
-                    E.Spacer(6),
-                    E.T("1点：温度控制器在加热模式时对温度的校准只使用基点#3的偏移值。\n" +
-                        "2点：根据基点#1和基点#3的偏移值计算目标温度偏移值。\n" +
-                        "3点：分为 2 个范围，目标温度小于基点#2时根据基点#1和#2计算，大于基点#2时根据基点#2和#3计算。",
-                        11.5, E.Sec, false, TextWrapping.Wrap)),
-                E.Group("基点设定（要求 基点#1 < 基点#2 < 基点#3）",
-                    E.Grid().Cols("210", "210", "210")
-                        .Add(E.Row("基点#1", E.Num("mt_b1", 25, 96), 92), 0, 0)
-                        .Add(E.Row("基点#2", E.Num("mt_b2", 60, 96), 92), 0, 1)
-                        .Add(E.Row("基点#3", E.Num("mt_b3", 95, 96), 92), 0, 2)
-                        .Add(E.Row("基点#4", E.Num("mt_b4", 125, 96), 92), 1, 0)),
-                E.Group("目标区域偏移值", E.Scroll(g, 380, System.Windows.Controls.ScrollBarVisibility.Disabled,
-                    System.Windows.Controls.ScrollBarVisibility.Auto)),
-                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", wqzForm.Apply)));
-        }
-
-        // ==================================================================
-        //  4. 接触力校准 (image104)
-        // ==================================================================
+    // ==================================================================
+    //  2. 接触力校准 (image104)
+    // ==================================================================
         public static Element MaintForce()
         {
             var wqzForm = Ops.PageForm("接触力校准", "mf_");
@@ -522,9 +380,9 @@ namespace HandlerGuide.ViewModels
                             11.5, E.Sec, false, TextWrapping.Wrap))));
         }
 
-        // ==================================================================
-        //  5. 用户管理 (image105)
-        // ==================================================================
+    // ==================================================================
+    //  3. 用户管理 (image105)
+    // ==================================================================
         public static Element MaintUser()
         {
             var wqzForm = Ops.PageForm("用户 / 权限", "mu_");
@@ -599,39 +457,6 @@ namespace HandlerGuide.ViewModels
                         "添加用户：在“用户名”和“口令”文本框中输入信息后点击[修改]按钮即可添加新用户，用户名不分大小写，不可与内置用户名相同，前后空字符会被自动截断去除。\n" +
                         "删除用户 / 更改信息：在列表中选择欲操作对象后操作。导入 / 导出：支持导出和导入用户管理及权限管理文件。",
                         11.5, E.Sec, false, TextWrapping.Wrap)));
-        }
-
-        // ==================================================================
-        //  6. 信号灯设定 (image106)
-        // ==================================================================
-        public static Element MaintLight()
-        {
-            var wqzForm = Ops.PageForm("信号灯设定", "ml_");
-            string[] states = { "运行", "卡料", "暂停", "警告" };
-            string[] opts = { "OFF", "BLINK", "ON" };
-            int[,] def = { { 0, 0, 2, 0 }, { 1, 0, 0, 2 }, { 0, 2, 0, 0 }, { 0, 1, 0, 2 } };
-
-            var g = E.Grid().Cols("120", "130", "130", "130", "130");
-            g.Add(Head("状态"), 0, 0);
-            g.Add(Head("红色"), 0, 1);
-            g.Add(Head("黄色"), 0, 2);
-            g.Add(Head("绿色"), 0, 3);
-            g.Add(Head("蜂鸣器"), 0, 4);
-            for (int r = 0; r < states.Length; r++)
-            {
-                g.Add(Label(states[r], 28), r + 1, 0);
-                for (int c = 0; c < 4; c++)
-                    g.Add(Cell(E.Cmb("ml_" + r + "_" + c, opts, 120, def[r, c]), 28), r + 1, c + 1);
-            }
-
-            return E.V(
-                
-                E.Group("信号灯定义", g),
-                E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", Ops.ApplyLightSetting)),
-                E.Group("说明",
-                    E.T("状态：表示设备处于某种状态时，包括运行、卡料、暂停和警告。\n" +
-                        "红色 / 黄色 / 绿色：可定义信号灯的三种颜色灯在对应状态下所触发的状态，包括长亮(ON)、闪烁(BLINK)以及不激活(OFF)。\n" +
-                        "蜂鸣器：可定义信号灯蜂鸣器的状态，是否蜂鸣。", 11.5, E.Sec, false, TextWrapping.Wrap)));
         }
     }
 }

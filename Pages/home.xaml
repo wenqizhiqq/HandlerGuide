@@ -1,0 +1,9 @@
+<vm:StackElement xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:vm="clr-namespace:HandlerGuide.ViewModels;assembly=HandlerGuide"
+                 xmlns:vw="clr-namespace:HandlerGuide.Views;assembly=HandlerGuide">
+
+    <!-- 温启志 18719361399 · home：复用 MainScreen() 生成（命令中心 + 操作面板 + 四列布局） -->
+    <vw:D Method="MainScreen" />
+
+</vm:StackElement>
