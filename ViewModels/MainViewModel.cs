@@ -118,7 +118,7 @@ namespace HandlerGuide.ViewModels
         public List<PageVm> AllPages { get; } = new List<PageVm>();
         public PageVm HomePage { get; private set; }
         public PageVm ManualPage { get; private set; }
-        /// <summary>SECS/GEM 通讯页（工具条右侧「通讯」按钮直达）。温启志 18719361399</summary>
+        /// <summary>SECS/GEM 通讯页（工具条「通讯」组，位于设定模式左侧）。温启志 18719361399</summary>
         public PageVm SecsGemPage { get; private set; }
         public ToolGroupVm BoardGroup { get; private set; }
 
@@ -164,14 +164,14 @@ namespace HandlerGuide.ViewModels
             // 先注册运动页的具名实时信号（静态构造函数不会因方法组引用而触发）
             MotionPages.EnsureRegistered();
 
+            // SECS/GEM 通讯页先建，供工具条「通讯」组（设定模式左侧）直接引用，避免出现重复页面实例
+            SecsGemPage = PageCatalog.SecsGem(this);
             Groups = PageCatalog.Toolbar(this);
             HomePage = PageCatalog.Home(this);
             ManualPage = PageCatalog.Manual(this);
-            SecsGemPage = PageCatalog.SecsGem(this);
             BoardGroup = Groups.FirstOrDefault(g => g.Name == "显示控制板");
             AllPages.Add(HomePage);
             AllPages.Add(ManualPage);
-            AllPages.Add(SecsGemPage);
             foreach (var g in Groups)
             {
                 if (g.Direct != null) AllPages.Add(g.Direct);

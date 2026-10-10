@@ -189,13 +189,6 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <Border Width="1" Background="{StaticResource DividerBrush}" Margin="8,4" />
-
-                    <!-- 右侧快捷操作：SECS/GEM 通讯（温启志 18719361399）保留在工具条原位；
-                         「保存 / 召回 / 键盘锁定 / 语言 / 关闭程序」已上移到顶部标题栏，与「说明书」同排 -->
-                    <Button Style="{StaticResource MiniButton}" Content="通讯" Padding="18,6"
-                            ToolTip="SECS/GEM 通讯（HSMS-SS）" Command="{Binding SecsGemCommand}" />
-
                     <!-- 显示控制板 --><!--
                     <ToggleButton x:Name="boardBtn" Cursor="Hand" Margin="2,0"
                                   IsChecked="{Binding BoardGroup.IsOpen, Mode=TwoWay}">

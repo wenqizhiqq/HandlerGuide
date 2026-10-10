@@ -127,6 +127,15 @@ namespace HandlerGuide.ViewModels
                 }
             });
 
+            // 温启志 18719361399 · SECS/GEM 通讯（HSMS-SS）：置于「设定模式」左侧，点击直达通讯页
+            list.Add(new ToolGroupVm
+            {
+                Name = "通讯",
+                Icon = "🔗",
+                Desc = "SECS/GEM（HSMS-SS）通讯：连接设定、连接状态、常用报文收发与实时报文日志。",
+                Direct = main.SecsGemPage
+            });
+
             list.Add(new ToolGroupVm { Name = "设定模式", Icon = "🗂️", Desc = "设定当前设备的工作模式（正常 / 练习 / 空跑 / 清除 / 维护）。", Direct = D("mode", "🗂️", "设定模式", "设定当前设备的工作模式（正常 / 练习 / 空跑 / 清除 / 维护）。", null) });
             list.Add(new ToolGroupVm { Name = "使能设定", Icon = "🎚️", Desc = "设定设备各部分（测试臂 Nest / 单元 / Site）的使能是否打开。", Direct = D("enable", "🎚️", "使能设定", "设定设备各部分（测试臂 Nest / 单元 / Site）的使能是否打开。", null) });
             list.Add(new ToolGroupVm { Name = "温控设定", Icon = "🌡️", Desc = "选择加热器的工作条件（室温 / 高温）。", Direct = D("tempctl", "🌡️", "温控设定", "选择加热器的工作条件（室温 / 高温）。", null) });
@@ -184,7 +193,7 @@ namespace HandlerGuide.ViewModels
                  "原厂《Pick and Place Handler 9000 用户手册》全文。",
                  null);
 
-        /// <summary>SECS/GEM 通讯页（入口在命令中心工具条右侧「通讯」按钮，温启志 18719361399）。</summary>
+        /// <summary>SECS/GEM 通讯页（入口在命令中心工具条「通讯」组，位于设定模式左侧，温启志 18719361399）。</summary>
         public static PageVm SecsGem(MainViewModel main)
             => D("secs_gem", "🔗", "SECS/GEM 通讯",
                  "SECS-II / HSMS-SS / GEM 通讯：连接设定、连接状态、常用报文收发与实时报文日志。",
