@@ -977,6 +977,50 @@ namespace HandlerGuide.ViewModels
         public Brush Fill { get => _fill; set => Set(ref _fill, value); }
     }
 
+    // 温启志 18719361399 · 类 public class PolyItem : DiagramItem
+    /// <summary>
+    /// 任意多边形（斜二测 / 透视场景用）。Points 按**画布绝对坐标**给，
+    /// Left/Top 自动取包围盒左上角 —— 这样把多边形挂到 Canvas 上时，
+    /// 它刚好落在给定坐标处，不用自己去减偏移。
+    /// 「3D整机图」用它把真机料盘布局投影到斜二测渲染图上（料盘在图上呈平行四边形）。
+    /// </summary>
+    public class PolyItem : DiagramItem
+    {
+        private PointCollection _points;
+        private Brush _fill;
+        private double _minX, _minY;
+
+        public PointCollection Points
+        {
+            get => _points;
+            set
+            {
+                _points = value;
+                _minX = double.MaxValue;
+                _minY = double.MaxValue;
+                if (value != null)
+                {
+                    foreach (var p in value)
+                    {
+                        if (p.X < _minX) _minX = p.X;
+                        if (p.Y < _minY) _minY = p.Y;
+                    }
+                }
+                if (_minX == double.MaxValue) { _minX = 0; _minY = 0; }
+                Raise(nameof(Points));
+                Raise(nameof(Left));
+                Raise(nameof(Top));
+            }
+        }
+
+        public Brush Fill { get => _fill; set => Set(ref _fill, value); }
+        public Brush Stroke { get; set; }
+        public double StrokeThickness { get; set; } = 1;
+
+        public override double Left => _minX;
+        public override double Top => _minY;
+    }
+
     // 温启志 18719361399 · 类 public class TextItem : DiagramItem
     public class TextItem : DiagramItem
     {

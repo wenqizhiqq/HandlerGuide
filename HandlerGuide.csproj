@@ -43,6 +43,14 @@
     <None Update="image\handler_3d.jpg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <!-- 三温标准机 整机俯视图（空机台、无料盘），用于「模块平面仿真」页的俯视图标签：
+          1696×1376 JPEG，运行时由 LayoutPages.BuildLayoutCanvasTop() 以
+          pack://siteoforigin:,,,/image/handler_top.jpg 加载为画布底图，
+          再由代码按真机量测坐标把 14 个料盘（上排 6 深盘 / 中排 5 深盘 / 左下 3 绿盘）
+          画在底图上并做走料动画。 -->
+    <None Update="image\handler_top.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>

@@ -493,6 +493,13 @@
                  Fill="{Binding Fill, Converter={StaticResource UnsetIfNull}}" />
     </DataTemplate>
 
+    <DataTemplate DataType="{x:Type vm:PolyItem}">
+        <Polygon Points="{Binding Points}"
+                 Fill="{Binding Fill, Converter={StaticResource UnsetIfNull}}"
+                 Stroke="{Binding Stroke, Converter={StaticResource UnsetIfNull}}"
+                 StrokeThickness="{Binding StrokeThickness}" />
+    </DataTemplate>
+
     <DataTemplate DataType="{x:Type vm:TextItem}">
         <TextBlock Text="{Binding Text}" FontSize="{Binding TextSize}"
                    Foreground="{Binding Foreground, Converter={StaticResource UnsetIfNull}}"
