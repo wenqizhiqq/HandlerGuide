@@ -384,6 +384,12 @@
                 ToolTip="{Binding ToolTip}" />
     </DataTemplate>
 
+    <DataTemplate DataType="{x:Type vm:VisibleElement}">
+        <ContentControl Content="{Binding Child}"
+                        Visibility="{Binding Vis}"
+                        HorizontalAlignment="Stretch" />
+    </DataTemplate>
+
     <DataTemplate DataType="{x:Type vm:DisplayElement}">
         <Border Background="{Binding Background}"
                 BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"

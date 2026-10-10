@@ -365,6 +365,10 @@ namespace HandlerGuide.ViewModels
         public static LiveLampElement LiveLamp(Func<MachineModel, bool> get, bool isRed = false, bool square = false, double size = 13)
             => new LiveLampElement(get, isRed, square, size);
 
+        /// <summary>按条件实时显示 / 隐藏一段内容（条件每 tick 重算；用于按接口方式切换页面区块）。</summary>
+        public static VisibleElement ShowIf(Func<MachineModel, bool> pred, Element content)
+            => new VisibleElement(pred, content);
+
         public static DisplayElement Display(string text, double w = 0, Brush bg = null, Brush fg = null,
             TextAlignment ta = TextAlignment.Center, double fs = 12.5)
             => new DisplayElement(text, w, bg ?? BandGrey, fg ?? P, ta, fs);

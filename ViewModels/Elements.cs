@@ -711,6 +711,42 @@ namespace HandlerGuide.ViewModels
         }
     }
 
+    // 温启志 18719361399 · 类 public class VisibleElement : Element, ILiveValue
+    /// <summary>
+    /// 按模型条件实时显示 / 隐藏的一段内容（由 LiveRegistry 每 tick 重算条件）。
+    /// 用于按接口方式（TTL / GPIB / RS232 / TCP）切换页面区块：
+    /// 各区块一次性建好，只有命中条件的那个可见，切换时不需要重建页面。
+    /// </summary>
+    public class VisibleElement : Element, ILiveValue
+    {
+        private Func<MachineModel, bool> _get;
+        private bool _on = true;
+
+        public VisibleElement() { }
+
+        public VisibleElement(Func<MachineModel, bool> get, Element child)
+        {
+            _get = get;
+            Child = child;
+            LiveRegistry.Register(this);
+            Refresh();
+        }
+
+        /// <summary>被包裹的内容。</summary>
+        public Element Child { get; set; }
+
+        /// <summary>视图层绑定目标：命中条件 Visible，否则 Collapsed。</summary>
+        public Visibility Vis => _on ? Visibility.Visible : Visibility.Collapsed;
+
+        public bool IsOn { get => _on; private set { if (Set(ref _on, value)) Raise(nameof(Vis)); } }
+
+        public void Refresh()
+        {
+            try { IsOn = _get != null ? _get(MachineModel.Instance) : true; }
+            catch { IsOn = true; }
+        }
+    }
+
     // 温启志 18719361399 · 类 public class DisplayElement : Element
     public class DisplayElement : Element
     {

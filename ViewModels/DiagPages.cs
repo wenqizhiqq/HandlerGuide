@@ -600,12 +600,78 @@ namespace HandlerGuide.ViewModels
             ttl.Add(TextCell("动态刷新", E.CardBg, 26, TextAlignment.Right), 12, 0);
             ttl.Add(LampCell(E.ClickLamp("tio_dyn", false, true, 14), 26), 12, 1);
 
-            var left = E.V(
+            // ---- 接口方式选择（与「测试接口」页共用同一个 ti_type 键，改哪边都同步）----
+            var waySel = E.H(
+                E.T("接口方式：", 12, E.Sec),
+                E.SpacerW(4),
+                E.Radios("ti_type", new[] { "TTL", "GPIB", "RS232", "TCP" }, false),
+                E.SpacerW(12),
+                E.T("当前：", 12, E.Sec),
+                E.Live(_ => TestInterfaceService.WayName, null, 80, E.BandBlue, E.P, 12.5));
+
+            // ---- ① TTL 调试面板：测试位矩阵 + TTL-接口 灯阵 ----
+            var ttlPanel = E.V(
                 ck,
                 E.Spacer(8),
                 E.Btn("SOT", Ops.TestIo_Sot, "PrimaryButton", 12),
                 E.Spacer(8),
-                E.Group("TTL-接口", ttl));
+                E.Group("TTL-接口", ttl),
+                E.Spacer(8),
+                E.Group("TTL 说明",
+                    E.T("SOT 出（OUT 位 40ms 脉冲），EOT / DUT 入（20ms 轮询，跳变才上报）。灯位号在「测试接口」页的 TTL SOT / EOT / DUT 位里设。",
+                        11.5, E.Sec, false, TextWrapping.Wrap)));
+
+            // ---- ② RS232 调试面板 ----
+            var rs232Panel = E.V(
+                E.Group("RS232 串口参数",
+                    E.Row("串口端口号", E.Cmb("ti_com", TestInterfaceService.AvailablePorts(), 150), 110),
+                    E.Row("波特率", E.Cmb("ti_baud", new[] { "9600", "19200", "38400", "57600", "115200" }, 150), 110),
+                    E.Row("数据位", E.Cmb("ti_data", new[] { "7", "8" }, 150), 110),
+                    E.Row("停止位", E.Cmb("ti_stop", new[] { "1", "2" }, 150), 110),
+                    E.Row("校验值", E.Cmb("ti_parity", new[] { "None", "Odd", "Even" }, 150), 110),
+                    E.Spacer(8),
+                    E.H(E.Btn("打开串口", TestInterfaceService.Connect, "PrimaryButton", 12),
+                        E.Btn("关闭串口", TestInterfaceService.Disconnect, "PrimaryButton", 12))),
+                E.Spacer(8),
+                E.Group("RS232 说明",
+                    E.T("按上面参数打开真实串口，收发内容显示在右侧日志里。改完参数要先「关闭串口」再「打开串口」才会生效。",
+                        11.5, E.Sec, false, TextWrapping.Wrap)));
+
+            // ---- ③ TCP 调试面板 ----
+            var tcpPanel = E.V(
+                E.Group("TCP 连接参数",
+                    E.Row("地址", E.Text("ti_ip", "127.0.0.1", 150), 110),
+                    E.Row("端口", E.Num("ti_port", 5001, 120, "0", 1, 65535), 110),
+                    E.Row("本机角色", E.Cmb("ti_role", new[] { "客户端（主动连测试机）", "服务端（等测试机连入）" }, 230), 110),
+                    E.Spacer(8),
+                    E.H(E.Btn("连接", TestInterfaceService.Connect, "PrimaryButton", 12),
+                        E.Btn("断开", TestInterfaceService.Disconnect, "PrimaryButton", 12))),
+                E.Spacer(8),
+                E.Group("TCP 说明",
+                    E.T("客户端模式由本机主动连测试机的 IP:端口；服务端模式监听本机端口、等测试机连入（建链最长等「超时」设定的毫秒数）。",
+                        11.5, E.Sec, false, TextWrapping.Wrap)));
+
+            // ---- ④ GPIB 调试面板 ----
+            var gpibPanel = E.V(
+                E.Group("GPIB 参数",
+                    E.Row("接口地址", E.Num("ti_gpib", 11, 120, "0", 0, 30), 110),
+                    E.Spacer(8),
+                    E.H(E.Btn("连接", TestInterfaceService.Connect, "PrimaryButton", 12),
+                        E.Btn("断开", TestInterfaceService.Disconnect, "PrimaryButton", 12),
+                        E.MiniBtn("*IDN? 查询", () => Ops.TestIo_Send("*IDN?")))),
+                E.Spacer(8),
+                E.Group("GPIB 说明",
+                    E.T("资源串按 GPIB0::地址::INSTR 生成；优先用 VISA（visa32.dll），装不到时自动退回 NI-488.2（gpib-32.dll）。",
+                        11.5, E.Sec, false, TextWrapping.Wrap)));
+
+            // ---- 按接口方式实时切换（VisibleElement 每 tick 重算条件，切换不用重建页面）----
+            var left = E.V(
+                waySel,
+                E.Spacer(8),
+                E.ShowIf(_ => TestInterfaceService.Way == TestInterfaceService.WayTtl, ttlPanel),
+                E.ShowIf(_ => TestInterfaceService.Way == TestInterfaceService.WayGpib, gpibPanel),
+                E.ShowIf(_ => TestInterfaceService.Way == TestInterfaceService.WayRs232, rs232Panel),
+                E.ShowIf(_ => TestInterfaceService.Way == TestInterfaceService.WayTcp, tcpPanel));
 
             // 温启志 18719361399 · 收发日志：长文本需换行 + 左对齐
             var logEl = E.Live(_ => TestInterfaceService.LogText, null, 330, E.CardBg, E.P, 11.5);
@@ -637,7 +703,8 @@ namespace HandlerGuide.ViewModels
             return E.V(
                 E.Grid().Cols("*", "400").Add(left, 0, 0).Add(right, 0, 1),
                 E.Group("说明",
-                    E.T("[SOT] 按钮可手动激活开始测试信号：① 在需要测试的测试位上选择激活；② 按下 [SOT] 按钮激活测试过程；"
+                    E.T("调试面板跟随上方「接口方式」自动切换：TTL / GPIB / RS232 / TCP 各一套，切换即时生效、不用重进页面。\n"
+                        + "[SOT] 按钮可手动激活开始测试信号：① 在需要测试的测试位上选择激活；② 按下 [SOT] 按钮激活测试过程；"
                         + "③ 在测试状态中检查测试反馈，测试成功后测试结果反馈到该框内。\n"
                         + "报文收发走真实通道（TCP / RS232 / GPIB，TTL 走 DIO 位），收发内容与十六进制原样显示在右侧日志中。\n"
                         + "动态刷新：当测试接口板为锁定硬件版本时，关闭动态刷新将显示最后一次刷新的状态，打开则实时显示输入状态。",

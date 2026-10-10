@@ -295,16 +295,49 @@ namespace HandlerGuide.ViewModels
             logEl.TextHAlign = HorizontalAlignment.Left;
             logEl.Wrap = TextWrapping.Wrap;
 
-            var conn = E.Group("连接设定（真实通讯）",
-                E.Row("TCP 地址", E.Text("ti_ip", "127.0.0.1", 150), 96),
-                E.Row("TCP 端口", E.Num("ti_port", 5001, 110, "0", 1, 65535), 96),
-                E.Row("本机角色", E.Cmb("ti_role", new[] { "客户端（主动连测试机）", "服务端（等测试机连入）" }, 230), 96),
-                E.Row("串口端口号", E.Cmb("ti_com", TestInterfaceService.AvailablePorts(), 150), 96),
-                E.Row("报文结束符", E.Cmb("ti_delim", new[] { "CR+LF", "CR", "LF", "无结束符" }, 150), 96),
-                E.Row("TTL SOT 位", E.Num("ti_sotbit", 0, 110, "0", 0, 31), 96),
-                E.Row("TTL EOT 位", E.Num("ti_eotbit", 1, 110, "0", 0, 31), 96),
-                E.Row("TTL DUT 位", E.Num("ti_dutbit", 2, 110, "0", 0, 31), 96));
+            // ---- ① TTL / DIO ----
+            var ttlGroup = E.Group("TTL / DIO",
+                E.Row("TTL 接口类型", E.Cmb("ti_ttl", Enumerable.Range(1, 16).Select(i => "DIO Type " + i).ToArray(), 160), 110),
+                E.T("（在“维护配置”->“DIO设定”中定义，总共可定义 16 种）", 11, E.Sec, false, TextWrapping.Wrap),
+                E.Spacer(8),
+                E.Row("SOT 输出位", E.Num("ti_sotbit", 0, 110, "0", 0, 31), 110),
+                E.Row("EOT 输入位", E.Num("ti_eotbit", 1, 110, "0", 0, 31), 110),
+                E.Row("DUT 输入位", E.Num("ti_dutbit", 2, 110, "0", 0, 31), 110),
+                E.T("SOT 由运控卡输出（40ms 脉冲）；EOT / DUT 由运控卡输入（20ms 轮询，跳变才上报）。", 11, E.Sec, false, TextWrapping.Wrap));
 
+            // ---- ② GPIB ----
+            var gpibGroup = E.Group("GPIB",
+                E.Row("接口地址", E.Num("ti_gpib", 11, 90, "0", 0, 30), 110),
+                E.T("资源串按 GPIB0::地址::INSTR 生成；需装 NI-VISA / Keysight IO Libraries，或 NI-488.2。", 11, E.Sec, false, TextWrapping.Wrap));
+
+            // ---- ③ RS232 ----
+            var rs232Group = E.Group("RS232",
+                E.Row("串口端口号", E.Cmb("ti_com", TestInterfaceService.AvailablePorts(), 150), 110),
+                E.Row("波特率", E.Cmb("ti_baud", new[] { "9600", "19200", "38400", "57600", "115200" }, 130), 110),
+                E.Row("数据位", E.Cmb("ti_data", new[] { "7", "8" }, 130), 110),
+                E.Row("停止位", E.Cmb("ti_stop", new[] { "1", "2" }, 130), 110),
+                E.Row("校验值", E.Cmb("ti_parity", new[] { "None", "Odd", "Even" }, 130), 110));
+
+            // ---- ④ TCP ----
+            var tcpGroup = E.Group("TCP",
+                E.Row("地址", E.Text("ti_ip", "127.0.0.1", 150), 110),
+                E.Row("端口", E.Num("ti_port", 5001, 120, "0", 1, 65535), 110),
+                E.Row("本机角色", E.Cmb("ti_role", new[] { "客户端（主动连测试机）", "服务端（等测试机连入）" }, 230), 110));
+
+            // ---- 报文格式：只有报文通道（GPIB / RS232 / TCP）需要；TTL 走 IO 位，不显示 ----
+            var delimGroup = E.Group("报文格式",
+                E.Row("报文结束符", E.Cmb("ti_delim", new[] { "CR+LF", "CR", "LF", "无结束符" }, 150), 110),
+                E.T("发送报文时自动追加在末尾。TTL 走 IO 位、没有报文，所以选 TTL 时本组不显示。", 11, E.Sec, false, TextWrapping.Wrap));
+
+            // ---- 左栏：只显示当前接口方式对应的那一块（VisibleElement 每 tick 重算条件）----
+            var left = E.V(
+                E.ShowIf(_ => TestInterfaceService.Way == TestInterfaceService.WayTtl, ttlGroup),
+                E.ShowIf(_ => TestInterfaceService.Way == TestInterfaceService.WayGpib, gpibGroup),
+                E.ShowIf(_ => TestInterfaceService.Way == TestInterfaceService.WayRs232, rs232Group),
+                E.ShowIf(_ => TestInterfaceService.Way == TestInterfaceService.WayTcp, tcpGroup),
+                E.ShowIf(_ => TestInterfaceService.Way != TestInterfaceService.WayTtl, delimGroup));
+
+            // ---- 右栏：连接状态（四种方式共用）----
             var status = E.Group("连接状态",
                 E.H(E.LiveLamp(_ => TestInterfaceService.IsConnected, false, true, 14),
                     E.SpacerW(6),
@@ -330,18 +363,7 @@ namespace HandlerGuide.ViewModels
                     E.Spacer(6),
                     E.Chk("ti_binerr", "Type 不停机@BinErr（勾选后测到 ErrBin 不停机报警）", true)),
                 E.Grid().Cols("*", "24", "*")
-                    .Add(E.Group("GPIB / TTL",
-                        E.Row("GPIB 接口地址", E.Num("ti_gpib", 11, 90, "0", 0, 30), 120),
-                        E.Spacer(6),
-                        E.Row("TTL 接口类型", E.Cmb("ti_ttl", Enumerable.Range(1, 16).Select(i => "DIO Type " + i).ToArray(), 160), 120),
-                        E.T("（在“维护配置”->“DIO设定”中定义，总共可定义 16 种）", 11, E.Sec, false, TextWrapping.Wrap)), 0, 0)
-                    .Add(E.Group("RS232",
-                        E.Row("波特率", E.Cmb("ti_baud", new[] { "9600", "19200", "38400", "57600", "115200" }, 130), 80),
-                        E.Row("数据位", E.Cmb("ti_data", new[] { "7", "8" }, 130), 80),
-                        E.Row("停止位", E.Cmb("ti_stop", new[] { "1", "2" }, 130), 80),
-                        E.Row("校验值", E.Cmb("ti_parity", new[] { "None", "Odd", "Even" }, 130), 80)), 0, 2),
-                E.Grid().Cols("*", "24", "*")
-                    .Add(conn, 0, 0)
+                    .Add(left, 0, 0)
                     .Add(status, 0, 2),
                 E.Spacer(8),
                 logBox,
@@ -353,11 +375,11 @@ namespace HandlerGuide.ViewModels
                         .Add(E.T("开测延时", 12.5, E.P, ta: TextAlignment.Right).Margin(0, 0, 10, 0), 0, 3)
                         .Add(E.Num("ti_sotdelay", 10, 120, "0"), 0, 4)),
                 E.Group("说明",
-                    E.T("“测试接口”窗口中的 Bin F% 报警 “IC数量” 设定：当数量为零时，关闭对 Bin F% 的报警。\n"
-                      + "真实通讯：本页参数决定实际通道 —— TCP 默认由本机作客户端主动连测试机（也可选服务端等待连入）；"
-                      + "RS232 走所选串口 / 波特率 / 数据位 / 停止位 / 校验值；TTL 用运控卡 DIO 位（SOT 出，EOT / DUT 入）；"
-                      + "GPIB 走 VISA（visa32.dll），未安装时自动退回 NI-488.2（gpib-32.dll）。"
-                      + "点「应用」写入 params.json，点「连接」按当前参数建立真实链路。",
+                    E.T("本页按「接口方式」只显示对应那一块：TTL 显示 IO 位设定，GPIB 显示接口地址，RS232 显示串口参数，TCP 显示地址 / 端口 / 角色；"
+                      + "报文结束符只在报文通道（GPIB / RS232 / TCP）出现。\n"
+                      + "真实通讯：点「应用」写入 params.json，点「连接」按当前参数建立真实链路 —— "
+                      + "TCP 默认由本机作客户端主动连测试机（也可选服务端等待连入）；RS232 走所选串口；"
+                      + "TTL 用运控卡 DIO 位（SOT 出，EOT / DUT 入）；GPIB 优先 VISA（visa32.dll），装不到时自动退回 NI-488.2（gpib-32.dll）。",
                         11.5, E.Sec, false, TextWrapping.Wrap)),
                 E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", wqzForm.Apply)));
         }
