@@ -288,8 +288,43 @@ namespace HandlerGuide.ViewModels
         {
             var m = E.M;
             var wqzForm = Ops.PageForm("测试接口", "ti_");
+
+            // 温启志 18719361399 · 收发日志：长文本，需要换行 + 左对齐（LiveElement 默认居中且不换行）
+            var logEl = E.Live(_ => TestInterfaceService.LogText, null, 1000, E.CardBg, E.P, 11.5);
+            logEl.Align = TextAlignment.Left;
+            logEl.TextHAlign = HorizontalAlignment.Left;
+            logEl.Wrap = TextWrapping.Wrap;
+
+            var conn = E.Group("连接设定（真实通讯）",
+                E.Row("TCP 地址", E.Text("ti_ip", "127.0.0.1", 150), 96),
+                E.Row("TCP 端口", E.Num("ti_port", 5001, 110, "0", 1, 65535), 96),
+                E.Row("本机角色", E.Cmb("ti_role", new[] { "客户端（主动连测试机）", "服务端（等测试机连入）" }, 230), 96),
+                E.Row("串口端口号", E.Cmb("ti_com", TestInterfaceService.AvailablePorts(), 150), 96),
+                E.Row("报文结束符", E.Cmb("ti_delim", new[] { "CR+LF", "CR", "LF", "无结束符" }, 150), 96),
+                E.Row("TTL SOT 位", E.Num("ti_sotbit", 0, 110, "0", 0, 31), 96),
+                E.Row("TTL EOT 位", E.Num("ti_eotbit", 1, 110, "0", 0, 31), 96),
+                E.Row("TTL DUT 位", E.Num("ti_dutbit", 2, 110, "0", 0, 31), 96));
+
+            var status = E.Group("连接状态",
+                E.H(E.LiveLamp(_ => TestInterfaceService.IsConnected, false, true, 14),
+                    E.SpacerW(6),
+                    E.Live(_ => TestInterfaceService.StateText, null, 300, E.BandGrey, E.P, 12.5)),
+                E.Spacer(4),
+                E.Live(_ => TestInterfaceService.CountText, null, 300, E.BandGrey, E.P, 12),
+                E.Spacer(4),
+                E.Live(_ => TestInterfaceService.Describe(), null, 380, E.BandGrey, E.Sec, 11.5),
+                E.Spacer(8),
+                E.H(E.Btn("连接", TestInterfaceService.Connect, "PrimaryButton", 12),
+                    E.Btn("断开", TestInterfaceService.Disconnect, "PrimaryButton", 12),
+                    E.MiniBtn("测试信息", TestInterfaceService.RequestTestInfo)));
+
+            var logBox = E.Group("收发日志（实时）",
+                E.Box(E.Scroll(logEl, 190, System.Windows.Controls.ScrollBarVisibility.Auto, System.Windows.Controls.ScrollBarVisibility.Auto),
+                    E.CardBg, Palette.LineGrey, 1, 3, new Thickness(8)),
+                E.H(E.MiniBtn("清空日志", TestInterfaceService.ClearLog),
+                    E.MiniBtn("导出日志", TestInterfaceService.ExportLog)));
+
             return E.V(
-                
                 E.Group("接口方式",
                     E.Radios("ti_type", new[] { "TTL", "GPIB", "RS232", "TCP" }, false),
                     E.Spacer(6),
@@ -305,6 +340,11 @@ namespace HandlerGuide.ViewModels
                         E.Row("数据位", E.Cmb("ti_data", new[] { "7", "8" }, 130), 80),
                         E.Row("停止位", E.Cmb("ti_stop", new[] { "1", "2" }, 130), 80),
                         E.Row("校验值", E.Cmb("ti_parity", new[] { "None", "Odd", "Even" }, 130), 80)), 0, 2),
+                E.Grid().Cols("*", "24", "*")
+                    .Add(conn, 0, 0)
+                    .Add(status, 0, 2),
+                E.Spacer(8),
+                logBox,
                 E.Group("定时设定 (ms)",
                     E.Grid().Cols("160", "130", "40", "160", "130")
                         .Add(E.T("超时", 12.5, E.P, ta: TextAlignment.Right).Margin(0, 0, 10, 0), 0, 0)
@@ -313,7 +353,12 @@ namespace HandlerGuide.ViewModels
                         .Add(E.T("开测延时", 12.5, E.P, ta: TextAlignment.Right).Margin(0, 0, 10, 0), 0, 3)
                         .Add(E.Num("ti_sotdelay", 10, 120, "0"), 0, 4)),
                 E.Group("说明",
-                    E.T("“测试接口”窗口中的 Bin F% 报警 “IC数量” 设定：当数量为零时，关闭对 Bin F% 的报警。", 11.5, E.Sec, false, TextWrapping.Wrap)),
+                    E.T("“测试接口”窗口中的 Bin F% 报警 “IC数量” 设定：当数量为零时，关闭对 Bin F% 的报警。\n"
+                      + "真实通讯：本页参数决定实际通道 —— TCP 默认由本机作客户端主动连测试机（也可选服务端等待连入）；"
+                      + "RS232 走所选串口 / 波特率 / 数据位 / 停止位 / 校验值；TTL 用运控卡 DIO 位（SOT 出，EOT / DUT 入）；"
+                      + "GPIB 走 VISA（visa32.dll），未安装时自动退回 NI-488.2（gpib-32.dll）。"
+                      + "点「应用」写入 params.json，点「连接」按当前参数建立真实链路。",
+                        11.5, E.Sec, false, TextWrapping.Wrap)),
                 E.H(E.MiniBtn("恢复", wqzForm.Restore), E.Btn("应用", wqzForm.Apply)));
         }
 

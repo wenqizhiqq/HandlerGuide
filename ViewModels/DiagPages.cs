@@ -607,26 +607,40 @@ namespace HandlerGuide.ViewModels
                 E.Spacer(8),
                 E.Group("TTL-接口", ttl));
 
+            // 温启志 18719361399 · 收发日志：长文本需换行 + 左对齐
+            var logEl = E.Live(_ => TestInterfaceService.LogText, null, 330, E.CardBg, E.P, 11.5);
+            logEl.Align = TextAlignment.Left;
+            logEl.TextHAlign = HorizontalAlignment.Left;
+            logEl.Wrap = TextWrapping.Wrap;
+
             var right = E.V(
+                E.H(E.LiveLamp(_ => TestInterfaceService.IsConnected, false, true, 14),
+                    E.SpacerW(6),
+                    E.Live(_ => TestInterfaceService.StateText, null, 240, E.BandGrey, E.P, 12)),
+                E.Spacer(6),
+                E.H(E.Btn("连接", TestInterfaceService.Connect, "PrimaryButton", 12),
+                    E.Btn("断开", TestInterfaceService.Disconnect, "PrimaryButton", 12),
+                    E.MiniBtn("TestInfo", Ops.TestIo_TestInfo)),
+                E.Spacer(8),
                 E.H(E.T("msg:", 12, E.P), E.Text("tio_msg", "", 240)),
                 E.Spacer(6),
                 E.H(E.MiniBtn("Send", () => Ops.TestIo_Send(m.GetText("tio_msg"))),
                     E.MiniBtn("Clear", () => { m.SetText("tio_msg", ""); m.Log("信息", "清空发送内容"); })),
                 E.Spacer(6),
-                E.H(E.Cmb("tio_com", new[] { "COM1", "COM2", "COM3", "COM4" }, 120),
-                    E.MiniBtn("TestInfo", Ops.TestIo_TestInfo)),
+                E.H(E.Cmb("ti_com", TestInterfaceService.AvailablePorts(), 120),
+                    E.MiniBtn("清空日志", TestInterfaceService.ClearLog)),
                 E.Spacer(8),
-                E.Box(E.Scroll(E.Live(_ => Ops.TestIoRx, null, 330, E.CardBg, E.P, 11.5), 330,
-                        System.Windows.Controls.ScrollBarVisibility.Disabled,
+                E.Box(E.Scroll(logEl, 300, System.Windows.Controls.ScrollBarVisibility.Disabled,
                         System.Windows.Controls.ScrollBarVisibility.Auto),
                     E.CardBg, Palette.LineGrey, 1, 3, new Thickness(8)));
 
             return E.V(
                 E.Grid().Cols("*", "400").Add(left, 0, 0).Add(right, 0, 1),
                 E.Group("说明",
-                    E.T("[SOT] 按钮可手动激活开始测试信号：① 在需要测试的测试位上选择激活；② 按下 [SOT] 按钮激活测试过程；" +
-                        "③ 在测试状态中检查测试反馈，测试成功后测试结果反馈到该框内。\n" +
-                        "动态刷新：当测试接口板为锁定硬件版本时，关闭动态刷新将显示最后一次刷新的状态，打开则实时显示输入状态。",
+                    E.T("[SOT] 按钮可手动激活开始测试信号：① 在需要测试的测试位上选择激活；② 按下 [SOT] 按钮激活测试过程；"
+                        + "③ 在测试状态中检查测试反馈，测试成功后测试结果反馈到该框内。\n"
+                        + "报文收发走真实通道（TCP / RS232 / GPIB，TTL 走 DIO 位），收发内容与十六进制原样显示在右侧日志中。\n"
+                        + "动态刷新：当测试接口板为锁定硬件版本时，关闭动态刷新将显示最后一次刷新的状态，打开则实时显示输入状态。",
                         11.5, E.Sec, false, TextWrapping.Wrap)));
         }
     }

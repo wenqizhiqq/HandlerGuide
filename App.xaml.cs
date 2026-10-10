@@ -488,7 +488,7 @@ namespace HandlerGuide
                 Pump(5);
                 Chk("TickTestIoPulse 回落", () => { }, () => !mm.ReadOut(0));
                 Chk("TestIo_Send", () => Ops.TestIo_Send("SELFTEST"), () => Ops.TestIoRx.Contains("SELFTEST"));
-                Chk("TestIo_TestInfo", Ops.TestIo_TestInfo, () => Ops.TestIoRx.Contains("Ready"));
+                Chk("TestIo_TestInfo", Ops.TestIo_TestInfo, () => Ops.TestIoRx.Contains("测试系统信息"));
 
                 // ---------- 9. Bin / 视觉 / 清洁 ----------
                 Chk("ApplyBinYieldCtrl", Ops.ApplyBinYieldCtrl);

@@ -1449,22 +1449,32 @@ namespace HandlerGuide.ViewModels
 
         // ---------------- 测试系统 IO ----------------
 
-        private static string _tioRx = "（尚未通讯）";
+        /// <summary>测试状态反馈窗口里的文本（只读）——直接取自真实通讯服务的收发日志。</summary>
+        public static string TestIoRx => TestInterfaceService.LogText;
 
-        /// <summary>测试状态反馈窗口里的文本（只读）。</summary>
-        public static string TestIoRx => _tioRx;
+        private static double _tioSotPulse;
 
-        /// <summary>[SOT]：手动激活开始测试信号（脉冲 40ms，与手册一致）。</summary>
+        /// <summary>[SOT]：手动激活开始测试信号。TTL 走 OUT0 脉冲（40ms，与手册一致），其余通道发 SOT 报文。</summary>
         public static void TestIo_Sot()
         {
-            if (Mm.AnyAlarm()) { Warn("存在报警，请先解除报警"); return; }
+            if (TestInterfaceService.Way == TestInterfaceService.WayTtl)
+            {
+                if (Mm.AnyAlarm()) { Warn("存在报警，请先解除报警"); return; }
+                TestIo_SotPulse();
+                return;
+            }
+            TestInterfaceService.SendSot();
+        }
+
+        /// <summary>TTL 通道的 SOT 脉冲（OUT0 置位，40ms 后由快节拍回落）。</summary>
+        public static void TestIo_SotPulse()
+        {
             Mm.WriteOut(0, true);
             _tioSotPulse = 0.04;
+            TestInterfaceService.AddLog("[" + DateTime.Now.ToString("HH:mm:ss.fff") + "] → TTL : SOT（OUT0 脉冲 40ms）");
             Info("手动激活开始测试信号 SOT（OUT0 脉冲 40ms）");
             RaiseStatus();
         }
-
-        private static double _tioSotPulse;
 
         /// <summary>SOT 脉冲回落（快节拍驱动）。</summary>
         public static void TickTestIoPulse(double dt)
@@ -1474,35 +1484,11 @@ namespace HandlerGuide.ViewModels
             if (_tioSotPulse <= 0) { Mm.WriteOut(0, false); _tioSotPulse = 0; }
         }
 
-        /// <summary>[Send]：把 msg 文本按当前接口方式发出去（仿真里回显一条应答）。</summary>
-        public static void TestIo_Send(string msg)
-        {
-            if (string.IsNullOrEmpty(msg)) { Warn("发送内容为空"); return; }
-            int type = M.GetChoice("ti_type", 0);
-            string[] way = { "TTL", "GPIB", "RS232", "TCP" };
-            string w = way[Math.Max(0, Math.Min(3, type))];
-            _tioRx = "[" + DateTime.Now.ToString("HH:mm:ss") + "] → " + w + " : " + msg
-                   + "\n[" + DateTime.Now.ToString("HH:mm:ss") + "] ← " + w + " : ACK (0x06)";
-            Info("测试接口[" + w + "] 发送：" + msg);
-            RaiseStatus();
-        }
+        /// <summary>[Send]：把 msg 按当前接口方式**真实**发出去（TCP / RS232 / GPIB 走报文通道）。</summary>
+        public static void TestIo_Send(string msg) => TestInterfaceService.Send(msg);
 
-        /// <summary>[TestInfo]：读取测试系统信息。</summary>
-        public static void TestIo_TestInfo()
-        {
-            int type = M.GetChoice("ti_type", 0);
-            string[] way = { "TTL", "GPIB", "RS232", "TCP" };
-            string w = way[Math.Max(0, Math.Min(3, type))];
-            double to = M.GetNum("ti_timeout", 5000);
-            _tioRx = "[" + DateTime.Now.ToString("HH:mm:ss") + "] 测试系统信息（" + w + "）\n"
-                   + "  接口方式 : " + w + "\n"
-                   + "  超时设定 : " + to.ToString("0") + " ms\n"
-                   + "  开测延时 : " + M.GetNum("ti_sotdelay", 10).ToString("0") + " ms\n"
-                   + "  状态     : Ready\n"
-                   + "  Bin 反馈 : NT / NG / ERR 三态可用";
-            Info("读取测试系统信息完成（" + w + "）");
-            RaiseStatus();
-        }
+        /// <summary>[TestInfo]：读取测试系统信息（发查询并记录测试机的真实应答）。</summary>
+        public static void TestIo_TestInfo() => TestInterfaceService.RequestTestInfo();
 
         // ---------------- 工具条页面 ----------------
 
