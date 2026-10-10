@@ -1187,7 +1187,8 @@ namespace HandlerGuide.ViewModels
             }
 
             // ---- 真机料盘：按 TrayPlan 的平面坐标落点 ----
-            // 两套配色，和真机一致：深盘 = 近黑底 + 灰格纹；绿盘 = 墨绿底 + 青绿格纹
+            // 一张盘 = ①取放高亮底板 ②盘身 ③格子层 ④物料格（每个格子里一颗料）。
+            // 两套配色，和真机一致：深盘 = 近黑底 + 灰格；绿盘 = 墨绿底 + 青绿格
             // （颜色取自「满盘俯视图」对应区域的中位色）。
             var darkBody = new SolidColorBrush(Color.FromRgb(0x26, 0x28, 0x2E));
             var darkLine = new SolidColorBrush(Color.FromRgb(0x6E, 0x72, 0x7C));
@@ -1196,8 +1197,15 @@ namespace HandlerGuide.ViewModels
             var greenLine = new SolidColorBrush(Color.FromRgb(0x5B, 0x86, 0x7C));
             var greenEdge = new SolidColorBrush(Color.FromRgb(0x7F, 0xA8, 0x9A));
 
-            // 每个料盘的「取放高亮」底板：平时全透明，轮到它被取放时点亮
+            // 物料配色：待测（深盘里）= 亮青；已测 / 出料（绿盘里）= 亮绿
+            var devBlue = new SolidColorBrush(Color.FromRgb(0x3C, 0xC0, 0xF0));
+            var devGreen = new SolidColorBrush(Color.FromRgb(0x3A, 0xD3, 0x8E));
+
+            // 每个料盘的「取放高亮」底板（平时全透明，轮到它被取放时点亮）
             var trayHilite = new List<RectItem>();
+            // 每个料盘的物料格列表（按「从上到下、从左到右」排好序，动画里逐格增删）
+            var trayDevices = new List<List<RectItem>>();
+
             for (int i = 0; i < TrayPlan.Length; i++)
             {
                 var tp = TrayPlan[i];
@@ -1206,7 +1214,7 @@ namespace HandlerGuide.ViewModels
                 var line = tp.Green ? greenLine : darkLine;
                 var edge = tp.Green ? greenEdge : darkEdge;
 
-                // 取放高亮先加，压在盘身下面（外扩 3px，动画里改它的 Fill / Stroke）
+                // ① 取放高亮先加，压在盘身下面（外扩 3px，动画里改它的 Fill / Stroke）
                 var hi = new RectItem
                 {
                     X = x - 3, Y = y - 3, W = w + 6, H = h + 6,
@@ -1218,7 +1226,7 @@ namespace HandlerGuide.ViewModels
                 cv.Items.Add(hi);
                 trayHilite.Add(hi);
 
-                // 盘身
+                // ② 盘身
                 cv.Items.Add(new RectItem
                 {
                     X = x, Y = y, W = w, H = h,
@@ -1228,26 +1236,54 @@ namespace HandlerGuide.ViewModels
                     StrokeThickness = 1.2,
                 });
 
-                // 格纹：竖 6 道 + 横 12 道（真机盘面就是这种密格），四周留 2px 内缩不出框
-                const int NV = 6, NH = 12;
-                for (int c = 1; c <= NV; c++)
+                // ③ 格子层：用 DrawingBrush 按「一格」的尺寸平铺 —— 一张盘只占 1 个图元
+                //    就画出整片格子（深盘 5×10 格，绿盘 4×8 格，格子接近正方形）。
+                int cols = tp.Green ? 4 : 5;
+                int rows = tp.Green ? 8 : 10;
+                double cw = w / cols, ch = h / rows;
+                var pocket = new DrawingBrush
                 {
-                    double lx = x + w * c / (NV + 1.0);
-                    cv.Items.Add(new RectItem
+                    TileMode = TileMode.Tile,
+                    Viewport = new Rect(0, 0, cw, ch),
+                    ViewportUnits = BrushMappingMode.Absolute,
+                    Stretch = Stretch.Fill,          // 把「一格」的图形精确铺满一个 Viewport 瓷砖
+                    Drawing = new GeometryDrawing
                     {
-                        X = lx, Y = y + 2, W = 1, H = Math.Max(1, h - 4),
-                        Radius = 0, Fill = line,
-                    });
-                }
-                for (int r = 1; r <= NH; r++)
+                        Brush = body,
+                        Pen = new Pen(line, 1),
+                        Geometry = new RectangleGeometry(new Rect(0.5, 0.5, cw - 1, ch - 1)),
+                    },
+                };
+                cv.Items.Add(new RectItem
                 {
-                    double ly = y + h * r / (NH + 1.0);
-                    cv.Items.Add(new RectItem
+                    X = x, Y = y, W = w, H = h,
+                    Radius = 3,
+                    Fill = pocket,
+                    Stroke = body,          // 只为了把 BorderThickness 压到 0，颜色无所谓
+                    StrokeThickness = 0,
+                });
+
+                // ④ 物料格：每个格子里一颗料（比格子内缩 3px，露出格子的边）
+                var devs = new List<RectItem>();
+                for (int r = 0; r < rows; r++)
+                {
+                    for (int c = 0; c < cols; c++)
                     {
-                        X = x + 2, Y = ly, W = Math.Max(1, w - 4), H = 1,
-                        Radius = 0, Fill = line,
-                    });
+                        const double inset = 3.2;
+                        var dv = new RectItem
+                        {
+                            X = x + c * cw + inset,
+                            Y = y + r * ch + inset,
+                            W = Math.Max(2, cw - inset * 2),
+                            H = Math.Max(2, ch - inset * 2),
+                            Radius = 2,
+                            Fill = tp.Green ? devGreen : devBlue,
+                        };
+                        cv.Items.Add(dv);
+                        devs.Add(dv);
+                    }
                 }
+                trayDevices.Add(devs);
             }
 
             // ---- 分组标注 ----
@@ -1328,6 +1364,31 @@ namespace HandlerGuide.ViewModels
                         on ? Color.FromArgb(70, 0xFF, 0xC0, 0x40) : Colors.Transparent;
                     ((SolidColorBrush)trayHilite[i].Stroke).Color =
                         on ? Color.FromArgb(255, 0xFF, 0xA8, 0x20) : Color.FromArgb(0, 0xFF, 0xC0, 0x40);
+                }
+
+                // ---- 格子里的物料变化 ----
+                // 每个料盘按自己的相位在「满 / 空」之间循环，逐格地取走或累积：
+                //   · 上排 6 个 = 待测盘：满 → 空（物料被逐格取走）
+                //   · 中排 5 个 = 缓存盘：空 → 满 → 空
+                //   · 左下 3 个 = 出料盘：空 → 满（逐格累积已测品）
+                // 填充顺序统一「从上到下、从左到右」，所以看起来是从下往上被清空的。
+                // 只有真的发生变化的格子才会触发属性通知（Set 里做了相等判断），
+                // 所以每帧实际刷新的图元只有一两个，不会拖慢界面。
+                for (int i = 0; i < trayDevices.Count; i++)
+                {
+                    var devs = trayDevices[i];
+                    int n = devs.Count;
+                    if (n == 0) continue;
+
+                    bool green = TrayPlan[i].Green;
+                    var devBrush = green ? devGreen : devBlue;
+                    double k = Triangle(t * 0.08 + i * 0.19);
+                    int target = i < 6
+                        ? (int)Math.Round(n * (1.0 - k))   // 待测盘：满 → 空
+                        : (int)Math.Round(n * k);          // 缓存盘 / 出料盘：空 → 满
+
+                    for (int j = 0; j < n; j++)
+                        devs[j].Fill = j < target ? devBrush : null;
                 }
             };
 
