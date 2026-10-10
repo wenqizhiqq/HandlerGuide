@@ -167,8 +167,11 @@ namespace HandlerGuide.ViewModels
         /// <summary>芯片（B 层的一部分，但颜色每帧变）。</summary>
         public readonly List<ChipGroup> Chips = new List<ChipGroup>();
 
-        /// <summary>C 层：横梁 / 滑座 / 吸嘴 —— 顶点每帧重算，Quad 对象本身复用。</summary>
-        public readonly Quad[] Dynamic = new Quad[18];
+        /// <summary>
+        /// C 层：横梁 / 滑座 / Z 轴立柱 / 红色吸嘴托板 / 8 个吸嘴 —— 顶点每帧重算，Quad 复用。
+        /// 6 + 6 + 6 + 6 + 8×6 = 72 个面。每帧 72×4 = 288 次投影，对 20fps 来说完全不算事。
+        /// </summary>
+        public readonly Quad[] Dynamic = new Quad[72];
 
         public Scene3D()
         {
@@ -508,14 +511,48 @@ namespace HandlerGuide.ViewModels
             // ---- C 层：横梁沿 X 走，滑座沿 Y 走，吸嘴沿 Z 升降 ----
             double beamX = 130 + Layout3D.Triangle(t * 0.10) * 740;             // 130..870
             double headY = 120 + Layout3D.Triangle(t * 0.17 + 0.30) * 560;      // 120..680
-            double nz = 150 + Layout3D.Triangle(t * 0.33) * 220;                // 吸嘴下端 150..370
+            // 吸嘴下端 150..355。上限从 370 收到 355 是必须的：
+            // 下面 Z 轴立柱要从 nz+40 顶到滑座底面 396，nz 再高立柱就被压成负高度。
+            double nz = 150 + Layout3D.Triangle(t * 0.33) * 205;
 
             Layout3D.SetBox(_sc.Dynamic, 0,
                 new V3(beamX, 34, 360), new V3(beamX + 44, 766, 390), Layout3D.ColBeam);
             Layout3D.SetBox(_sc.Dynamic, 6,
                 new V3(beamX - 10, headY - 30, 390), new V3(beamX + 54, headY + 30, 434), Layout3D.ColCarriage);
+            // ---- 吸嘴：2 行 × 4 列 = 8 头 ----
+            // 原来这里是**一根**细吸嘴（28×18 的柱子），但用户口述的真机是
+            // 「红色是吸嘴 2×4 组合」，整机俯视图也已经按 8 头画了。
+            // 两边必须是同一套机构，否则从俯视图切到 3D 会像换了一台机器。
+            //
+            // 这个尺寸是被**离屏渲染逼出来**的，别凭直觉改：
+            //   第一版 8×8×228（吸嘴从托板一直拖到 nz）—— 8 根 1:30 的长针糊成一根柱子；
+            //   第二版 7×7×18 短针 —— 针本身投影宽 ≈ 9px，而列距 13 单位只投影到 ≈ 11px，
+            //   只剩 1~2px 的缝，看上去还是一坨。
+            // 症结是**斜视角下屏幕横向把 X 和 Y 混在一起**：一个 7×7 的盒子横向就有
+            // 7×(0.83+0.56) ≈ 9.7 单位宽，所以「针必须比列距细得多」才分得开。
+            // 最终 4.5×4.5×26 细针：投影宽 ≈ 6px、列距 ≈ 11px，缝有 5px，4 列一眼可数。
+            //   红色托板 52×40×14（和俯视图那块红块同色）
+            //   Z 轴立柱 16×16，从托板顶一直连到滑座底面 396，整组不留悬空
+            // 尺寸也全部落在 C 层取景包络（x 130..914 / y 34..766 / z 360..434）之内。
+            double npX = beamX - 8, npY = headY - 20;      // 红色托板左上角
+            const double npW = 52.0, npD = 40.0, nw = 4.5, nt = 26.0;
             Layout3D.SetBox(_sc.Dynamic, 12,
-                new V3(beamX + 8, headY - 9, nz), new V3(beamX + 36, headY + 9, 396), Layout3D.ColNozzle);
+                new V3(beamX + 14, headY - 8, nz + 40), new V3(beamX + 30, headY + 8, 396),
+                Layout3D.ColCarriage);                      // Z 轴立柱
+            Layout3D.SetBox(_sc.Dynamic, 18,
+                new V3(npX, npY, nz + nt), new V3(npX + npW, npY + npD, nz + 40),
+                Layout3D.ColNozzleRed);                     // 红色托板
+            for (int r = 0; r < 2; r++)
+            {
+                for (int cx = 0; cx < 4; cx++)
+                {
+                    double bx0 = npX + npW * (cx + 0.5) / 4.0 - nw / 2.0;
+                    double by0 = npY + npD * (r + 0.5) / 2.0 - nw / 2.0;
+                    Layout3D.SetBox(_sc.Dynamic, 24 + (r * 4 + cx) * 6,
+                        new V3(bx0, by0, nz), new V3(bx0 + nw, by0 + nw, nz + nt),
+                        Layout3D.ColNozzle);
+                }
+            }
 
             for (int i = 0; i < _sc.Dynamic.Length; i++)
                 Push(_sc.Dynamic[i], _dynItems[i], _dynZ + 1 + i);
@@ -589,12 +626,16 @@ namespace HandlerGuide.ViewModels
         private static readonly Color ColTable = Color.FromRgb(0xC2, 0xC8, 0xD2);
         private static readonly Color ColTrayDark = Color.FromRgb(0x3C, 0x41, 0x4B);
         private static readonly Color ColTrayGreen = Color.FromRgb(0x2E, 0x4A, 0x42);
+        /// <summary>料盘外圈亮边（见 BuildScene 里料盘的「亮边 + 内缩盘体」两层做法）。</summary>
+        private static readonly Color ColTrayRim = Color.FromRgb(0x8E, 0x96, 0xA2);
         private static readonly Color ColPlate = Color.FromRgb(0x6E, 0x76, 0x81);
         private static readonly Color ColPost = Color.FromRgb(0x79, 0x80, 0x8B);
         private static readonly Color ColRail = Color.FromRgb(0x8A, 0x92, 0x9D);
         internal static readonly Color ColBeam = Color.FromRgb(0x3A, 0x7C, 0xBF);
         internal static readonly Color ColCarriage = Color.FromRgb(0x4E, 0x93, 0xD4);
         internal static readonly Color ColNozzle = Color.FromRgb(0xC8, 0xCE, 0xD8);
+        /// <summary>吸嘴托板（真机上是红色的那一块，和俯视图里的红块同色）。</summary>
+        internal static readonly Color ColNozzleRed = Color.FromRgb(0xD0, 0x20, 0x20);
         private static readonly Color ColChipDark = Color.FromRgb(0x3C, 0xC0, 0xF0);
         private static readonly Color ColChipGreen = Color.FromRgb(0x3A, 0xD3, 0x8E);
         private static readonly Color ColChipHeat = Color.FromRgb(0xF2, 0xA9, 0x3B);
@@ -710,6 +751,16 @@ namespace HandlerGuide.ViewModels
             AddBox(sc.Ground, new V3(-14, -14, BASE_H), new V3(MX + 14, MY + 14, BASE_TOP), ColTable);
 
             // ---- B 层：14 个料盘（位置来自 TrayPlan，和俯视图同一份数据）----
+            //
+            // 每个盘做成「亮边 + 内缩盘体」两层，不是一层平盒子。
+            // 原因：左下 3 张绿色出料盘在真机上是**紧贴**的 —— TrayPlan 里前一张的
+            // U+DU 正好等于后一张的 U（0.13718+0.07635 = 0.21353 = 第二张的 U），
+            // 所以只做一层盒子的话，3 张盘的顶面会连成一整片大绿板，
+            // 在 3D 里根本数不出是 3 张（俯视图靠描边分得开，3D 没有描边）。
+            // 办法：外面套一圈浅色亮边（和台面同高的盒子），里面再放内缩 2.2 的盘体，
+            // 盘体顶面比亮边高 0.5，于是每张盘周围都露出一条浅色缝，一眼就能数清。
+            // 芯片仍然按**原始矩形**排，位置和俯视图一模一样，不受内缩影响。
+            const double TRAY_INSET = 2.2, TRAY_LIFT = 0.5;
             var plan = LayoutPages.TrayPlan;
             var trayTop = new List<double[]>();
             for (int i = 0; i < plan.Length; i++)
@@ -717,7 +768,10 @@ namespace HandlerGuide.ViewModels
                 var tp = plan[i];
                 double x0 = tp.U * MX, y0 = WY(tp.V + tp.DV);
                 double x1 = (tp.U + tp.DU) * MX, y1 = WY(tp.V);
-                AddBox(sc.Static, new V3(x0, y0, BASE_TOP), new V3(x1, y1, BASE_TOP + TRAY_H),
+                AddBox(sc.Static, new V3(x0, y0, BASE_TOP), new V3(x1, y1, BASE_TOP + TRAY_H), ColTrayRim);
+                AddBox(sc.Static,
+                    new V3(x0 + TRAY_INSET, y0 + TRAY_INSET, BASE_TOP),
+                    new V3(x1 - TRAY_INSET, y1 - TRAY_INSET, BASE_TOP + TRAY_H + TRAY_LIFT),
                     tp.Green ? ColTrayGreen : ColTrayDark);
                 trayTop.Add(new double[] { x0, y0, x1, y1, tp.Green ? 1 : 0 });
             }

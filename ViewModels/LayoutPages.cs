@@ -1221,7 +1221,9 @@ namespace HandlerGuide.ViewModels
             });
             cv.Items.Add(new TextItem
             {
-                Text = "左下绿色料盘 ×3（出料）", X = 18, Y = 486, TextSize = 12, TextWidth = 200,
+                // 原来放在 y=486（绿盘上方），但「下料X手臂」的行程槽正好落在那里，
+                // 所以挪到绿盘下方 y=690（绿盘底边 ≈ 682），互不遮挡。
+                Text = "左下绿色料盘 ×3（出料）", X = 18, Y = 690, TextSize = 12, TextWidth = 200,
                 Align = TextAlignment.Left, Foreground = labelGreen,
             });
             cv.Items.Add(new TextItem
@@ -1251,6 +1253,195 @@ namespace HandlerGuide.ViewModels
             };
             cv.Items.Add(armHead);
 
+            // ==============================================================
+            //  下料X手臂（真机量测：X 横梁 + 红色吸嘴 2×4 组合）
+            // ==============================================================
+            // 量测来源：真机俯视图 image/handler_top.jpg（1696×1376）。
+            // 画布坐标 = 照片坐标 × (CW/1696, CH/1376) = × (0.59552, 0.59520)。
+            //   · X 横梁外框      照片 x 151..766, y 821..880
+            //   · 红色吸嘴组合    照片 x 376..494, y 821..878（2 行 × 4 列 = 8 个吸嘴）
+            //   · 绿色滑块 ×2     照片 x 220..263 / 327..370, y 826..874
+            //   · 左侧竖直导轨（手臂 Y 行程的导轨）照片 x 97..157, y 870..1260
+            //
+            // 运动学（用户口述 + 照片印证）：
+            //   ① 整根 X 横梁挂在左侧竖直导轨的滑座上，可以**上下平移**（画面上下 = 机器 Y）；
+            //   ② 红色吸嘴组合沿横梁**左右平移**（= 机器 X）；
+            //   ①×② 叠加 → 吸嘴拿到 XY 定位；2×4 组合一次取放 8 颗料。
+            const double UAX0 = 89.9, UAX1 = 456.2;        // X 横梁左右端（画布坐标）
+            const double UACY = 506.2;                     // 横梁中心线（照片实测 = 行程上端）
+            const double UAH = 35.1;                       // 横梁高
+            // Y 向行程：**上端就是照片里的静止位**（横梁正好压在真机导轨上，误差 0），
+            // 下端让吸嘴降到三张绿色出料盘的上方 —— 下料手臂够得着出料盘才有意义。
+            // 左端那根竖直导轨（照片 y 870..1260 → 画布 y 518..750）印证了「只往下走」：
+            // 横梁静止位卡在导轨的**顶端**，所以行程是单向下行，不是绕中线上下摆。
+            const double UAY0 = UACY, UAY1 = 660.0;        // Y 向行程：上端 / 下端
+            const double UANW = 70.3, UANH = 33.9;         // 吸嘴组合尺寸
+            const double UANX0 = 96.0, UANX1 = 386.0;      // 吸嘴左端行程范围
+            const int UANC = 4, UANR = 2;                  // 2×4 = 8 个吸嘴
+
+            var uaBlue = new SolidColorBrush(Color.FromRgb(0x2F, 0x7C, 0xD6));
+            var uaBlueSoft = new SolidColorBrush(Color.FromArgb(0x9A, 0x2F, 0x7C, 0xD6));
+            var uaRed = new SolidColorBrush(Color.FromRgb(0xD0, 0x20, 0x20));
+            var uaRedEdge = new SolidColorBrush(Color.FromRgb(0x6B, 0x10, 0x10));
+            var uaDotBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0xDC, 0xDC));
+            var uaGreenBrush = new SolidColorBrush(Color.FromRgb(0x1E, 0x8E, 0x6E));
+            var uaAmberOn = new SolidColorBrush(Color.FromRgb(0xFF, 0xA8, 0x20));
+            var uaAmberOff = new SolidColorBrush(Color.FromArgb(0, 0xFF, 0xC0, 0x40));
+
+            // 行程上下限：横梁**外缘**能到的两个极限位置。
+            // 早先这里画的是一个半透明圆角「行程槽」，但行程从 ±30 拉长到 154 之后，
+            // 那个槽会把三张绿色出料盘整片罩住，像给料盘盖了块灰玻璃。
+            // 改成两条细限位线 + 一个带箭头的行程标尺，只标「能走到哪」，不遮料盘。
+            // 温启志 18719361399
+            double uaSlotTop = UAY0 - UAH / 2 - 5;
+            double uaSlotBot = UAY1 + UAH / 2 + 5;
+            var uaLimit = new SolidColorBrush(Color.FromArgb(0x8C, 0x2F, 0x7C, 0xD6));
+            foreach (double uaLy in new[] { uaSlotTop, uaSlotBot })
+            {
+                cv.Items.Add(new RectItem
+                {
+                    X = UAX0 - 4, Y = uaLy, W = (UAX1 - UAX0) + 8, H = 1.4, Fill = uaLimit,
+                });
+            }
+
+            // Y 行程标尺：竖线 + 上下两个小三角，画在横梁左端**外侧**（x 77..89），
+            // 那一条竖带在照片里是空白的，压上去不会盖住任何零件。
+            cv.Items.Add(new RectItem
+            {
+                X = 82, Y = uaSlotTop + 3, W = 2, H = uaSlotBot - uaSlotTop - 6, Fill = uaBlueSoft,
+            });
+            cv.Items.Add(new PolyItem
+            {
+                Points = new PointCollection
+                {
+                    new Point(83, uaSlotTop), new Point(77, uaSlotTop + 9), new Point(89, uaSlotTop + 9),
+                },
+                Fill = uaBlue,
+            });
+            cv.Items.Add(new PolyItem
+            {
+                Points = new PointCollection
+                {
+                    new Point(83, uaSlotBot), new Point(77, uaSlotBot - 9), new Point(89, uaSlotBot - 9),
+                },
+                Fill = uaBlue,
+            });
+            cv.Items.Add(new TextItem
+            {
+                Text = "上下平移（Y）", X = 96, Y = uaSlotTop - 16, TextSize = 9.5, TextWidth = 120,
+                Align = TextAlignment.Left, Foreground = uaLimit,
+            });
+
+            // 出料盘高亮：吸嘴走到哪张绿盘上方就点亮哪张
+            var uaTrayX = new List<double>();
+            var uaHilite = new List<RectItem>();
+            for (int i = 0; i < TrayPlan.Length; i++)
+            {
+                if (!TrayPlan[i].Green) continue;          // 只有 3 张绿色出料盘
+                var tp = TrayPlan[i];
+                uaTrayX.Add(tp.U * CW);
+                uaTrayX.Add((tp.U + tp.DU) * CW);
+                var hl = new RectItem
+                {
+                    X = tp.U * CW - 3, Y = tp.V * CH - 3,
+                    W = tp.DU * CW + 6, H = tp.DV * CH + 6, Radius = 3,
+                    Fill = new SolidColorBrush(Colors.Transparent),
+                    Stroke = uaAmberOff, StrokeThickness = 2,
+                };
+                cv.Items.Add(hl);
+                uaHilite.Add(hl);
+            }
+
+            // X 横梁（手臂本体）：半透明蓝，压在照片导轨上，看得见「手臂现在在哪」
+            var uaBeam = new RectItem
+            {
+                X = UAX0, Y = UACY - UAH / 2, W = UAX1 - UAX0, H = UAH, Radius = 5,
+                Fill = new SolidColorBrush(Color.FromArgb(0x7A, 0x1B, 0x2A, 0x5A)),
+                Stroke = uaBlue, StrokeThickness = 2,
+            };
+            cv.Items.Add(uaBeam);
+
+            // 横梁上的两个绿色滑块（真机照片里就有，跟着横梁一起走）
+            var uaGreenSliders = new List<RectItem>();
+            double[] uaGx = { 131.0, 156.6, 194.7, 220.3 };
+            for (int i = 0; i < 2; i++)
+            {
+                var gs = new RectItem
+                {
+                    X = uaGx[i * 2], Y = UACY - UAH / 2 + 3,
+                    W = uaGx[i * 2 + 1] - uaGx[i * 2], H = UAH - 6, Radius = 3,
+                    Fill = uaGreenBrush,
+                };
+                cv.Items.Add(gs);
+                uaGreenSliders.Add(gs);
+            }
+
+            // 红色吸嘴 2×4 组合
+            var uaNozzle = new RectItem
+            {
+                X = UANX0, Y = UACY - UANH / 2, W = UANW, H = UANH, Radius = 5,
+                Fill = uaRed, Stroke = uaRedEdge, StrokeThickness = 2,
+            };
+            cv.Items.Add(uaNozzle);
+
+            var uaDots = new List<EllipseItem>();
+            double uaDotD = Math.Min(UANW / UANC, UANH / UANR) * 0.60;
+            for (int r = 0; r < UANR; r++)
+            {
+                for (int q = 0; q < UANC; q++)
+                {
+                    var dot = new EllipseItem
+                    {
+                        X = UANX0 + UANW * (q + 0.5) / UANC - uaDotD / 2,
+                        Y = UACY - UANH / 2 + UANH * (r + 0.5) / UANR - uaDotD / 2,
+                        W = uaDotD, H = uaDotD, Fill = uaDotBrush,
+                    };
+                    cv.Items.Add(dot);
+                    uaDots.Add(dot);
+                }
+            }
+
+            // 标注：放在横梁右端外侧的空白区（x 458..774 / y 548..648，这一带没有料盘）。
+            // 真机照片在这一段的机械细节非常密，纯文字直接压上去几乎读不出来 ——
+            // 所以先铺一块半透明白底（工程图里的「标注框」），再写字。
+            // 这是本页唯一带底框的标注，其余分组标签都在照片的平坦区域，不需要。
+            cv.Items.Add(new RectItem
+            {
+                X = 458, Y = 548, W = 316, H = 100, Radius = 6,
+                Fill = new SolidColorBrush(Color.FromArgb(0xDC, 0xFF, 0xFF, 0xFF)),
+                Stroke = new SolidColorBrush(Color.FromArgb(0x66, 0x1E, 0x4E, 0x8C)),
+                StrokeThickness = 1,
+            });
+            cv.Items.Add(new TextItem
+            {
+                Text = "下料X手臂（真机量测 · 照片 x151..766）",
+                X = 468, Y = 556, TextSize = 11.5, TextWidth = 300,
+                Align = TextAlignment.Left,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x1E, 0x4E, 0x8C)),
+            });
+            cv.Items.Add(new TextItem
+            {
+                Text = "① 整根 X 横梁沿左侧竖直导轨上下平移（机器 Y）\n"
+                     + "② 红色吸嘴组合沿横梁左右走（机器 X）\n"
+                     + "①×② = 吸嘴 XY 定位 · 2×4 = 8 头，一次取放 8 颗料",
+                X = 468, Y = 575, TextSize = 10, TextWidth = 300,
+                Align = TextAlignment.Left,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x5A, 0x62, 0x70)),
+            });
+            // 图例：一个红色小方块，和盘面上的红色吸嘴组合同色，指代关系一眼可辨
+            cv.Items.Add(new RectItem
+            {
+                X = 468, Y = 628, W = 13, H = 13, Radius = 2,
+                Fill = uaRed, Stroke = uaRedEdge, StrokeThickness = 1,
+            });
+            cv.Items.Add(new TextItem
+            {
+                Text = "= 吸嘴 2×4 组合（8 头）",
+                X = 487, Y = 629, TextSize = 10.5, TextWidth = 200,
+                Align = TextAlignment.Left,
+                Foreground = new SolidColorBrush(Color.FromRgb(0xA8, 0x18, 0x18)),
+            });
+
             // ---- 作者署名水印 ----
             cv.Items.Add(new TextItem
             {
@@ -1277,6 +1468,47 @@ namespace HandlerGuide.ViewModels
                 // 臂头：0..1 三角波映射到导轨两端
                 double headX = armX0 + Triangle(t * 0.11) * (armX1 - armX0);
                 armHead.X = headX;
+
+                // ---- 下料X手臂：X 横梁上下平移（Y） ＋ 吸嘴沿横梁左右走（X） ----
+                // ① 横梁整体 Y 平移：从照片里的静止位（行程上端）单向下行到出料盘上方。
+                //    相位不加偏移 ⇒ t = 0 时横梁正好压在真机导轨上，静止状态与照片完全重合。
+                double uaCYn = UAY0 + Triangle(t * 0.13) * (UAY1 - UAY0);
+                uaBeam.Y = uaCYn - UAH / 2;
+                for (int k = 0; k < uaGreenSliders.Count; k++)
+                    uaGreenSliders[k].Y = uaCYn - UAH / 2 + 3;
+
+                // ② 吸嘴组合沿横梁 X 向走位（另一条相位，避免和 Y 同步显得很假）
+                double uaNx = UANX0 + Triangle(t * 0.09 + 0.22) * (UANX1 - UANX0);
+                uaNozzle.X = uaNx;
+                uaNozzle.Y = uaCYn - UANH / 2;
+
+                // 8 个吸嘴点位跟着红色方块走（2 行 × 4 列）
+                for (int r = 0; r < UANR; r++)
+                {
+                    // 注意：外层 cv.Draw 的 lambda 形参就叫 c，这里不能再叫 c（CS0136）
+                    for (int q = 0; q < UANC; q++)
+                    {
+                        var dot = uaDots[r * UANC + q];
+                        dot.X = uaNx + UANW * (q + 0.5) / UANC - dot.W / 2;
+                        dot.Y = uaCYn - UANH / 2 + UANH * (r + 0.5) / UANR - dot.H / 2;
+                    }
+                }
+
+                // 吸嘴中心离哪张出料盘**最近**，就点亮哪张（琥珀色描边）。
+                // 早先用的是「中心落在 ±8 判定窗内就点亮」，可是吸嘴组合有 70px 宽、
+                // 出料盘才 84px 宽，中心一旦落在两张盘的公共边上，**两张会同时点亮**，
+                // 看着像画错了。改成「最近的那张独占点亮」，一次只有一张，而且逐张推进。
+                double uaNcx = uaNx + UANW / 2;
+                int uaBest = -1;
+                double uaBestD = double.MaxValue;
+                for (int i = 0; i < uaHilite.Count; i++)
+                {
+                    double uaCx = (uaTrayX[i * 2] + uaTrayX[i * 2 + 1]) / 2.0;
+                    double uaD = Math.Abs(uaNcx - uaCx);
+                    if (uaD < uaBestD) { uaBestD = uaD; uaBest = i; }
+                }
+                for (int i = 0; i < uaHilite.Count; i++)
+                    uaHilite[i].Stroke = (i == uaBest) ? uaAmberOn : uaAmberOff;
 
                 // 离臂头最近的料盘点亮（超过 90px 就都不亮）
                 int best = -1;
