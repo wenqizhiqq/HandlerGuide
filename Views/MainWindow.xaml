@@ -58,6 +58,22 @@
                               SelectedItem="{Binding SelectedUserLevel, Mode=TwoWay}" />
                     <Button Style="{StaticResource MenuButton}" Content="说明书" Command="{Binding ManualCommand}" Margin="0,0,4,0" />
                     <Button Style="{StaticResource MenuButton}" Content="关于" Command="{Binding AboutCommand}" Margin="0,0,4,0" />
+
+                    <!-- 温启志 18719361399 · 快捷操作已上移到标题栏，与「说明书 / 关于」同排 -->
+                    <Border Width="1" Background="{StaticResource DividerBrush}" Margin="8,6" />
+                    <Button Style="{StaticResource MiniButton}" Content="保存" Padding="14,6"
+                            Command="{Binding SaveCommand}" Margin="0,0,4,0" />
+                    <Button Style="{StaticResource MiniButton}" Content="召回" Padding="14,6"
+                            Command="{Binding RecallCommand}" Margin="0,0,10,0" />
+                    <CheckBox Content="键盘锁定" FontSize="12.5" VerticalAlignment="Center"
+                              Margin="0,0,10,0" Foreground="{StaticResource TextPrimaryBrush}"
+                              IsChecked="{Binding KeyboardLocked, Mode=TwoWay}" />
+                    <ComboBox Width="92" FontSize="12.5" Margin="0,0,10,0" VerticalAlignment="Center"
+                              ItemsSource="{Binding Languages}"
+                              SelectedIndex="{Binding LanguageIndex, Mode=TwoWay}" />
+                    <Button Content="关闭程序" FontSize="12.5" Padding="16,7" Background="#9B1B1B"
+                            Foreground="White" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand"
+                            Command="{Binding CloseCommand}" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -175,11 +191,10 @@
 
                     <Border Width="1" Background="{StaticResource DividerBrush}" Margin="8,4" />
 
-                    <!-- 右侧快捷操作 -->
-                    <Button Style="{StaticResource MiniButton}" Content="保存" Padding="18,6"
-                            Command="{Binding SaveCommand}" />
-                    <Button Style="{StaticResource MiniButton}" Content="召回" Padding="18,6"
-                            Command="{Binding RecallCommand}" />
+                    <!-- 右侧快捷操作：SECS/GEM 通讯（温启志 18719361399）保留在工具条原位；
+                         「保存 / 召回 / 键盘锁定 / 语言 / 关闭程序」已上移到顶部标题栏，与「说明书」同排 -->
+                    <Button Style="{StaticResource MiniButton}" Content="通讯" Padding="18,6"
+                            ToolTip="SECS/GEM 通讯（HSMS-SS）" Command="{Binding SecsGemCommand}" />
 
                     <!-- 显示控制板 --><!--
                     <ToggleButton x:Name="boardBtn" Cursor="Hand" Margin="2,0"
@@ -230,17 +245,6 @@
                         </Border>
                     </Popup>-->
 
-                    <CheckBox Content="键盘锁定" FontSize="12.5" VerticalAlignment="Center"
-                              Margin="10,0,10,0" Foreground="{StaticResource TextPrimaryBrush}"
-                              IsChecked="{Binding KeyboardLocked, Mode=TwoWay}" />
-
-                    <ComboBox Width="92" FontSize="12.5" Margin="0,0,10,0" VerticalAlignment="Center"
-                              ItemsSource="{Binding Languages}"
-                              SelectedIndex="{Binding LanguageIndex, Mode=TwoWay}" />
-
-                    <Button Content="关闭程序" FontSize="12.5" Padding="18,8" Background="#9B1B1B"
-                            Foreground="White" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand"
-                            Command="{Binding CloseCommand}" />
                 </StackPanel>
             </ScrollViewer>
         </Border>

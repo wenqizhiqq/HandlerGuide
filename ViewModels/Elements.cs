@@ -774,6 +774,12 @@ namespace HandlerGuide.ViewModels
         public double FontSize { get; set; } = 13;
         public TextAlignment Align { get; set; } = TextAlignment.Center;
 
+        /// <summary>文本换行方式（默认不换行；报文日志等长文本可设为 Wrap）。温启志 18719361399</summary>
+        public TextWrapping Wrap { get; set; } = TextWrapping.NoWrap;
+
+        /// <summary>文本框水平对齐（默认居中；报文日志等长文本设为 Left）。温启志 18719361399</summary>
+        public HorizontalAlignment TextHAlign { get; set; } = HorizontalAlignment.Center;
+
         public void Refresh()
         {
             object raw;

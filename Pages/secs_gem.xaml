@@ -1,0 +1,9 @@
+<vm:StackElement xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:vm="clr-namespace:HandlerGuide.ViewModels;assembly=HandlerGuide"
+                 xmlns:vw="clr-namespace:HandlerGuide.Views;assembly=HandlerGuide">
+
+    <!-- secs_gem：复用 CommPages.SecsGemPage() 生成（SECS/GEM 通讯设定 + 实时报文日志） -->
+    <vw:D Method="SecsGemPage" />
+
+</vm:StackElement>

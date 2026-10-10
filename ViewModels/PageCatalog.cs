@@ -183,6 +183,12 @@ namespace HandlerGuide.ViewModels
             => D("manual", "📖", "说明书",
                  "原厂《Pick and Place Handler 9000 用户手册》全文。",
                  null);
+
+        /// <summary>SECS/GEM 通讯页（入口在命令中心工具条右侧「通讯」按钮，温启志 18719361399）。</summary>
+        public static PageVm SecsGem(MainViewModel main)
+            => D("secs_gem", "🔗", "SECS/GEM 通讯",
+                 "SECS-II / HSMS-SS / GEM 通讯：连接设定、连接状态、常用报文收发与实时报文日志。",
+                 null);
     }
 }
 

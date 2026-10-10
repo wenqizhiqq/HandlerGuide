@@ -54,4 +54,8 @@
     </Content>
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Secs4Net" Version="3.1.0" />
+  </ItemGroup>
+
 </Project>

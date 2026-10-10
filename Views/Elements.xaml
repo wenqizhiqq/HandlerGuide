@@ -406,7 +406,8 @@
                 HorizontalAlignment="{Binding HAlign}" VerticalAlignment="Center"
                 ToolTip="{Binding ToolTip}">
             <TextBlock Text="{Binding Value}" FontSize="{Binding FontSize}" Foreground="{Binding Foreground}"
-                       TextAlignment="{Binding Align}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                       TextWrapping="{Binding Wrap}"
+                       TextAlignment="{Binding Align}" HorizontalAlignment="{Binding TextHAlign}" VerticalAlignment="Center" />
         </Border>
     </DataTemplate>
 

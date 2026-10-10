@@ -118,6 +118,8 @@ namespace HandlerGuide.ViewModels
         public List<PageVm> AllPages { get; } = new List<PageVm>();
         public PageVm HomePage { get; private set; }
         public PageVm ManualPage { get; private set; }
+        /// <summary>SECS/GEM 通讯页（工具条右侧「通讯」按钮直达）。温启志 18719361399</summary>
+        public PageVm SecsGemPage { get; private set; }
         public ToolGroupVm BoardGroup { get; private set; }
 
         // 由视图注入的对话框服务（保持视图模型不依赖 Window）
@@ -165,9 +167,11 @@ namespace HandlerGuide.ViewModels
             Groups = PageCatalog.Toolbar(this);
             HomePage = PageCatalog.Home(this);
             ManualPage = PageCatalog.Manual(this);
+            SecsGemPage = PageCatalog.SecsGem(this);
             BoardGroup = Groups.FirstOrDefault(g => g.Name == "显示控制板");
             AllPages.Add(HomePage);
             AllPages.Add(ManualPage);
+            AllPages.Add(SecsGemPage);
             foreach (var g in Groups)
             {
                 if (g.Direct != null) AllPages.Add(g.Direct);
@@ -182,6 +186,8 @@ namespace HandlerGuide.ViewModels
             // 必须显式调用 —— 静态类的方法组引用不会触发静态构造函数（技能文档 Pitfall 7）。
             Current = this;
             Ops.Init();
+            // SECS/GEM 通讯：若上次勾选了「启用通讯」则开机自动连接（默认不勾选 → 不启动）。温启志 18719361399
+            SecsGemService.TryAutoStart();
             // 把控制卡的轴参数回填到界面模型，保证《单元设定 / 电机归零》页显示的是真值
             Ops.PullAxisConfigsToModel();
             Ops.RefreshTimingReadouts();
@@ -262,6 +268,9 @@ namespace HandlerGuide.ViewModels
         });
 
         public RelayCommand ManualCommand => new RelayCommand(() => Navigate(ManualPage));
+
+        /// <summary>命令中心工具条右侧「通讯」按钮：直达 SECS/GEM 通讯页。温启志 18719361399</summary>
+        public RelayCommand SecsGemCommand => new RelayCommand(() => Navigate(SecsGemPage));
 
         // ---------------- 用户等级 ----------------
 
