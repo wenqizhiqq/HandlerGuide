@@ -13,6 +13,7 @@
 //          (1) 真实轴位置 —— 上/下料臂 X、小车 A/B、测试下压 Z、上料臂 Y；
 //          (2) 时间驱动 —— 流水线走料、料盘升降、手工盘扫描、加热脉冲。
 //        打开本页会自动启动「安全演示节拍」，每一步都过同一套互锁，不会撞机。
+//        「3D整机图」页签已改为真三维仿真，见 ViewModels/Layout3D.cs。
 // ============================================================================
 using System;
 using System.Collections.Generic;
@@ -154,9 +155,13 @@ namespace HandlerGuide.ViewModels
         ///     · 中排 5 个 —— 深色格纹盘 / 料盘缓存位（v 0.357..0.569）
         ///     · 左下 3 个 —— 绿色格纹盘 / 出料盘（v 0.639..0.833）
         /// 「整机俯视图」画布直接乘画布尺寸落点；
-        /// 「3D整机图」再经一次仿射投影落到斜二测渲染图的台面上。
+        /// 「3D整机图」直接把这组 (u,v) 乘到三维机台尺寸上，落成实体料盘。
         /// </summary>
-        private static readonly (double U, double V, double DU, double DV, bool Green)[] TrayPlan =
+        /// <remarks>
+        /// 注意：这里是 <c>internal</c> 而不是 private —— 「3D整机图」
+        /// （<see cref="Layout3D"/>）要复用同一份量测数据，保证两个页签的料盘位置永远一致。
+        /// </remarks>
+        internal static readonly (double U, double V, double DU, double DV, bool Green)[] TrayPlan =
         {
             // 上排 6 个：深色格纹盘
             (0.14649, 0.04820, 0.08380, 0.21499, false),
@@ -184,15 +189,24 @@ namespace HandlerGuide.ViewModels
         /// <summary>整机模块平面仿真页（motion_layout）。</summary>
         public static Element LayoutPage()
         {
-            // 三个视图页签先建出来：E.Tabs 默认激活**首个**页签（2D平面图），
-            // 但本版的重点是「按真机量测绘制料盘」，所以这里显式把默认页签切到「整机俯视图」，
-            // 打开仿真页第一眼就能看到料盘布局。
-            // （想改回默认停在 2D平面图，把下面这行 E.SelectTab 删掉即可。）
-            var viewTabs = E.Tabs(
-                ("2D平面图", () => BuildLayoutCanvas()),
-                ("整机俯视图", () => BuildLayoutCanvasTop()),
-                ("3D整机图", () => BuildLayoutCanvas3D()));
-            E.SelectTab(viewTabs, viewTabs.Tabs[1]);
+            // 三个视图页签：本版的重点是「按真机量测绘制料盘」，
+            // 所以默认页签直接指定成第 2 个「整机俯视图」（下标 1），打开仿真页第一眼就是料盘布局。
+            //
+            // 用 Tabs(默认下标, ...) 重载而不是「先 Tabs(...) 再 E.SelectTab(...)」：
+            // 页签内容是懒加载的，但 SelectTab 会立刻构建被选中的那一页，
+            // 走两步的话第 1 页（2D平面图）会先被建出来 —— 那是一块逐帧重绘的画布，
+            // 会一直挂在 LiveRegistry 快速通道上在后台空跑动画。
+            // （想改回默认停在 2D平面图，把下面的 1 改成 0 即可。）
+            //
+            // 三个 lambda 显式写成 Func<Element>：否则编译器会把公共类型推成 CanvasElement，
+            // 第三个返回 Element 的 lambda 就转不过去（CS1503）。
+            Func<Element> f2d = () => BuildLayoutCanvas();
+            Func<Element> fTop = () => BuildLayoutCanvasTop();
+            Func<Element> f3d = () => Layout3D.BuildTab();
+            var viewTabs = E.Tabs(1,
+                ("2D平面图", f2d),
+                ("整机俯视图", fTop),
+                ("3D整机图", f3d));
 
             return E.V(
                 E.H(
@@ -222,7 +236,9 @@ namespace HandlerGuide.ViewModels
                 // 2D 标签走 BuildLayoutCanvas() 的 11 模组 540×438 工程图；
                 // 俯视图标签以 image\handler_top.jpg（空机台）为底图，按真机量测坐标
                 // 现画 14 个料盘（上排 6 深盘 / 中排 5 深盘 / 左下 3 绿盘）并做取放动画；
-                // 3D 标签加载 image\handler_3d.jpg，料盘布局（同一份 TrayPlan 投影）与龙门架随节拍动。
+                // 3D 标签走 Layout3D.BuildTab() —— **自算三维**（世界坐标→相机→透视投影→
+                // 画家算法→逐面朗伯着色），机台 / 料盘 / 加热盘 / 龙门架都是实体，可自由换视角，
+                // 不再是「贴一张斜二测渲染图 + 盖几个平行四边形」。
                 // 右侧命令中心 / 图例 / 模组动作对照三套视图共用。
                 E.Grid()
                     .Cols("*", "490")
@@ -964,171 +980,6 @@ namespace HandlerGuide.ViewModels
         }
 
         /// <summary>
-        /// 构建 3D 整机渲染画布：把 image\handler_3d.jpg 作为画布背景，
-        /// 在「料盘」与「龙门架」位置上叠加半透明高亮矩形，由 MotionManager 实例
-        /// 驱动的 Draw 回调让料盘横向走料、龙门架随节拍上下起降。
-        /// 画布 1498×819（保持原图 1920:1050≈1.83 的宽高比），
-        /// 刚好嵌进 2D 视图左侧的「标签页」区域，与 2D 平面图共用右侧说明栏。
-        /// </summary>
-        private static CanvasElement BuildLayoutCanvas3D()
-        {
-            // 1498×819 ≈ 原图 1920×1050 等比缩放（×0.78），既能在 1920 视口完整显示
-            // 又不把页面顶到出现竖向滚动条。
-            const double CW = 1498;
-            const double CH = 819;
-
-            var cv = new CanvasElement { CanvasWidth = CW, CanvasHeight = CH };
-
-            // ---- 背景：image/handler_3d.jpg（运行时由 .csproj CopyToOutputDirectory
-            // 复制到 exe 同级目录，pack://siteoforigin 从那里加载）----
-            ImageBrush bgBrush;
-            try
-            {
-                var bmp = new BitmapImage();
-                bmp.BeginInit();
-                bmp.UriSource = new Uri("pack://siteoforigin:,,,/image/handler_3d.jpg");
-                bmp.CacheOption = BitmapCacheOption.OnLoad;
-                bmp.EndInit();
-                bmp.Freeze();
-                bgBrush = new ImageBrush(bmp) { Stretch = Stretch.Fill };
-            }
-            catch
-            {
-                // 兜底：找不到图时画一个深灰底+提示文字，绝不黑屏
-                bgBrush = new ImageBrush();
-            }
-            var bg = new RectItem { X = 0, Y = 0, W = CW, H = CH, Fill = bgBrush };
-            cv.Items.Add(bg);
-
-            // 找不到图时叠一行大字提示
-            if (bgBrush.ImageSource == null)
-            {
-                cv.Items.Add(new RectItem
-                {
-                    X = 0, Y = 0, W = CW, H = CH,
-                    Fill = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x30))
-                });
-                cv.Items.Add(new TextItem
-                {
-                    Text = "image/handler_3d.jpg 加载失败", X = CW / 2 - 200, Y = CH / 2,
-                    TextSize = 18, TextWidth = 400, Align = TextAlignment.Center,
-                    Foreground = new SolidColorBrush(Color.FromRgb(0xE0, 0xE0, 0xE0))
-                });
-            }
-
-            // ---- 料盘高亮：按**真机布局**叠 14 个（上排 6 深盘 / 中排 5 深盘 / 左下 3 绿盘）----
-            // handler_3d.jpg 是斜二测渲染图，料盘在图上呈平行四边形，所以这里用 PolyItem 画四边形。
-            // 位置不靠肉眼摆，而是把「真机俯视图逐像素量出来的料盘平面坐标」（TrayPlan，0..1）
-            // 做一次仿射投影落到原图的台面上：
-            //     图(x,y) = C00 + (C10-C00)·u + (C01-C00)·v
-            // 三个机台角点 C00 / C10 / C01 由 handler_3d.jpg 的凸包量得
-            // （原图 1920×1050 → 画布 1498×819，故角点统一乘 0.78）。
-            const double IsoK = 0.78;
-            const double C00x = 821 * IsoK, C00y = 35 * IsoK;     // 机台左上角
-            const double C10x = 1766 * IsoK, C10y = 593 * IsoK;   // 机台右上角
-            const double C01x = 74 * IsoK, C01y = 546 * IsoK;     // 机台左下角
-            const double KU = 1.00, KV = 1.08;                    // 三排略分开，避免视觉上叠在一起
-
-            Point Iso(double u, double v)
-            {
-                u = 0.5 + (u - 0.5) * KU;
-                v = 0.5 + (v - 0.5) * KV;
-                return new Point(C00x + (C10x - C00x) * u + (C01x - C00x) * v,
-                                 C00y + (C10y - C00y) * u + (C01y - C00y) * v);
-            }
-
-            var trayDarkFill = new SolidColorBrush(Color.FromArgb(105, 0x1A, 0x1C, 0x22));
-            var trayDarkEdge = new SolidColorBrush(Color.FromRgb(0xFF, 0x8A, 0x1E));
-            var trayGreenFill = new SolidColorBrush(Color.FromArgb(105, 0x10, 0x2A, 0x22));
-            var trayGreenEdge = new SolidColorBrush(Color.FromRgb(0x22, 0xC0, 0x7A));
-            foreach (var tp in TrayPlan)
-            {
-                cv.Items.Add(new PolyItem
-                {
-                    Points = new PointCollection
-                    {
-                        Iso(tp.U, tp.V), Iso(tp.U + tp.DU, tp.V),
-                        Iso(tp.U + tp.DU, tp.V + tp.DV), Iso(tp.U, tp.V + tp.DV),
-                    },
-                    Fill = tp.Green ? trayGreenFill : trayDarkFill,
-                    Stroke = tp.Green ? trayGreenEdge : trayDarkEdge,
-                    StrokeThickness = 2.5,
-                });
-            }
-
-            // ---- 龙门架高亮：中央灰色框的蓝色半透明矩形，随节拍上下起降 ----
-            // 原图「龙门架」x≈580..1020, y≈90..500；折算 1498×819 → x≈453..796, y≈70..390
-            const double gantryBaseY = 90;
-            const double gantrySpan = 50;     // 上下移动幅度
-            var gantryStroke = new SolidColorBrush(Color.FromRgb(0x00, 0x66, 0xCC));
-            var gantryHilite = new RectItem
-            {
-                X = 480, Y = gantryBaseY, W = 540, H = 320,
-                Radius = 8,
-                Fill = new SolidColorBrush(Color.FromArgb(70, 0x00, 0xAA, 0xFF)),
-                Stroke = gantryStroke,
-                StrokeThickness = 3,
-            };
-            cv.Items.Add(gantryHilite);
-
-            // ---- 标签 ----
-            cv.Items.Add(new TextItem
-            {
-                Text = "料盘布局（真机量测）：上排 6 深盘 · 中排 5 深盘 · 左下 3 绿盘",
-                X = 10, Y = 8, TextSize = 13, TextWidth = 460,
-                Align = TextAlignment.Left,
-                Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x8A, 0x1E)),
-            });
-            cv.Items.Add(new TextItem
-            {
-                Text = "龙门架升降 ↑↓", X = 480, Y = 60, TextSize = 13, TextWidth = 160,
-                Foreground = new SolidColorBrush(Color.FromRgb(0x00, 0x66, 0xCC)),
-            });
-            cv.Items.Add(new TextItem
-            {
-                Text = "温启志 18719361399 · 3D 整机仿真", X = 10, Y = CH - 22,
-                TextSize = 10, TextWidth = 300,
-                Foreground = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80))
-            });
-
-            // ---- 逐帧动画：与 2D 画布共享同一套 MotionManager / 三角波节拍 ----
-            long last = Environment.TickCount64;
-            double t = 0;
-
-            cv.Draw = c =>
-            {
-                long now = Environment.TickCount64;
-                double dt = (now - last) / 1000.0;
-                last = now;
-                if (dt <= 0 || dt > 0.5) dt = 0.05;
-
-                var m = MotionManager.Instance;
-
-                // 只有点击「启动演示节拍」后（AutoCycle=true）才推进动画；否则保持静态初态
-                if (m.AutoCycle) t += dt;
-
-                // 料盘呼吸：深盘与绿盘反相位地亮一下，表示料盘在位、随节拍被取放。
-                // 共用同一个画刷，所以一次改色整组料盘同步（省掉逐盘更新）。
-                double breathe = 0.5 + 0.5 * Math.Sin(t * 2.2);
-                trayDarkFill.Color = Color.FromArgb((byte)(70 + 60 * breathe), 0x1A, 0x1C, 0x22);
-                trayGreenFill.Color = Color.FromArgb((byte)(70 + 60 * (1 - breathe)), 0x10, 0x2A, 0x22);
-
-                // 龙门架随三角波上下起降（与 2D 画布左右立柱同步）
-                double tri = Triangle(t * 0.24);
-                gantryHilite.Y = gantryBaseY + (1 - tri) * gantrySpan;
-                // 到顶 / 到底时边框变红，表示压到位
-                bool atEnd = tri > 0.92 || tri < 0.08;
-                gantryStroke.Color = atEnd
-                    ? Color.FromRgb(0xFF, 0x33, 0x33)
-                    : Color.FromRgb(0x00, 0x66, 0xCC);
-            };
-
-            // 先画一帧，保证首次显示就有内容（不依赖快速通道）
-            cv.Refresh();
-            return cv;
-        }
-
-        /// <summary>
         /// 构建整机俯视图仿真画布。
         ///
         /// 底图 = image/handler_top.jpg —— 用户提供的**空机台**俯视图（1696×1376，
@@ -1199,6 +1050,11 @@ namespace HandlerGuide.ViewModels
 
             // 物料配色：待测（深盘里）= 亮青；已测 / 出料（绿盘里）= 亮绿
             var devBlue = new SolidColorBrush(Color.FromRgb(0x3C, 0xC0, 0xF0));
+
+            // 分组标注的字色：底图是浅色的真机照片，直接用盘体描边色（中灰 / 灰绿）
+            // 会看不清，所以另配两支更深的笔刷专门给文字用。
+            var labelDark = new SolidColorBrush(Color.FromRgb(0x3E, 0x44, 0x52));
+            var labelGreen = new SolidColorBrush(Color.FromRgb(0x1E, 0x6B, 0x50));
             var devGreen = new SolidColorBrush(Color.FromRgb(0x3A, 0xD3, 0x8E));
 
             // 每个料盘的「取放高亮」底板（平时全透明，轮到它被取放时点亮）
@@ -1286,21 +1142,95 @@ namespace HandlerGuide.ViewModels
                 trayDevices.Add(devs);
             }
 
+            // ---- 加热盘（真机俯视图右侧那两块点阵加热盘）----
+            // 坐标同样是量测出来的：格子中心 = 盘面上的圆点中心。
+            // 原图 1696×1376 上量得：8 列（列间距 16.086px）、两块盘各 11 行（行间距 26.97px），
+            // 首行 y 分别是 547.6 / 857.9；列起点 1356.5。换算到画布就是下面这几个数。
+            // 每块盘 8×11 = 88 个格子，两块共 176 个。
+            const double HP_X0 = 1356.5, HP_DX = 16.086;   // 原图列起点 / 列间距
+            const double HP_DY = 26.97;                    // 原图行间距
+            const int HP_COLS = 8, HP_ROWS = 11;
+            double[] hpY0 = { 547.6, 857.9 };              // 原图两块盘的首行 y
+            double hkx = CW / 1696.0, hky = CH / 1376.0;   // 原图 → 画布
+
+            var heatLine = new SolidColorBrush(Color.FromRgb(0x92, 0x98, 0xA4));   // 格子线
+            var heatChip = new SolidColorBrush(Color.FromRgb(0xF2, 0xA9, 0x3B));   // 加热中的芯片（琥珀）
+            var heatChips = new List<List<RectItem>>();
+
+            for (int hp = 0; hp < hpY0.Length; hp++)
+            {
+                // 网格左上角：以圆点为中心，往外让半个间距
+                double gw = HP_DX * hkx, gh = HP_DY * hky;          // 一个格子（画布）
+                double gx0 = HP_X0 * hkx - gw / 2;
+                double gy0 = hpY0[hp] * hky - gh / 2;
+
+                // 格子层：DrawingBrush 平铺（一块盘 1 个图元就画出 88 个格子）
+                var pocket = new DrawingBrush
+                {
+                    TileMode = TileMode.Tile,
+                    Viewport = new Rect(0, 0, gw, gh),
+                    ViewportUnits = BrushMappingMode.Absolute,
+                    Stretch = Stretch.Fill,
+                    Drawing = new GeometryDrawing
+                    {
+                        Brush = new SolidColorBrush(Color.FromArgb(0x14, 0x00, 0x00, 0x00)),
+                        Pen = new Pen(heatLine, 1),
+                        Geometry = new RectangleGeometry(new Rect(0.5, 0.5, gw - 1, gh - 1)),
+                    },
+                };
+                cv.Items.Add(new RectItem
+                {
+                    X = gx0, Y = gy0, W = gw * HP_COLS, H = gh * HP_ROWS, Radius = 2,
+                    Fill = pocket, Stroke = heatLine, StrokeThickness = 0,
+                });
+
+                // 芯片：每个点位上放一颗，正对圆点居中。
+                // 注意格子是「高瘦」的（原图列距 16px、行距 27px），如果按格子等比铺料，
+                // 一颗料会变成一根竖条，完全不像芯片；所以取窄边（列距）的 0.66 当边长，
+                // 做成正方形，视觉上就是「一颗料被放到加热盘的点位上」。
+                var chips = new List<RectItem>();
+                double cs = gw * 0.66;               // 芯片边长（正方形）
+                for (int r = 0; r < HP_ROWS; r++)
+                {
+                    for (int c = 0; c < HP_COLS; c++)
+                    {
+                        var chip = new RectItem
+                        {
+                            X = gx0 + c * gw + (gw - cs) / 2,
+                            Y = gy0 + r * gh + (gh - cs) / 2,
+                            W = cs, H = cs,
+                            Radius = 1.5, Fill = heatChip,
+                        };
+                        cv.Items.Add(chip);
+                        chips.Add(chip);
+                    }
+                }
+                heatChips.Add(chips);
+            }
+
             // ---- 分组标注 ----
             cv.Items.Add(new TextItem
             {
                 Text = "上排料盘 ×6（深盘）", X = 140, Y = 6, TextSize = 12, TextWidth = 180,
-                Align = TextAlignment.Left, Foreground = darkEdge,
+                Align = TextAlignment.Left, Foreground = labelDark,
             });
             cv.Items.Add(new TextItem
             {
-                Text = "中排料盘 ×5（深盘 · 缓存位）", X = 140, Y = 258, TextSize = 12, TextWidth = 230,
-                Align = TextAlignment.Left, Foreground = darkEdge,
+                Text = "中排料盘 ×5（深盘 · 缓存位）", X = 140, Y = 262, TextSize = 12, TextWidth = 230,
+                Align = TextAlignment.Left, Foreground = labelDark,
             });
             cv.Items.Add(new TextItem
             {
                 Text = "左下绿色料盘 ×3（出料）", X = 18, Y = 486, TextSize = 12, TextWidth = 200,
-                Align = TextAlignment.Left, Foreground = greenEdge,
+                Align = TextAlignment.Left, Foreground = labelGreen,
+            });
+            cv.Items.Add(new TextItem
+            {
+                // 紧贴两块加热盘左上角上方，说明这两块盘也有格子（点位）和芯片刷新
+                Text = "加热盘 ×2（8×11 点位 · 芯片刷新）",
+                X = HP_X0 * (CW / 1696.0) - 4, Y = 298, TextSize = 11, TextWidth = 230,
+                Align = TextAlignment.Left,
+                Foreground = new SolidColorBrush(Color.FromRgb(0xF2, 0xA9, 0x3B)),
             });
 
             // ---- 横移取放臂：沿上排与中排之间的导轨左右走位，走到哪个盘就点亮哪个盘 ----
@@ -1324,8 +1254,8 @@ namespace HandlerGuide.ViewModels
             // ---- 作者署名水印 ----
             cv.Items.Add(new TextItem
             {
-                Text = "温启志 18719361399 · 整机俯视图仿真（料盘按真机量测绘制）",
-                X = 10, Y = CH - 22, TextSize = 10, TextWidth = 430,
+                Text = "温启志 18719361399 · 整机俯视图仿真（料盘 / 加热盘按真机量测绘制）",
+                X = 10, Y = CH - 22, TextSize = 10, TextWidth = 520,
                 Align = TextAlignment.Left,
                 Foreground = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80)),
             });
@@ -1389,6 +1319,25 @@ namespace HandlerGuide.ViewModels
 
                     for (int j = 0; j < n; j++)
                         devs[j].Fill = j < target ? devBrush : null;
+                }
+
+                // ---- 加热盘上的芯片刷新 ----
+                // 斜向扫过的波：同一时刻约一半格子有芯片，形成一条从左下往右上走的料带，
+                // 看起来就是一颗颗芯片被放上加热盘、加热完再被取走。
+                for (int hp = 0; hp < heatChips.Count; hp++)
+                {
+                    var chips = heatChips[hp];
+                    for (int r = 0; r < HP_ROWS; r++)
+                    {
+                        // 注意：外层 cv.Draw 的 lambda 形参就叫 c，这里不能再叫 c（CS0136）
+                        for (int cc = 0; cc < HP_COLS; cc++)
+                        {
+                            int j = r * HP_COLS + cc;
+                            if (j >= chips.Count) break;
+                            double ph = t * 0.55 + hp * 0.5 - (r + cc) * 0.13;
+                            chips[j].Fill = Triangle(ph) > 0.5 ? heatChip : null;
+                        }
+                    }
                 }
             };
 

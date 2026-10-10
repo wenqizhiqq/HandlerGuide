@@ -1,8 +1,10 @@
 <!-- ============================================================================
      Views/MainWindow.xaml — 主窗口布局（苹果风格外壳）
      项目：HandlerGuide（EXCEED9000 控制软件界面复刻）
-     职责：顶栏（交通灯/标题/用户等级/说明书/关于）
+     职责：顶栏（交通灯/标题/版本号/用户等级/说明书/关于）
            + 命令中心工具条 + 页面主体（固定标题 + 滚动内容）+ 底部实时状态条。
+     注：版本号原先单独占一条 26px 高的绿色横条（Grid.Row=2），
+         现改为标题栏中列的绿色小胶囊，外层 Grid 由 5 行变 4 行。
      ============================================================================ -->
 <Window x:Class="HandlerGuide.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -16,7 +18,6 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="50" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="26" />
             <RowDefinition Height="*" />
             <RowDefinition Height="30" />
         </Grid.RowDefinitions>
@@ -51,6 +52,15 @@
                     <TextBlock Text="{Binding TitleText}" FontWeight="SemiBold" FontSize="14"
                                Foreground="{StaticResource TextPrimaryBrush}" Margin="16,0,0,0" VerticalAlignment="Center" />
                 </StackPanel>
+
+                <!-- 版本号：原来单独占一条 26px 高的绿色横条（旧 Grid.Row=2），
+                     现在收进标题栏中列居中，不再白占一整行高度。温启志 18719361399 -->
+                <Border Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Background="#E7F3E9" BorderBrush="#C3DFC9" BorderThickness="1"
+                        CornerRadius="9" Padding="10,3">
+                    <TextBlock Text="{Binding VersionText}" FontSize="11.5" Foreground="#1E6B32"
+                               ToolTip="{Binding VersionText}" />
+                </Border>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
                     <ComboBox Width="110" FontSize="13" Margin="0,0,10,0"
@@ -242,17 +252,8 @@
             </ScrollViewer>
         </Border>
 
-        <!-- ================= 版本条 ================= -->
-        <Border Grid.Row="2" Background="#E7F3E9"
-                BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1">
-            <Grid>
-                <TextBlock Text="{Binding VersionText}" FontSize="11.5" Foreground="#1E6B32"
-                           VerticalAlignment="Center" Margin="14,0,0,0" />
-            </Grid>
-        </Border>
-
         <!-- ================= 页面主体 ================= -->
-        <Grid Grid.Row="3" Margin="12,10,12,6">
+        <Grid Grid.Row="2" Margin="12,10,12,6">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -281,7 +282,7 @@
         </Grid>
 
         <!-- ================= 底部状态条 ================= -->
-        <Border Grid.Row="4" Background="{StaticResource CardBgBrush}"
+        <Border Grid.Row="3" Background="{StaticResource CardBgBrush}"
                 BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0">
                 <Ellipse Width="9" Height="9" Fill="{Binding StatusDot}" Margin="0,0,7,0" />

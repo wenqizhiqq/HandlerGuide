@@ -37,9 +37,13 @@
     <None Update="image\OK.bmp">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <!-- 三温标准机 3D 整机渲染图，用于「模块平面仿真」页的 3D 视角：
-         1920×1050 JPEG，运行时由 LayoutPages.BuildLayoutCanvas3D() 以
-         pack://siteoforigin:,,,/image/handler_3d.jpg 加载为画布背景。 -->
+    <!-- 三温标准机 3D 整机渲染图（1920×1050 JPEG）。
+         注意：这张图现在**已经不被代码引用了** —— 原来的「3D整机图」页签是
+         「贴这张斜二测渲染图 + 盖几个平行四边形」的假三维（LayoutPages.
+         BuildLayoutCanvas3D()），本版已删掉，改成 ViewModels/Layout3D.cs 里
+         自算三维（世界坐标→相机→透视→画家算法→朗伯着色），不需要底图。
+         这里保留拷贝只是为了让旧版本对比时文件还在；哪天确认不再需要，
+         把下面这个 <None> 条目和 image/handler_3d.jpg 一起删掉即可。 -->
     <None Update="image\handler_3d.jpg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

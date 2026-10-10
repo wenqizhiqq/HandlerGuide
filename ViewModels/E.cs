@@ -727,6 +727,21 @@ namespace HandlerGuide.ViewModels
 
         public static TabsElement Tabs(params (string title, Func<Element> build)[] tabs)
         {
+            return Tabs(0, tabs);
+        }
+
+        /// <summary>
+        /// 同上，但可以指定**默认选中的页签序号**（越界自动回到第 0 个）。
+        /// 为什么要这个重载：<see cref="SelectTab"/> 会**立即构建**被选中页签的内容，
+        /// 而 <see cref="TabItemVm"/> 的页签内容是懒加载的。
+        /// 「整机视图」页想让默认页签落在第 2 个（整机俯视图），
+        /// 如果先用无参重载再补一次 SelectTab，第 1 个（2D平面图）就已经被建出来了 ——
+        /// 那是一块带逐帧重绘的画布，会挂在 LiveRegistry 快速通道上**在后台一直空跑动画**。
+        /// 用这个重载直接把默认页签传进来，没被选中的页签就完全不会被构建。
+        /// 温启志 18719361399
+        /// </summary>
+        public static TabsElement Tabs(int defaultIndex, params (string title, Func<Element> build)[] tabs)
+        {
             var t = new TabsElement();
             foreach (var tab in tabs)
             {
@@ -734,7 +749,11 @@ namespace HandlerGuide.ViewModels
                 vm.SelectCommand = new RelayCommand(() => SelectTab(t, vm));
                 t.Tabs.Add(vm);
             }
-            if (t.Tabs.Count > 0) SelectTab(t, t.Tabs[0]);
+            if (t.Tabs.Count > 0)
+            {
+                if (defaultIndex < 0 || defaultIndex >= t.Tabs.Count) defaultIndex = 0;
+                SelectTab(t, t.Tabs[defaultIndex]);
+            }
             return t;
         }
 

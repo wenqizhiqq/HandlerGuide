@@ -510,6 +510,7 @@
         <ItemsControl ItemsSource="{Binding Items}"
                       Width="{Binding CanvasWidth}" Height="{Binding CanvasHeight}"
                       Margin="{Binding EffectiveMargin}" HorizontalAlignment="Left"
+                ClipToBounds="{Binding ClipContent}"
                 ToolTip="{Binding ToolTip}">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
@@ -520,6 +521,8 @@
                 <Style TargetType="ContentPresenter">
                     <Setter Property="Canvas.Left" Value="{Binding Left}" />
                     <Setter Property="Canvas.Top" Value="{Binding Top}" />
+                    <!-- 3D 画家算法的排序键；其他图元默认 Z=0，等价于「按加入顺序」 -->
+                    <Setter Property="Canvas.ZIndex" Value="{Binding Z}" />
                 </Style>
             </ItemsControl.ItemContainerStyle>
         </ItemsControl>

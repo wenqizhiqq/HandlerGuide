@@ -945,6 +945,15 @@ namespace HandlerGuide.ViewModels
 
         public virtual double Left => X;
         public virtual double Top => Y;
+
+        private int _z;
+        /// <summary>
+        /// 图层序号：直接绑到容器的 Canvas.ZIndex（越大越靠上）。
+        /// 「3D整机图」的画家算法靠它排序 —— 改 Z 只会让 Canvas 重排子元素，
+        /// 不用重建 ItemsControl 的容器，所以换视角时不会卡。
+        /// 其他画布不设置，默认 0，行为和以前完全一样。温启志 18719361399
+        /// </summary>
+        public int Z { get => _z; set => Set(ref _z, value); }
     }
 
     // 温启志 18719361399 · 类 public class RectItem : DiagramItem
@@ -1048,6 +1057,14 @@ namespace HandlerGuide.ViewModels
         public double CanvasWidth { get; set; } = 300;
         public double CanvasHeight { get; set; } = 200;
         public List<DiagramItem> Items { get; } = new List<DiagramItem>();
+
+        /// <summary>
+        /// 是否把内容裁到画布边框内（默认 false = 不裁，和以前完全一样）。
+        /// 「3D整机图」要打开：它的地面网格故意比机台大一圈（出血），
+        /// 投影后会有图元落在 0..CanvasWidth / 0..CanvasHeight 之外 ——
+        /// 不裁的话那些图元会溢出到旁边的工具栏和面板上。温启志 18719361399
+        /// </summary>
+        public bool ClipContent { get; set; }
         /// <summary>
         /// 自检用「包含性守卫」：布局页把「必须落在某个箱体里」的图形登记进来
         /// （闭包返回 null 表示合格，返回字符串表示越界描述），自检时逐帧校验。
