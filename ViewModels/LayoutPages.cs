@@ -1409,13 +1409,23 @@ namespace HandlerGuide.ViewModels
             //   ① 红色吸嘴组沿横梁左右走 = 机器 X；
             //   ② 整根横梁挂在两根竖直导杆上上下平移 = 机器 Y；
             //   ①×② = 吸嘴拿到 XY 定位，2×4 一次取放 8 颗。
-            // Y 行程：横梁正下方能看到两根竖直导杆（照片 x ≈1270 / 1330，y ≈1135..1297），
-            // 横梁本身 58 高、静止位 y 1200..1258，按导杆可见长度上下各留约 ±26 画布像素。
-            // 俯视图量不出更精确的 Y 行程，所以画布上额外画了行程标尺，标出这是量测上限。
+            // Y 行程（用户口径：「上料的 y 也是这么长」）：
+            // 上料横梁的 Y 行程长度**与下料X手臂完全等长**。所以这里不写死数字，
+            // 直接取下料的 (UAY1 - UAY0) —— 以后调下料行程，上料自动跟着走，不会走散。
+            // 原来这里是「以静止位为中心、上下各 ±26」的对称摆动，总行程只有 52，
+            // 比下料的 153.8 短了 2/3，和真机两根同规格的 X 轴不符。
+            //
+            // 方向：下料是「静止位在行程上端、单向下行」；上料正好反过来 ——
+            // 横梁静止位（照片实测 731.5）在**行程下端**，只向上走。
+            // 之所以不能继续「以静止位为中心上下对称」：上料横梁已经贴在画布下沿附近
+            // （静止位 731.5、梁高 34.5、画布高 819），对称摆到 ±76.9 的话横梁下缘会到
+            // 825.6，冲出画布 6.6px 被 ClipToBounds 裁掉。向上走既放得下，
+            // 方向上也正好对着上方的料盘 / 加热盘区，动作合理。
             const double U2X0 = 683.7, U2X1 = 922.9;       // 横梁外框左右端（画布坐标）
-            const double U2CY = 731.5;                     // 横梁中心线（照片实测 = 静止位）
+            const double U2CY = 731.5;                     // 横梁中心线（照片实测 = 静止位 = 行程下端）
             const double U2H = 34.5;                       // 横梁高
-            const double U2YS = 26.0;                      // Y 向行程半幅
+            const double U2Y0 = U2CY;                      // Y 行程下端 = 静止位
+            const double U2Y1 = U2CY - (UAY1 - UAY0);      // Y 行程上端（与下料 Y 行程等长，= 577.7）
             const double U2NW = 69.1, U2NH = 34.5;         // 红色吸嘴组合尺寸
             const double U2NX0 = 694.9, U2NX1 = 843.3;     // 吸嘴左端行程范围
             const double U2GA0 = 845.0, U2GA1 = 852.2;     // 绿滑块 A
@@ -1432,8 +1442,10 @@ namespace HandlerGuide.ViewModels
             var u2RedEdge = new SolidColorBrush(Color.FromRgb(0x6B, 0x10, 0x10));
             var u2DotBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0xDC, 0xDC));
 
-            double u2EnvTop = U2CY - U2YS - U2H / 2 - 5;
-            double u2EnvBot = U2CY + U2YS + U2H / 2 + 5;
+            // 行程包络 = 横梁**外缘**能到的两个极限位置
+            // （上端 = 行程上端再让出半个梁高 + 5；下端 = 静止位再让出半个梁高 + 5）
+            double u2EnvTop = U2Y1 - U2H / 2 - 5;
+            double u2EnvBot = U2Y0 + U2H / 2 + 5;
 
             // 行程上下限（横梁外缘能到的两个极限位置）
             var u2Limit = new SolidColorBrush(Color.FromArgb(0x8C, 0x7C, 0x4F, 0xD0));
@@ -1445,7 +1457,8 @@ namespace HandlerGuide.ViewModels
                 });
             }
 
-            // Y 行程标尺（画在横梁左端外侧，x 667..679，避开左边标注框的右边缘 666）
+            // Y 行程标尺（画在横梁左端外侧，x 667..679；原来这里是为了避开左边的标注框，
+            // 标注框已在需求 35 删除，标尺位置保持不变）
             cv.Items.Add(new RectItem
             {
                 X = 672, Y = u2EnvTop + 3, W = 2, H = u2EnvBot - u2EnvTop - 6, Fill = u2VioletSoft,
@@ -1585,9 +1598,11 @@ namespace HandlerGuide.ViewModels
                     uaHilite[i].Stroke = (i == uaBest) ? uaAmberOn : uaAmberOff;
 
                 // ---- 上料X轴：横梁上下平移（Y） ＋ 红色吸嘴组沿横梁左右走（X） ----
-                // ① 横梁 Y 平移。相位 +0.25 ⇒ t = 0 时三角波正好 0.5，横梁停在行程中点，
-                //    也就是照片里的静止位，静止状态与照片完全重合。
-                double u2CYn = U2CY + (Triangle(t * 0.15 + 0.25) - 0.5) * 2.0 * U2YS;
+                // ① 横梁 Y 平移。相位不加偏移 ⇒ t = 0 时三角波为 0，横梁停在**行程下端**
+                //    （= 照片里的静止位），静止状态与照片完全重合 —— 和下料同一套约定，
+                //    只是方向相反：下料从静止位往下走，上料从静止位往上走。
+                //    行程长度 = (U2Y0 - U2Y1) = 下料的 (UAY1 - UAY0)，两根轴等长。
+                double u2CYn = U2Y0 - Triangle(t * 0.15) * (U2Y0 - U2Y1);
                 u2Beam.Y = u2CYn - U2H / 2;
                 u2GreenA.Y = u2CYn - U2H / 2 + 3;
                 u2GreenB.Y = u2CYn - U2H / 2 + 3;
