@@ -15,6 +15,9 @@
 //        打开本页会自动启动「安全演示节拍」，每一步都过同一套互锁，不会撞机。
 //        本页现在**只显示「整机俯视图」**：2D平面图 / 整机俯视图 / 3D整机图 这套页签选择条
 //        已按用户要求整个撤掉（先删 3D，再把选择器也去掉），打开本页直接就是俯视图。
+//        画布上的**所有文字**也已按用户要求清掉 —— 分组标签、手臂标注框、行程文字、
+//        署名水印全部撤除。现在画布上只剩「真机照片 + 料盘 / 加热盘 / 两根手臂」的
+//        图形与动画，一句字都没有；所有文字说明统一收到右侧说明栏（见 LayoutPage()）。
 // ============================================================================
 using System;
 using System.Collections.Generic;
@@ -1033,7 +1036,10 @@ namespace HandlerGuide.ViewModels
             }
             cv.Items.Add(new RectItem { X = 0, Y = 0, W = CW, H = CH, Fill = bgBrush });
 
-            // 找不到图时叠深灰底 + 提示文字，绝不黑屏
+            // 找不到图时叠深灰底，绝不黑屏。
+            // 这里原来还会在画布正中写一行「image/handler_top.jpg 加载失败」，按用户要求
+            // 画布上不留任何文字，于是改成往运行日志里记一条 —— 失败依旧可查（日志页 / 日志文件），
+            // 但仿真画面上不会再冒出一行字。
             if (bgBrush.ImageSource == null)
             {
                 cv.Items.Add(new RectItem
@@ -1041,12 +1047,8 @@ namespace HandlerGuide.ViewModels
                     X = 0, Y = 0, W = CW, H = CH,
                     Fill = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x30))
                 });
-                cv.Items.Add(new TextItem
-                {
-                    Text = "image/handler_top.jpg 加载失败", X = CW / 2 - 200, Y = CH / 2,
-                    TextSize = 18, TextWidth = 400, Align = TextAlignment.Center,
-                    Foreground = new SolidColorBrush(Color.FromRgb(0xE0, 0xE0, 0xE0))
-                });
+                try { MachineModel.Instance.Log("警告", "整机俯视图底图 image/handler_top.jpg 加载失败，画布以深灰底代替"); }
+                catch { }
             }
 
             // ---- 真机料盘：按 TrayPlan 的平面坐标落点 ----
@@ -1063,10 +1065,6 @@ namespace HandlerGuide.ViewModels
             // 物料配色：待测（深盘里）= 亮青；已测 / 出料（绿盘里）= 亮绿
             var devBlue = new SolidColorBrush(Color.FromRgb(0x3C, 0xC0, 0xF0));
 
-            // 分组标注的字色：底图是浅色的真机照片，直接用盘体描边色（中灰 / 灰绿）
-            // 会看不清，所以另配两支更深的笔刷专门给文字用。
-            var labelDark = new SolidColorBrush(Color.FromRgb(0x3E, 0x44, 0x52));
-            var labelGreen = new SolidColorBrush(Color.FromRgb(0x1E, 0x6B, 0x50));
             var devGreen = new SolidColorBrush(Color.FromRgb(0x3A, 0xD3, 0x8E));
 
             // 每个料盘的「取放高亮」底板（平时全透明，轮到它被取放时点亮）
@@ -1220,32 +1218,10 @@ namespace HandlerGuide.ViewModels
                 heatChips.Add(chips);
             }
 
-            // ---- 分组标注 ----
-            cv.Items.Add(new TextItem
-            {
-                Text = "上排料盘 ×6（深盘）", X = 140, Y = 6, TextSize = 12, TextWidth = 180,
-                Align = TextAlignment.Left, Foreground = labelDark,
-            });
-            cv.Items.Add(new TextItem
-            {
-                Text = "中排料盘 ×5（深盘 · 缓存位）", X = 140, Y = 262, TextSize = 12, TextWidth = 230,
-                Align = TextAlignment.Left, Foreground = labelDark,
-            });
-            cv.Items.Add(new TextItem
-            {
-                // 原来放在 y=486（绿盘上方），但「下料X手臂」的行程槽正好落在那里，
-                // 所以挪到绿盘下方 y=690（绿盘底边 ≈ 682），互不遮挡。
-                Text = "左下绿色料盘 ×3（出料）", X = 18, Y = 690, TextSize = 12, TextWidth = 200,
-                Align = TextAlignment.Left, Foreground = labelGreen,
-            });
-            cv.Items.Add(new TextItem
-            {
-                // 紧贴两块加热盘左上角上方，说明这两块盘也有格子（点位）和芯片刷新
-                Text = "加热盘 ×2（8×11 点位 · 芯片刷新）",
-                X = HP_X0 * (CW / 1696.0) - 4, Y = 298, TextSize = 11, TextWidth = 230,
-                Align = TextAlignment.Left,
-                Foreground = new SolidColorBrush(Color.FromRgb(0xF2, 0xA9, 0x3B)),
-            });
+            // ---- 分组标注：已按用户要求整组删除 ----
+            // 原来这里有四条压在照片上的文字：「上排料盘 ×6（深盘）」「中排料盘 ×5（深盘 · 缓存位）」
+            // 「左下绿色料盘 ×3（出料）」「加热盘 ×2（8×11 点位 · 芯片刷新）」。
+            // 现在画布上一句字都不留，这些分组说明统一放到右侧说明栏的「图例」里。
 
             // ---- 横移取放臂：沿上排与中排之间的导轨左右走位，走到哪个盘就点亮哪个盘 ----
             const double armY = 240;                       // 导轨中心线（上排盘底 215 / 中排盘顶 292 之间）
@@ -1261,7 +1237,8 @@ namespace HandlerGuide.ViewModels
                 Fill = new SolidColorBrush(Color.FromArgb(230, 0x2F, 0x7C, 0xD6)),
                 Stroke = new SolidColorBrush(Color.FromRgb(0x14, 0x3F, 0x74)),
                 StrokeThickness = 1.5,
-                Text = "臂", TextSize = 12, TextColor = Brushes.White,
+                // 原来这个方块正中写着一个「臂」字（Text / TextSize / TextColor），
+                // 按用户要求画布不留文字，只保留方块本身作为「取放臂头」的图形标记。
             };
             cv.Items.Add(armHead);
 
@@ -1338,11 +1315,6 @@ namespace HandlerGuide.ViewModels
                 },
                 Fill = uaBlue,
             });
-            cv.Items.Add(new TextItem
-            {
-                Text = "上下平移（Y）", X = 96, Y = uaSlotTop - 16, TextSize = 9.5, TextWidth = 120,
-                Align = TextAlignment.Left, Foreground = uaLimit,
-            });
 
             // 出料盘高亮：吸嘴走到哪张绿盘上方就点亮哪张
             var uaTrayX = new List<double>();
@@ -1413,46 +1385,11 @@ namespace HandlerGuide.ViewModels
                 }
             }
 
-            // 标注：放在横梁右端外侧的空白区（x 458..774 / y 548..648，这一带没有料盘）。
-            // 真机照片在这一段的机械细节非常密，纯文字直接压上去几乎读不出来 ——
-            // 所以先铺一块半透明白底（工程图里的「标注框」），再写字。
-            // 这是本页唯一带底框的标注，其余分组标签都在照片的平坦区域，不需要。
-            cv.Items.Add(new RectItem
-            {
-                X = 458, Y = 548, W = 316, H = 100, Radius = 6,
-                Fill = new SolidColorBrush(Color.FromArgb(0xDC, 0xFF, 0xFF, 0xFF)),
-                Stroke = new SolidColorBrush(Color.FromArgb(0x66, 0x1E, 0x4E, 0x8C)),
-                StrokeThickness = 1,
-            });
-            cv.Items.Add(new TextItem
-            {
-                Text = "下料X手臂（真机量测 · 照片 x151..766）",
-                X = 468, Y = 556, TextSize = 11.5, TextWidth = 300,
-                Align = TextAlignment.Left,
-                Foreground = new SolidColorBrush(Color.FromRgb(0x1E, 0x4E, 0x8C)),
-            });
-            cv.Items.Add(new TextItem
-            {
-                Text = "① 整根 X 横梁沿左侧竖直导轨上下平移（机器 Y）\n"
-                     + "② 红色吸嘴组合沿横梁左右走（机器 X）\n"
-                     + "①×② = 吸嘴 XY 定位 · 2×4 = 8 头，一次取放 8 颗料",
-                X = 468, Y = 575, TextSize = 10, TextWidth = 300,
-                Align = TextAlignment.Left,
-                Foreground = new SolidColorBrush(Color.FromRgb(0x5A, 0x62, 0x70)),
-            });
-            // 图例：一个红色小方块，和盘面上的红色吸嘴组合同色，指代关系一眼可辨
-            cv.Items.Add(new RectItem
-            {
-                X = 468, Y = 628, W = 13, H = 13, Radius = 2,
-                Fill = uaRed, Stroke = uaRedEdge, StrokeThickness = 1,
-            });
-            cv.Items.Add(new TextItem
-            {
-                Text = "= 吸嘴 2×4 组合（8 头）",
-                X = 487, Y = 629, TextSize = 10.5, TextWidth = 200,
-                Align = TextAlignment.Left,
-                Foreground = new SolidColorBrush(Color.FromRgb(0xA8, 0x18, 0x18)),
-            });
+            // ---- 「下料X手臂」标注框：已按用户要求整块删除 ----
+            // 原来这里是 316×100 的半透明白底标注框（x 458..774 / y 548..648）+ 标题 +
+            // 三行说明 + 一个红色图例小方块 —— 因为照片这一带的机械细节太密，必须垫白底
+            // 才读得出来。画布不留文字之后，白底和方块都成了没有内容的浮块，一并撤掉，
+            // 让这一片照片恢复完整（红色吸嘴组本身还画在横梁上，图例不再需要）。
 
             // ==============================================================
             //  上料X轴（真机量测：X 横梁 + 红色吸嘴 2×4 组合）
@@ -1529,11 +1466,6 @@ namespace HandlerGuide.ViewModels
                 },
                 Fill = u2Violet,
             });
-            cv.Items.Add(new TextItem
-            {
-                Text = "上下平移（Y）", X = 686, Y = 690, TextSize = 9.5, TextWidth = 120,
-                Align = TextAlignment.Left, Foreground = u2Limit,
-            });
 
             // X 横梁（上料手臂本体）
             var u2Beam = new RectItem
@@ -1583,53 +1515,15 @@ namespace HandlerGuide.ViewModels
                 }
             }
 
-            // 标注框：横梁左下方的空白带（x 430..666 / y 654..752）。
-            // 上面是「下料X手臂」的标注框（到 y 648），右边是行程标尺（x 667 起），互不遮挡。
-            cv.Items.Add(new RectItem
-            {
-                X = 430, Y = 654, W = 236, H = 98, Radius = 6,
-                Fill = new SolidColorBrush(Color.FromArgb(0xDC, 0xFF, 0xFF, 0xFF)),
-                Stroke = new SolidColorBrush(Color.FromArgb(0x66, 0x4A, 0x2E, 0x8C)),
-                StrokeThickness = 1,
-            });
-            cv.Items.Add(new TextItem
-            {
-                Text = "上料X轴（真机量测 · 照片 x1148..1549）",
-                X = 439, Y = 661, TextSize = 10.5, TextWidth = 220,
-                Align = TextAlignment.Left,
-                Foreground = new SolidColorBrush(Color.FromRgb(0x4A, 0x2E, 0x8C)),
-            });
-            cv.Items.Add(new TextItem
-            {
-                Text = "① 红色吸嘴组沿 X 横梁左右走（机器 X）\n"
-                     + "② 整根横梁沿两根竖直导杆上下平移（机器 Y）\n"
-                     + "①×② = 吸嘴 XY 定位 · 2×4 = 8 头",
-                X = 439, Y = 679, TextSize = 9.5, TextWidth = 220,
-                Align = TextAlignment.Left,
-                Foreground = new SolidColorBrush(Color.FromRgb(0x5A, 0x62, 0x70)),
-            });
-            // 图例：一个红色小方块，和横梁上的红色吸嘴组合同色
-            cv.Items.Add(new RectItem
-            {
-                X = 439, Y = 726, W = 13, H = 13, Radius = 2,
-                Fill = u2Red, Stroke = u2RedEdge, StrokeThickness = 1,
-            });
-            cv.Items.Add(new TextItem
-            {
-                Text = "= 吸嘴 2×4 组合（8 头）",
-                X = 458, Y = 727, TextSize = 10, TextWidth = 200,
-                Align = TextAlignment.Left,
-                Foreground = new SolidColorBrush(Color.FromRgb(0xA8, 0x18, 0x18)),
-            });
+            // ---- 「上料X轴」标注框：已按用户要求整块删除 ----
+            // 原来是 236×98 的半透明白底标注框（x 430..666 / y 654..752）+ 标题 +
+            // 三行说明 + 红色图例小方块。撤掉之后这一片照片不再被白底盖住，
+            // 上料横梁与红色吸嘴组看得很清楚，不再需要图例指代。
 
-            // ---- 作者署名水印 ----
-            cv.Items.Add(new TextItem
-            {
-                Text = "温启志 18719361399 · 整机俯视图仿真（料盘 / 加热盘按真机量测绘制）",
-                X = 10, Y = CH - 22, TextSize = 10, TextWidth = 520,
-                Align = TextAlignment.Left,
-                Foreground = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80)),
-            });
+            // ---- 画布署名水印：已按用户要求从画布上撤掉 ----
+            // 原来画布左下角有一行「温启志 18719361399 · 整机俯视图仿真（…）」。
+            // 画布不留文字之后这里不再画字；署名仍保留在本文件头部注释、类名注释
+            // 以及右侧说明栏的页脚里（温启志 18719361399）。
 
             // ---- 逐帧动画：横移臂在导轨上往返，最近的料盘随之点亮 ----
             long last = Environment.TickCount64;
