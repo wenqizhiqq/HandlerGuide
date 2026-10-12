@@ -537,6 +537,26 @@ namespace HandlerGuide
                 Chk("ApplyAllAxisConfigs", Ops.ApplyAllAxisConfigs);
                 Chk("PullAxisConfigsToModel", Ops.PullAxisConfigsToModel);
 
+                // ---------- 11b. 界面状态：最后显示的页面（温启志 18719361399） ----------
+                // 需求：开机要「主动」回到用户上次停留的那一页，导航栏按钮高亮跟着还原。
+                // 这里只校验 UiState 的落盘 / 回读 / 文件结构，**不动导航** ——
+                // 自检走到这一步主窗口已经 Close()，再 Navigate 会去构建页面内容，
+                // 平白扰动后面的检查（导航侧由 MainViewModel.Navigate + FindPageById 收口）。
+                // 测完把原值写回去，免得自检把「开机页面」永久改成 motion_layout。
+                string uiBackup = UiState.LastPageId;
+                Chk("UiState.Save", () => UiState.LastPageId = "motion_layout",
+                    () => UiState.LastPageId == "motion_layout");
+                Chk("UiState.File", () => { }, () => File.Exists(UiState.FilePath));
+                Chk("UiState.FileShape", () => { },
+                    () => File.ReadAllText(UiState.FilePath).Contains("\"LastPage\""));
+                Chk("UiState.IdIsRealPage", () => { }, () =>
+                {
+                    var mv = MainViewModel.Current;
+                    return mv != null && mv.AllPages.Any(pg => pg.Id == UiState.LastPageId);
+                });
+                Chk("UiState.Restore", () => UiState.LastPageId = uiBackup,
+                    () => UiState.LastPageId == uiBackup);
+
                 // ---------- 12. 批次 / 用户 ----------
                 Chk("OpenBatch", () => Ops.OpenBatch("MO-SELFTEST", "SUB-1", "Tester"), () => M.BatchOpen);
                 Chk("CloseBatch", Ops.CloseBatch, () => !M.BatchOpen);

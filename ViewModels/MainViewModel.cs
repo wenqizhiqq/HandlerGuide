@@ -192,7 +192,15 @@ namespace HandlerGuide.ViewModels
             Ops.PullAxisConfigsToModel();
             Ops.RefreshTimingReadouts();
 
-            Navigate(HomePage);
+            // 主动恢复「用户最后一次显示的页面」：下次开机直接回到那一页，
+            // 导航栏上对应的工具条按钮 / 下拉项高亮由 Navigate 一并还原。
+            // 从没记录过、或记录的页面已不存在（例如版本升级把页面删了 / 改了 Id）
+            // → 退回主界面，并留一条日志说明，免得用户以为「记忆功能坏了」。
+            string lastId = UiState.LastPageId;
+            var lastPage = FindPageById(lastId);
+            if (lastPage == null && !string.IsNullOrEmpty(lastId))
+                M.Log("信息", "上次停留的页面已不存在（" + lastId + "），已回到主界面");
+            Navigate(lastPage ?? HomePage);
         }
 
         // ---------------- 导航 ----------------
@@ -227,6 +235,21 @@ namespace HandlerGuide.ViewModels
             }
             foreach (var p in AllPages) p.IsActive = ReferenceEquals(p, page);
             CurrentPage = page;
+
+            // 主动记住最后显示的页面（落盘 %APPDATA%\HandlerGuide\ui.json）。
+            // 放在这里而不是各处命令里：GoHomeCommand / ManualCommand / SecsGemCommand
+            // 以及工具条每个按钮都走 Navigate，一处收口就不会漏。
+            // Id 没变时 UiState 自己会跳过写盘。
+            UiState.LastPageId = page.Id;
+        }
+
+        /// <summary>按 Id 找页面（开机恢复上次页面用）；找不到返回 null。</summary>
+        private PageVm FindPageById(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return null;
+            foreach (var p in AllPages)
+                if (string.Equals(p.Id, id, StringComparison.Ordinal)) return p;
+            return null;
         }
 
         // ---------------- 顶栏 / 工具条命令 ----------------

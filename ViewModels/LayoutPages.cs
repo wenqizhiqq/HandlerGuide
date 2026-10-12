@@ -213,21 +213,7 @@ namespace HandlerGuide.ViewModels
                     E.SpacerW(14),
                     E.T("（11 个模组 · 动作随运动控制卡实时变化）", 11, E.Sec)),
 
-                // ---- 操作条 ----
-                E.Band("仿真节拍控制", Palette.BandBlue,
-                    E.H(
-                        E.Btn("启动演示节拍", () => MotionManager.Instance.StartDemo(), "PrimaryButton", 12),
-                        E.Btn("停止演示", () => MotionManager.Instance.StopDemo(), "PrimaryButton", 12),
-                        E.SpacerW(10),
-                        E.Btn("急停", () => MotionManager.Instance.TriggerEStop(), "DangerButton", 12),
-                        E.Btn("急停复位", () => MotionManager.Instance.ResetEStop(), "PrimaryButton", 12),
-                        E.SpacerW(10),
-                        E.Btn("全部回零", () => MotionManager.Instance.HomeAll(), "PrimaryButton", 12),
-                        E.Btn("全部停止", () => MotionManager.Instance.StopAll(), "PrimaryButton", 12),
-                        E.Btn("清除报警", () => MotionManager.Instance.ClearAlarm(), "PrimaryButton", 12)),
-                    E.T("打开本页即自动演示节拍；点「停止演示」回到静态。"
-                        + "所有动作经 SafetyCheck 互锁裁决，越界指令会被拒绝，不会撞机。",
-                        10, E.Sec, false, TextWrapping.Wrap)),
+                E.Spacer(6),
 
                 // ---- 主画布 + 右侧说明栏 ----
                 // 两列网格：左列 * 吃满剩余宽度放整机俯视图画布，右列固定 490。
@@ -241,6 +227,32 @@ namespace HandlerGuide.ViewModels
                     .Add(topCanvas, 0, 0)
                     .Add(
                         E.V(
+                            // ---- 仿真节拍控制 ----
+                            // 原来这条是页顶的**通栏**操作条（7 个按钮一行排开）。按用户要求
+                            // 挪到「仿真图最右侧」= 右栏顶部，并**分 2 行**显示：
+                            // 本栏固定 490 宽，减去栏左边距 12 和 Band 内边距 14×2 只剩约 450，
+                            // 7 个按钮一行要 ~570px 塞不下，所以按语义拆成
+                            //   第 1 行 = 节拍控制（启动 / 停止）+ 急停 / 急停复位
+                            //   第 2 行 = 整机动作（全部回零 / 全部停止 / 清除报警）
+                            // 两行实测各约 336px / 252px，都在 450 之内。
+                            E.Band("仿真节拍控制", Palette.BandBlue,
+                                E.V(
+                                    E.H(
+                                        E.Btn("启动演示节拍", () => MotionManager.Instance.StartDemo(), "PrimaryButton", 12),
+                                        E.Btn("停止演示", () => MotionManager.Instance.StopDemo(), "PrimaryButton", 12),
+                                        E.Btn("急停", () => MotionManager.Instance.TriggerEStop(), "DangerButton", 12),
+                                        E.Btn("急停复位", () => MotionManager.Instance.ResetEStop(), "PrimaryButton", 12)),
+                                    E.Spacer(6),
+                                    E.H(
+                                        E.Btn("全部回零", () => MotionManager.Instance.HomeAll(), "PrimaryButton", 12),
+                                        E.Btn("全部停止", () => MotionManager.Instance.StopAll(), "PrimaryButton", 12),
+                                        E.Btn("清除报警", () => MotionManager.Instance.ClearAlarm(), "PrimaryButton", 12))),
+                                E.Spacer(4),
+                                E.T("打开本页即自动演示节拍；点「停止演示」回到静态。"
+                                    + "所有动作经 SafetyCheck 互锁裁决，越界指令会被拒绝，不会撞机。",
+                                    10, E.Sec, false, TextWrapping.Wrap)),
+                            E.Spacer(8),
+
                             // ---- 命令中心（生产控制 + 批次管理）从主界面搬到本仿真页右侧 ----
                             HomePages.CommandCenter(),
                             E.Spacer(6),
