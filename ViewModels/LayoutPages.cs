@@ -284,6 +284,10 @@ namespace HandlerGuide.ViewModels
                     E.T(label, 10.5, E.Sec),
                     E.SpacerW(12));
 
+            // 上排 6 个深盘改成「叠层」表示层数后的图例（温启志 18719361399）
+            var legendLayer = new SolidColorBrush(Color.FromRgb(0xC9, 0xCE, 0xD6));
+            var legendLayerWarn = new SolidColorBrush(Color.FromRgb(0xFF, 0xC0, 0x00));
+
             return E.Wrap(
                 Dot(Blue, "上料臂"),
                 Dot(Orange, "下料臂"),
@@ -294,7 +298,9 @@ namespace HandlerGuide.ViewModels
                 Dot(Steel, "料枪 / 机械件"),
                 Dot(TrayBlack, "黑盘"),
                 Dot(TrayColor, "彩盘"),
-                Dot(TrayWhite, "白盘"));
+                Dot(TrayWhite, "白盘"),
+                Dot(legendLayer, "上排料盘层数（叠层，最多 20 层）"),
+                Dot(legendLayerWarn, "层数不足 3 层：需增加料盘"));
         }
 
         /// <summary>模组动作说明表。</summary>
@@ -1017,6 +1023,10 @@ namespace HandlerGuide.ViewModels
 
             var cv = new CanvasElement { CanvasWidth = CW, CanvasHeight = CH };
 
+            // 上排料盘堆叠层数的数据源（温启志 18719361399）：静态时读它，
+            // 演示节拍里逐帧回写，保证「俯视图」与其它页面看到的是同一份层数。
+            var mm = MachineModel.Instance;
+
             // ---- 底图：image/handler_top.jpg（空机台；运行时由 .csproj CopyToOutputDirectory
             // 复制到 exe 同级目录，pack://siteoforigin 从那里加载）----
             ImageBrush bgBrush;
@@ -1067,10 +1077,27 @@ namespace HandlerGuide.ViewModels
 
             var devGreen = new SolidColorBrush(Color.FromRgb(0x3A, 0xD3, 0x8E));
 
+            // ---- 料盘堆叠层数配色（温启志 18719361399）----------------------------
+            // 上排 6 个深盘不再画格子，改成「一摞薄盘」表示层数：正常 = 灰白薄盘，
+            // 层数 < MinTrayAlarmLayers 时整摞与文字转黄，并在盘内写「需增加料盘」。
+            var layerWell = new SolidColorBrush(Color.FromRgb(0x12, 0x14, 0x18));      // 盘内槽底
+            var layerPlate = new SolidColorBrush(Color.FromRgb(0xC9, 0xCE, 0xD6));     // 正常层（灰白薄盘）
+            var layerWarnPlate = new SolidColorBrush(Color.FromRgb(0xFF, 0xC0, 0x00)); // 报警层（黄）
+            var layerCountInk = new SolidColorBrush(Color.FromRgb(0xE6, 0xEA, 0xF0));  // 层数文字
+            var layerWarnInk = new SolidColorBrush(Color.FromRgb(0xFF, 0xC0, 0x00));   // 报警文字（黄）
+            var layerWarnWash = new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xC0, 0x00));
+            var layerClear = new SolidColorBrush(Colors.Transparent);
+
             // 每个料盘的「取放高亮」底板（平时全透明，轮到它被取放时点亮）
             var trayHilite = new List<RectItem>();
             // 每个料盘的物料格列表（按「从上到下、从左到右」排好序，动画里逐格增删）
             var trayDevices = new List<List<RectItem>>();
+            // 以下 4 个列表与 TrayPlan 一一对齐（下标 = 料盘序号）：
+            // 上排 6 个深盘放叠层数据，其余盘放 null（它们走原来的格子 + 物料路径）。
+            var trayLayers = new List<List<RectItem>>();   // 叠层图元（下标 0 = 最底层）
+            var trayLayerLabel = new List<TextItem>();     // 盘内层数文字
+            var trayLayerWarn = new List<TextItem>();      // 盘内「需增加料盘」
+            var trayLayerWash = new List<RectItem>();      // 报警黄色底光
 
             for (int i = 0; i < TrayPlan.Length; i++)
             {
@@ -1101,6 +1128,79 @@ namespace HandlerGuide.ViewModels
                     Stroke = edge,
                     StrokeThickness = 1.2,
                 });
+
+                // ③ 上排 6 个深盘 = 料盘堆叠：**不画格子**，改画「叠层」表示层数。
+                //    温启志 18719361399 ·「这里不需要显示格子，改成多少层的料盘就好了，
+                //    最多 20 层料盘，如果少于 3 层就需要黄色提示需要增加料盘。」
+                //    · 正常：灰白薄盘按「自下而上」叠 N 片（N = 当前层数），盘内上方写「N 层」；
+                //    · N < MinTrayAlarmLayers：整摞与数字转黄，盘内再加一行「需增加料盘」。
+                //    其余 8 个盘（中排 5 缓存盘 / 左下 3 出料盘）仍走原来的「格子 + 物料」路径。
+                if (i < 6 && !tp.Green)
+                {
+                    const double pad = 5;      // 盘内留边
+                    const double bandH = 30;   // 顶部文字带（层数 + 报警两行）
+                    double wellX = x + pad, wellW = w - pad * 2;
+                    // 盘内槽底
+                    cv.Items.Add(new RectItem
+                    {
+                        X = wellX, Y = y + pad, W = wellW, H = h - pad * 2,
+                        Radius = 2, Fill = layerWell, Stroke = null, StrokeThickness = 0,
+                    });
+                    // 报警黄色底光（压在叠层之下，正常时全透明）
+                    var wash = new RectItem
+                    {
+                        X = wellX, Y = y + pad, W = wellW, H = h - pad * 2,
+                        Radius = 2, Fill = layerClear, Stroke = null, StrokeThickness = 0,
+                    };
+                    cv.Items.Add(wash);
+
+                    double areaTop = y + pad + bandH;               // 叠层区顶
+                    double areaH = (y + h - pad) - areaTop;         // 叠层区高
+                    double step = areaH / MachineModel.MaxTrayLayers;
+                    double plateH = Math.Max(2.6, step - 1.6);
+                    double plateW = wellW - 6;
+                    var plates = new List<RectItem>();
+                    for (int j = 0; j < MachineModel.MaxTrayLayers; j++)
+                    {
+                        // j = 0 是最底层（贴盘底），往上依次叠 —— 层数少时只有底部几片亮，
+                        // 一眼就能看出「这摞盘快用完了」。
+                        var plate = new RectItem
+                        {
+                            X = wellX + 3, Y = y + h - pad - plateH - j * step,
+                            W = plateW, H = plateH,
+                            Radius = 1.2, Fill = layerPlate, Stroke = null, StrokeThickness = 0,
+                        };
+                        cv.Items.Add(plate);
+                        plates.Add(plate);
+                    }
+                    // 层数文字（盘内顶部居中）
+                    var label = new TextItem
+                    {
+                        Text = "", X = wellX, Y = y + pad + 2, TextSize = 11,
+                        Foreground = layerCountInk, TextWidth = wellW, Align = TextAlignment.Center,
+                    };
+                    cv.Items.Add(label);
+                    // 「需增加料盘」黄色提示（层数不足时才写字，否则留空）
+                    var warn = new TextItem
+                    {
+                        Text = "", X = wellX, Y = y + pad + 16, TextSize = 9.5,
+                        Foreground = layerWarnInk, TextWidth = wellW, Align = TextAlignment.Center,
+                    };
+                    cv.Items.Add(warn);
+
+                    // 四个对齐列表都补位：叠层盘写数据、物料格留 null
+                    trayDevices.Add(null);
+                    trayLayers.Add(plates);
+                    trayLayerLabel.Add(label);
+                    trayLayerWarn.Add(warn);
+                    trayLayerWash.Add(wash);
+                    continue;
+                }
+                // 非叠层盘：叠层相关的四个列表留 null，保证下标与 TrayPlan 一一对齐
+                trayLayers.Add(null);
+                trayLayerLabel.Add(null);
+                trayLayerWarn.Add(null);
+                trayLayerWash.Add(null);
 
                 // ③ 格子层：用 DrawingBrush 按「一格」的尺寸平铺 —— 一张盘只占 1 个图元
                 //    就画出整片格子（深盘 5×10 格，绿盘 4×8 格，格子接近正方形）。
@@ -1647,9 +1747,45 @@ namespace HandlerGuide.ViewModels
                         on ? Color.FromArgb(255, 0xFF, 0xA8, 0x20) : Color.FromArgb(0, 0xFF, 0xC0, 0x40);
                 }
 
+                // ---- 上排 6 个深盘：料盘堆叠层数（叠层图元） ----
+                // 温启志 18719361399 · 演示节拍里这一摞盘被逐层取走，见底后补新盘
+                // （回到满 20 层），每盘各走各的相位，画面不会整齐划一。
+                // 层数 < MinTrayAlarmLayers 时：整摞转黄 + 盘内写「需增加料盘」。
+                // 静态（未启动演示节拍）时用模型里的层数，首屏就能看到各盘实际层数与报警。
+                bool running = MotionManager.Instance.AutoCycle;
+                for (int i = 0; i < trayLayers.Count; i++)
+                {
+                    var plates = trayLayers[i];
+                    if (plates == null) continue;          // 非叠层盘
+
+                    int layers;
+                    if (running)
+                    {
+                        double p = Mod(t * 0.055 + i * 0.19, 1.0);
+                        layers = MachineModel.MaxTrayLayers - (int)(p * MachineModel.MaxTrayLayers);
+                        if (layers < 1) layers = 1;
+                        mm.TopTrayLayers[i] = layers;      // 回写模型，其它页面可直接读
+                    }
+                    else
+                    {
+                        layers = mm.TopTrayLayers[i];
+                    }
+                    if (layers > MachineModel.MaxTrayLayers) layers = MachineModel.MaxTrayLayers;
+                    if (layers < 1) layers = 1;
+
+                    bool warn = layers < MachineModel.MinTrayAlarmLayers;
+                    var plateBrush = warn ? layerWarnPlate : layerPlate;
+                    for (int j = 0; j < plates.Count; j++)
+                        plates[j].Fill = j < layers ? plateBrush : null;   // 只亮到第 layers 片
+
+                    trayLayerWash[i].Fill = warn ? layerWarnWash : layerClear;
+                    trayLayerLabel[i].Text = layers + "层";
+                    trayLayerLabel[i].Foreground = warn ? layerWarnInk : layerCountInk;
+                    trayLayerWarn[i].Text = warn ? "需增加料盘" : "";
+                }
+
                 // ---- 格子里的物料变化 ----
                 // 每个料盘按自己的相位在「满 / 空」之间循环，逐格地取走或累积：
-                //   · 上排 6 个 = 待测盘：满 → 空（物料被逐格取走）
                 //   · 中排 5 个 = 缓存盘：空 → 满 → 空
                 //   · 左下 3 个 = 出料盘：空 → 满（逐格累积已测品）
                 // 填充顺序统一「从上到下、从左到右」，所以看起来是从下往上被清空的。
@@ -1658,15 +1794,14 @@ namespace HandlerGuide.ViewModels
                 for (int i = 0; i < trayDevices.Count; i++)
                 {
                     var devs = trayDevices[i];
+                    if (devs == null) continue;            // 上排 6 深盘已改成叠层，没有物料格
                     int n = devs.Count;
                     if (n == 0) continue;
 
                     bool green = TrayPlan[i].Green;
                     var devBrush = green ? devGreen : devBlue;
                     double k = Triangle(t * 0.08 + i * 0.19);
-                    int target = i < 6
-                        ? (int)Math.Round(n * (1.0 - k))   // 待测盘：满 → 空
-                        : (int)Math.Round(n * k);          // 缓存盘 / 出料盘：空 → 满
+                    int target = (int)Math.Round(n * k);   // 缓存盘 / 出料盘：空 → 满
 
                     for (int j = 0; j < n; j++)
                         devs[j].Fill = j < target ? devBrush : null;

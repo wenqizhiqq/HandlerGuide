@@ -226,6 +226,38 @@ namespace HandlerGuide
         public bool Chinese { get => _chinese; set { _chinese = value; OnChanged(); } }
         public bool KeyboardLocked { get => _keyboardLocked; set { _keyboardLocked = value; OnChanged(); } }
 
+        // ---- 上排料盘堆叠层数（温启志 18719361399）------------------------------
+        // 「整机俯视图」（motion_layout 页）里上排 6 个深盘原先画的是「格子 +
+        // 物料点」，现按用户要求改成「叠层」表示料盘层数。层数需要一个数据源，
+        // 本工程是界面原型 Demo（不含底层业务），因此先给一组**模拟值**：
+        //   · 初值：1..MaxTrayLayers 随机（固定种子，保证每次启动一致、可复现）；
+        //   · 演示节拍里：从满盘被逐层取走（见 LayoutPages 的逐帧动画）。
+        // 接真机时只要把 TopTrayLayers 换成料盘堆叠传感器的真实读数即可，
+        // 视图层一行都不用改。
+        /// <summary>单个料盘最多可堆叠的层数。</summary>
+        public const int MaxTrayLayers = 20;
+
+        /// <summary>层数低于此值 → 黄色提示「需增加料盘」。</summary>
+        public const int MinTrayAlarmLayers = 3;
+
+        /// <summary>上排 6 个深盘的堆叠层数（1..<see cref="MaxTrayLayers"/>）。</summary>
+        public int[] TopTrayLayers { get; } = NewTopTrayLayers();
+
+        private static int[] NewTopTrayLayers()
+        {
+            var rnd = new Random(20261012);            // 固定种子 → 每次启动的初值一致
+            var a = new int[6];
+            bool hasAlarm = false;
+            for (int i = 0; i < a.Length; i++)
+            {
+                a[i] = rnd.Next(1, MaxTrayLayers + 1);
+                if (a[i] < MinTrayAlarmLayers) hasAlarm = true;
+            }
+            // 演示用：保证静态首屏至少能看到一处黄色报警（否则要等演示节拍跑到底才出现）
+            if (!hasAlarm) a[a.Length - 1] = MinTrayAlarmLayers - 1;
+            return a;
+        }
+
         // 主界面状态栏附加
         public string BatchNo { get; set; } = "";
         public string SubBatchNo { get; set; } = "";
