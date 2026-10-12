@@ -56,8 +56,10 @@
     <None Update="image\handler_top.jpg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <!-- 整机俯视图的「修补底图」：把搬运臂从照片里擦掉之后的版本（1696×1376）。
-         「模块平面仿真」页优先加载它，搬运臂才能单独抠出来沿 X 走位而不留重影。 -->
+    <!-- 整机俯视图的「修补底图」：把三根手臂（料盘搬运臂 / 下料臂 / 上料臂）以及两根蓝色
+          横梁从照片里擦掉之后的版本（1696×1376）。「模块平面仿真」页优先加载它，手臂/横梁
+          才能单独抠出来走位而不留重影；擦除处用「同一批 y 行上的干净列」或梁外侧确认为纯
+          底板的那一行（下料梁取 y=812、上料梁取 y=1292，均做中位滤波 + 中位钳位）按行补平。 -->
     <None Update="image\handler_top_clean.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -65,6 +67,28 @@
          抠出的 RGBA 透明底图元（176×386），画布上逐帧只改 X —— 真机上该模组
          吊在横导轨下，只有 X 一个自由度（温启志 18719361399）。 -->
     <None Update="image\tray_arm.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <!-- 下料手臂「抠图」：照片框 (334,750)-(524,942)，RGBA 190×192。
+         含红色滑座 + 上下 4 根蓝导杆 + 白色法兰 + 左下白夹头，整块作为一个图元，
+         画布上逐帧只改 X（红色滑座沿横梁走 = 机器 X）。温启志 18719361399 -->
+    <None Update="image\unload_arm_head.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <!-- 上料手臂「抠图」：照片框 (1282,1144)-(1424,1318)，RGBA 142×174，
+         与下料臂同一套做法（红色滑座沿横梁走 = 机器 X）。温启志 18719361399 -->
+    <None Update="image\load_arm_head.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <!-- 下料侧蓝色横梁「抠图」：照片框 (142,820)-(796,880)，RGBA 654×60。
+         含深蓝导轨 + 上下黄描边 + 两端黄色端头支架 + 两个绿滑块；红滑座那一段用
+         「同一行的干净导轨列」补平成导轨。整根梁做 Y（俯视图上下）平移。 -->
+    <None Update="image\beam_down.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <!-- 上料侧蓝色横梁「抠图」：照片框 (1141,1201)-(1555,1263)，RGBA 414×62。
+         与下料梁同一套做法，整根梁做 Y 平移。温启志 18719361399 -->
+    <None Update="image\beam_up.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

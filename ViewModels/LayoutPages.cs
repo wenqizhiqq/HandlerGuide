@@ -18,9 +18,18 @@
 //        画布上的**所有文字**也已按用户要求清掉 —— 分组标签、手臂标注框、行程文字、
 //        署名水印全部撤除。现在画布上只剩「真机照片 + 料盘 / 加热盘 / 手臂」的
 //        图形与动画，一句字都没有；所有文字说明统一收到右侧说明栏（见 LayoutPage()）。
-//        俯视图里的「料盘搬运臂」用**真机照片抠图**（image/tray_arm.png）绘制，
-//        底图相应换成抹掉该模组的 image/handler_top_clean.png；该模组只有 X 一个
-//        自由度，动画里只改 X（温启志 18719361399）。
+//        俯视图里的三根手臂全部用**真机照片抠图**绘制（温启志 18719361399）：
+//          · 料盘搬运臂  image/tray_arm.png        （只有 X 一个自由度，动画里只改 X）
+//          · 下料手臂    image/unload_arm_head.png （红色滑座沿横梁走 = 机器 X）
+//          · 上料手臂    image/load_arm_head.png   （同上）
+//        另外两根**蓝色横梁**也是照片抠图（image/beam_down.png / image/beam_up.png）——
+//        用户明确：「蓝色的可以带动红色的 Y 移动」「整根蓝色横梁上下移动」：
+//          · 横梁做 Y（俯视图里上下）平移，红色滑座跟着梁一起升降；
+//          · 红色滑座自己仍沿梁左右走（X）；两根梁用不同相位，画面不整齐划一；
+//          · 每个红滑座上面画了 **2×4 吸嘴组合**（沿梁 4 个 × 垂直 2 行 = 8 个）。
+//        底图相应换成抹掉这三根臂 + 两根梁的 image/handler_top_clean.png —— 原位已用
+//        梁外侧确认为纯底板的那一行（下料梁取上方 y=812、上料梁取下方 y=1292，都做中位
+//        滤波 + 中位钳位）按行补平，横梁升降时原地不会留下不动的重影。
 // ============================================================================
 using System;
 using System.Collections.Generic;
@@ -96,9 +105,6 @@ namespace HandlerGuide.ViewModels
 
         /// <summary>橙（下料臂）。</summary>
         private static readonly Brush Orange = new SolidColorBrush(Color.FromRgb(0xE0, 0x7A, 0x1E));
-
-        /// <summary>蓝（上料臂）。</summary>
-        private static readonly Brush Blue = new SolidColorBrush(Color.FromRgb(0x2F, 0x7C, 0xD6));
 
         /// <summary>绿（小车 A）。</summary>
         private static readonly Brush Green = new SolidColorBrush(Color.FromRgb(0x2E, 0x9E, 0x5B));
@@ -290,10 +296,13 @@ namespace HandlerGuide.ViewModels
             // 上排 6 个深盘改成「叠层」表示层数后的图例（温启志 18719361399）
             var legendLayer = new SolidColorBrush(Color.FromRgb(0xC9, 0xCE, 0xD6));
             var legendLayerWarn = new SolidColorBrush(Color.FromRgb(0xFF, 0xC0, 0x00));
+            // 三根手臂现在都是真机照片抠图（上料 / 下料 / 料盘搬运），统一用灰蓝色标注。
+            // 原来「上料臂 = 蓝方块 / 下料臂 = 橙方块」那张是 2D 合成图的图例，已随抠图改造撤掉。
+            var legendPhoto = new SolidColorBrush(Color.FromRgb(0x6E, 0x86, 0xA8));
 
             return E.Wrap(
-                Dot(Blue, "上料臂"),
-                Dot(Orange, "下料臂"),
+                Dot(legendPhoto, "上料 / 下料手臂（真机照片抠图）"),
+                Dot(legendPhoto, "料盘搬运臂（真机照片抠图）"),
                 Dot(Green, "小车 A"),
                 Dot(GreenDark, "小车 B"),
                 Dot(Purple, "Z 轴 / 压头"),
@@ -1380,78 +1389,83 @@ namespace HandlerGuide.ViewModels
             cv.Items.Add(trayArm);
 
             // ==============================================================
-            //  下料X手臂（真机量测：X 横梁 + 红色吸嘴 2×4 组合）
+            //  下料X手臂（真机照片抠图：红色滑座 + 上下蓝导杆 + 白色法兰）
             // ==============================================================
-            // 量测来源：真机俯视图 image/handler_top.jpg（1696×1376）。
-            // 画布坐标 = 照片坐标 × (CW/1696, CH/1376) = × (0.59552, 0.59520)。
-            //   · X 横梁外框      照片 x 151..766, y 821..880
-            //   · 红色吸嘴组合    照片 x 376..494, y 821..878（2 行 × 4 列 = 8 个吸嘴）
-            //   · 绿色滑块 ×2     照片 x 220..263 / 327..370, y 826..874
-            //   · 左侧竖直导轨（手臂 Y 行程的导轨）照片 x 97..157, y 870..1260
-            //
-            // 运动学（用户口述 + 照片印证）：
-            //   ① 整根 X 横梁挂在左侧竖直导轨的滑座上，可以**上下平移**（画面上下 = 机器 Y）；
-            //   ② 红色吸嘴组合沿横梁**左右平移**（= 机器 X）；
-            //   ①×② 叠加 → 吸嘴拿到 XY 定位；2×4 组合一次取放 8 颗料。
-            const double UAX0 = 89.9, UAX1 = 456.2;        // X 横梁左右端（画布坐标）
-            const double UACY = 506.2;                     // 横梁中心线（照片实测 = 行程上端）
-            const double UAH = 35.1;                       // 横梁高
-            // Y 向行程：**上端就是照片里的静止位**（横梁正好压在真机导轨上，误差 0），
-            // 下端让吸嘴降到三张绿色出料盘的上方 —— 下料手臂够得着出料盘才有意义。
-            // 左端那根竖直导轨（照片 y 870..1260 → 画布 y 518..750）印证了「只往下走」：
-            // 横梁静止位卡在导轨的**顶端**，所以行程是单向下行，不是绕中线上下摆。
-            const double UAY0 = UACY, UAY1 = 660.0;        // Y 向行程：上端 / 下端
-            const double UANW = 70.3, UANH = 33.9;         // 吸嘴组合尺寸
-            const double UANX0 = 96.0, UANX1 = 386.0;      // 吸嘴左端行程范围
-            const int UANC = 4, UANR = 2;                  // 2×4 = 8 个吸嘴
+            // 温启志 18719361399 ·「下料手臂和上料手臂，你也需要抠图」
+            // 抠图来源：真机俯视图 image/handler_top.jpg。红色滑座在照片 x376..493 / y822..876，
+            // 上下各两根蓝色导杆 + 白色法兰 + 左下白夹头跟滑座连成一体，一并抠成
+            // image/unload_arm_head.png（RGBA 190×192，照片框 x334..524 / y750..942）。
+            // 底图同步换成 image/handler_top_clean.png —— 该臂原位已用「同一批 y 行上的干净
+            // 底板 / 干净导轨」按行补平（左右镜像平铺），否则滑座一走位，原地会留下一个
+            // 不动的红块重影。
+            // 运动学（照片印证）：**红色滑座沿横梁左右平移 = 机器 X**。横梁本身这一版不再
+            // 单独上下平移 —— 真机照片里横梁上下都是一整片有细节的机台底板，把横梁整体
+            // 挪走会露出一大块需要凭空捏造的区域，所以只做 X（详见文件头 motion_layout 说明）。
+            const double UA_X0 = 72.0, UA_X1 = 362.0;      // 抠图左沿的 X 行程（红块始终留在梁上）
+            const double UA_REST = 198.9;                  // 照片原位（静态首屏与真机照片重合）
+            const double UA_CX_OFF = 59.8;                 // 红块中心相对抠图左沿的偏移（画布）
 
-            var uaBlue = new SolidColorBrush(Color.FromRgb(0x2F, 0x7C, 0xD6));
-            var uaBlueSoft = new SolidColorBrush(Color.FromArgb(0x9A, 0x2F, 0x7C, 0xD6));
-            var uaRed = new SolidColorBrush(Color.FromRgb(0xD0, 0x20, 0x20));
-            var uaRedEdge = new SolidColorBrush(Color.FromRgb(0x6B, 0x10, 0x10));
-            var uaDotBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0xDC, 0xDC));
-            var uaGreenBrush = new SolidColorBrush(Color.FromRgb(0x1E, 0x8E, 0x6E));
             var uaAmberOn = new SolidColorBrush(Color.FromRgb(0xFF, 0xA8, 0x20));
             var uaAmberOff = new SolidColorBrush(Color.FromArgb(0, 0xFF, 0xC0, 0x40));
 
-            // 行程上下限：横梁**外缘**能到的两个极限位置。
-            // 早先这里画的是一个半透明圆角「行程槽」，但行程从 ±30 拉长到 154 之后，
-            // 那个槽会把三张绿色出料盘整片罩住，像给料盘盖了块灰玻璃。
-            // 改成两条细限位线 + 一个带箭头的行程标尺，只标「能走到哪」，不遮料盘。
-            // 温启志 18719361399
-            double uaSlotTop = UAY0 - UAH / 2 - 5;
-            double uaSlotBot = UAY1 + UAH / 2 + 5;
-            var uaLimit = new SolidColorBrush(Color.FromArgb(0x8C, 0x2F, 0x7C, 0xD6));
-            foreach (double uaLy in new[] { uaSlotTop, uaSlotBot })
+            // 抠图加载失败时退回一个半透明蓝方块，画面不会空一块（与料盘搬运臂同一套兜底）。
+            Brush uaBrush = new SolidColorBrush(Color.FromArgb(0x7A, 0x1B, 0x2A, 0x5A));
+            try
             {
-                cv.Items.Add(new RectItem
-                {
-                    X = UAX0 - 4, Y = uaLy, W = (UAX1 - UAX0) + 8, H = 1.4, Fill = uaLimit,
-                });
+                var ub = new BitmapImage();
+                ub.BeginInit();
+                ub.UriSource = new Uri("pack://siteoforigin:,,,/image/unload_arm_head.png");
+                ub.CacheOption = BitmapCacheOption.OnLoad;
+                ub.EndInit();
+                ub.Freeze();
+                uaBrush = new ImageBrush(ub) { Stretch = Stretch.Fill };
+            }
+            catch
+            {
+                // 保持蓝色方块兜底
             }
 
-            // Y 行程标尺：竖线 + 上下两个小三角，画在横梁左端**外侧**（x 77..89），
-            // 那一条竖带在照片里是空白的，压上去不会盖住任何零件。
-            cv.Items.Add(new RectItem
+            // ---- 下料横梁（真机照片抠图）：整根梁做「上下（Y）平移」------------
+            // 温启志 18719361399 · 用户明确：「蓝色的可以带动红色的 Y 移动」「整根蓝色横梁上下移动」。
+            // image/beam_down.png = 照片框 (142,820)-(796,880)：深蓝导轨 + 上下黄描边 +
+            // 两端黄色端头支架 + 两个绿滑块；红滑座那一段已用「同一行的干净导轨列」平铺补平，
+            // 所以梁里没有红块 —— 红滑座由单独的 image/unload_arm_head.png 叠在梁上画。
+            // 底图上这条带（820..879）已用梁上方 y=812 的纯底板补平，梁升起来时原地露的是底板。
+            const double BD_Y = 488.07;                    // 静止时梁顶的画布 y（t = 0 与真机照片重合）
+            Brush bdBrush = new SolidColorBrush(Color.FromArgb(0x7A, 0x1B, 0x2A, 0x5A));
+            try
             {
-                X = 82, Y = uaSlotTop + 3, W = 2, H = uaSlotBot - uaSlotTop - 6, Fill = uaBlueSoft,
-            });
-            cv.Items.Add(new PolyItem
+                var bb = new BitmapImage();
+                bb.BeginInit();
+                bb.UriSource = new Uri("pack://siteoforigin:,,,/image/beam_down.png");
+                bb.CacheOption = BitmapCacheOption.OnLoad;
+                bb.EndInit();
+                bb.Freeze();
+                bdBrush = new ImageBrush(bb) { Stretch = Stretch.Fill };
+            }
+            catch
             {
-                Points = new PointCollection
-                {
-                    new Point(83, uaSlotTop), new Point(77, uaSlotTop + 9), new Point(89, uaSlotTop + 9),
-                },
-                Fill = uaBlue,
-            });
-            cv.Items.Add(new PolyItem
+                // 保持深蓝方块兜底
+            }
+            var beamDown = new RectItem
             {
-                Points = new PointCollection
-                {
-                    new Point(83, uaSlotBot), new Point(77, uaSlotBot - 9), new Point(89, uaSlotBot - 9),
-                },
-                Fill = uaBlue,
-            });
+                X = 84.56, Y = BD_Y, W = 389.47, H = 35.71,
+                Fill = bdBrush, Stroke = null, StrokeThickness = 0,
+            };
+            cv.Items.Add(beamDown);
+
+            // 画布几何：照片框 (334,750)-(524,942) × (0.59552, 0.59520)
+            const double UA_Y = 446.4;                     // 红滑座静止时的画布 y
+            var uaArm = new RectItem
+            {
+                X = UA_REST, Y = UA_Y, W = 113.15, H = 114.28,
+                Fill = uaBrush, Stroke = null, StrokeThickness = 0,
+            };
+            cv.Items.Add(uaArm);
+
+            // 横梁的 Y 行程不再另画标尺：梁本身就是真机照片，行程靠画面直接看，
+            // 再叠一条「能走到哪」的 Y 包络反而会把照片覆盖掉（用户要求画布上不放标注）。
+            // 温启志 18719361399
 
             // 出料盘高亮：吸嘴走到哪张绿盘上方就点亮哪张
             var uaTrayX = new List<double>();
@@ -1473,202 +1487,86 @@ namespace HandlerGuide.ViewModels
                 uaHilite.Add(hl);
             }
 
-            // X 横梁（手臂本体）：半透明蓝，压在照片导轨上，看得见「手臂现在在哪」
-            var uaBeam = new RectItem
-            {
-                X = UAX0, Y = UACY - UAH / 2, W = UAX1 - UAX0, H = UAH, Radius = 5,
-                Fill = new SolidColorBrush(Color.FromArgb(0x7A, 0x1B, 0x2A, 0x5A)),
-                Stroke = uaBlue, StrokeThickness = 2,
-            };
-            cv.Items.Add(uaBeam);
-
-            // 横梁上的两个绿色滑块（真机照片里就有，跟着横梁一起走）
-            var uaGreenSliders = new List<RectItem>();
-            double[] uaGx = { 131.0, 156.6, 194.7, 220.3 };
-            for (int i = 0; i < 2; i++)
-            {
-                var gs = new RectItem
-                {
-                    X = uaGx[i * 2], Y = UACY - UAH / 2 + 3,
-                    W = uaGx[i * 2 + 1] - uaGx[i * 2], H = UAH - 6, Radius = 3,
-                    Fill = uaGreenBrush,
-                };
-                cv.Items.Add(gs);
-                uaGreenSliders.Add(gs);
-            }
-
-            // 红色吸嘴 2×4 组合
-            var uaNozzle = new RectItem
-            {
-                X = UANX0, Y = UACY - UANH / 2, W = UANW, H = UANH, Radius = 5,
-                Fill = uaRed, Stroke = uaRedEdge, StrokeThickness = 2,
-            };
-            cv.Items.Add(uaNozzle);
-
-            var uaDots = new List<EllipseItem>();
-            double uaDotD = Math.Min(UANW / UANC, UANH / UANR) * 0.60;
-            for (int r = 0; r < UANR; r++)
-            {
-                for (int q = 0; q < UANC; q++)
-                {
-                    var dot = new EllipseItem
-                    {
-                        X = UANX0 + UANW * (q + 0.5) / UANC - uaDotD / 2,
-                        Y = UACY - UANH / 2 + UANH * (r + 0.5) / UANR - uaDotD / 2,
-                        W = uaDotD, H = uaDotD, Fill = uaDotBrush,
-                    };
-                    cv.Items.Add(dot);
-                    uaDots.Add(dot);
-                }
-            }
-
-            // ---- 「下料X手臂」标注框：已按用户要求整块删除 ----
-            // 原来这里是 316×100 的半透明白底标注框（x 458..774 / y 548..648）+ 标题 +
-            // 三行说明 + 一个红色图例小方块 —— 因为照片这一带的机械细节太密，必须垫白底
-            // 才读得出来。画布不留文字之后，白底和方块都成了没有内容的浮块，一并撤掉，
-            // 让这一片照片恢复完整（红色吸嘴组本身还画在横梁上，图例不再需要）。
-
-            // ==============================================================
-            //  上料X轴（真机量测：X 横梁 + 红色吸嘴 2×4 组合）
-            // ==============================================================
-            // 定位方法：把用户给的截图当模板，在整张真机俯视图上做**归一化互相关**匹配。
-            // 最佳命中 photo (1149, 1202)、模板缩放 1.10×、NCC 0.835。
-            // （同一套流程回代上一张「下料X手臂」截图 → photo (169, 814)、NCC 0.810，
-            //   和当初手工量测完全一致，所以这套定位可信。）
-            //
-            // 画布坐标 = 照片坐标 × (CW/1696, CH/1376) = × (0.59552, 0.59520)。
-            //   · 横梁外框（含两端黄色端板） 照片 x 1148..1550, y 1200..1258
-            //   · 红色吸嘴 2×4 组合         照片 x 1297..1413（117 宽 —— 和下料那颗 118 宽同规格）
-            //   · 绿色滑块 ×2               照片 x 1419..1431 / 1452..1498
-            //   · 横梁内部（吸嘴 X 行程）   照片 x 1167..1533
-            //
-            // 运动学（用户口述「红色是 2*4 的吸嘴组，可以 xy 移动」＋照片印证）：
-            //   ① 红色吸嘴组沿横梁左右走 = 机器 X；
-            //   ② 整根横梁挂在两根竖直导杆上上下平移 = 机器 Y；
-            //   ①×② = 吸嘴拿到 XY 定位，2×4 一次取放 8 颗。
-            // Y 行程（用户口径：「上料的 y 也是这么长」）：
-            // 上料横梁的 Y 行程长度**与下料X手臂完全等长**。所以这里不写死数字，
-            // 直接取下料的 (UAY1 - UAY0) —— 以后调下料行程，上料自动跟着走，不会走散。
-            // 原来这里是「以静止位为中心、上下各 ±26」的对称摆动，总行程只有 52，
-            // 比下料的 153.8 短了 2/3，和真机两根同规格的 X 轴不符。
-            //
-            // 方向：下料是「静止位在行程上端、单向下行」；上料正好反过来 ——
-            // 横梁静止位（照片实测 731.5）在**行程下端**，只向上走。
-            // 之所以不能继续「以静止位为中心上下对称」：上料横梁已经贴在画布下沿附近
-            // （静止位 731.5、梁高 34.5、画布高 819），对称摆到 ±76.9 的话横梁下缘会到
-            // 825.6，冲出画布 6.6px 被 ClipToBounds 裁掉。向上走既放得下，
-            // 方向上也正好对着上方的料盘 / 加热盘区，动作合理。
-            const double U2X0 = 683.7, U2X1 = 922.9;       // 横梁外框左右端（画布坐标）
-            const double U2CY = 731.5;                     // 横梁中心线（照片实测 = 静止位 = 行程下端）
-            const double U2H = 34.5;                       // 横梁高
-            const double U2Y0 = U2CY;                      // Y 行程下端 = 静止位
-            const double U2Y1 = U2CY - (UAY1 - UAY0);      // Y 行程上端（与下料 Y 行程等长，= 577.7）
-            const double U2NW = 69.1, U2NH = 34.5;         // 红色吸嘴组合尺寸
-            const double U2NX0 = 694.9, U2NX1 = 843.3;     // 吸嘴左端行程范围
-            const double U2GA0 = 845.0, U2GA1 = 852.2;     // 绿滑块 A
-            const double U2GB0 = 864.6, U2GB1 = 892.0;     // 绿滑块 B
-            const int U2NC = 4, U2NR = 2;                  // 2×4 = 8 个吸嘴
-
-            // 上料用紫色系，和下料的蓝色区分开 —— 两根 X 轴同规格，
-            // 不用颜色区分的话画面上会出现两条一模一样的蓝横梁，看着像画重了。
+            // 原来这里是合成画的「半透明蓝横梁 + 两个绿滑块 + 红色吸嘴 2×4 方块 + 8 个白点」
+            // 以及一块 316×100 的白底标注框 —— 现在整根手臂已经是真机照片抠图
+            // （image/unload_arm_head.png，见上方），这些合成图元全部撤掉，
+            // 让照片这一片恢复完整、也不再出现「照片 + 合成方块」两层重叠的观感。
             // 温启志 18719361399
-            var u2Violet = new SolidColorBrush(Color.FromRgb(0x7C, 0x4F, 0xD0));
-            var u2VioletSoft = new SolidColorBrush(Color.FromArgb(0x9A, 0x7C, 0x4F, 0xD0));
-            var u2GreenBrush = new SolidColorBrush(Color.FromRgb(0x1E, 0x8E, 0x6E));
-            var u2Red = new SolidColorBrush(Color.FromRgb(0xD0, 0x20, 0x20));
-            var u2RedEdge = new SolidColorBrush(Color.FromRgb(0x6B, 0x10, 0x10));
-            var u2DotBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0xDC, 0xDC));
 
-            // 行程包络 = 横梁**外缘**能到的两个极限位置
-            // （上端 = 行程上端再让出半个梁高 + 5；下端 = 静止位再让出半个梁高 + 5）
-            double u2EnvTop = U2Y1 - U2H / 2 - 5;
-            double u2EnvBot = U2Y0 + U2H / 2 + 5;
+            // ==============================================================
+            //  上料X手臂（真机照片抠图：红色滑座 + 上下蓝导杆 + 白色法兰）
+            // ==============================================================
+            // 温启志 18719361399 · 与下料臂同一套做法。
+            // 定位方法：把用户给的截图当模板，在整张真机俯视图上做**多尺度归一化互相关**：
+            //   上料臂截图 → photo (1145,1201)、缩放 1.12×、NCC 0.952
+            //   下料臂截图 → photo (158, 823)、缩放 1.12×、NCC 0.968
+            // （两张同源截图缩放一致，互证可信。）
+            // 抠图：红色滑座在照片 x1300..1411 / y1204..1257，上下导杆 + 白法兰一并抠成
+            // image/load_arm_head.png（RGBA 142×174，照片框 x1282..1424 / y1144..1318）。
+            // 运动学：红色滑座沿横梁左右平移 = 机器 X；横梁本体另有 Y（上下）平移，见下方
+            //         image/beam_up.png —— 与下料梁同一套做法。
+            // 画布几何 = 照片 × (0.59552, 0.59520)：763.46 / 680.91 / 84.56 / 103.56。
+            const double U2_X0 = 674.1, U2_X1 = 845.6;     // 抠图左沿的 X 行程（红块始终留在梁上）
+            const double U2_REST = 763.5;                  // 照片原位（静态首屏与真机照片重合）
+            const double U2_Y = 680.9;                     // 红滑座静止时的画布 y
 
-            // 行程上下限（横梁外缘能到的两个极限位置）
-            var u2Limit = new SolidColorBrush(Color.FromArgb(0x8C, 0x7C, 0x4F, 0xD0));
-            foreach (double u2Ly in new[] { u2EnvTop, u2EnvBot })
+            // 抠图加载失败时退回一个半透明紫方块兜底（上料原先用紫色系，便于区分两根轴）。
+            Brush u2Brush = new SolidColorBrush(Color.FromArgb(0x7A, 0x7C, 0x4F, 0xD0));
+            try
             {
-                cv.Items.Add(new RectItem
-                {
-                    X = U2X0 - 4, Y = u2Ly, W = (U2X1 - U2X0) + 8, H = 1.4, Fill = u2Limit,
-                });
+                var ub2 = new BitmapImage();
+                ub2.BeginInit();
+                ub2.UriSource = new Uri("pack://siteoforigin:,,,/image/load_arm_head.png");
+                ub2.CacheOption = BitmapCacheOption.OnLoad;
+                ub2.EndInit();
+                ub2.Freeze();
+                u2Brush = new ImageBrush(ub2) { Stretch = Stretch.Fill };
+            }
+            catch
+            {
+                // 保持紫色方块兜底
             }
 
-            // Y 行程标尺（画在横梁左端外侧，x 667..679；原来这里是为了避开左边的标注框，
-            // 标注框已在需求 35 删除，标尺位置保持不变）
-            cv.Items.Add(new RectItem
+            // ---- 上料横梁（真机照片抠图）：与下料梁同一套，整根梁做上下（Y）平移 ------
+            // 温启志 18719361399 · image/beam_up.png = 照片框 (1141,1201)-(1555,1263)：
+            // 深蓝导轨 + 上下黄描边 + 两端黄色端头支架 + 两个绿滑块（右侧一个偏大）；
+            // 红滑座那一段同样用「同一行的干净导轨列」补平成导轨。
+            // 底图上这条带（1201..1262）用梁下方 y=1292 的纯底板补平。
+            // 画布 (679.49, 714.84, 246.54, 36.90) = 照片 × (0.595518, 0.595203)。
+            const double BU_Y = 714.84;                    // 静止时梁顶的画布 y
+            Brush buBrush = new SolidColorBrush(Color.FromArgb(0x7A, 0x1B, 0x2A, 0x5A));
+            try
             {
-                X = 672, Y = u2EnvTop + 3, W = 2, H = u2EnvBot - u2EnvTop - 6, Fill = u2VioletSoft,
-            });
-            cv.Items.Add(new PolyItem
-            {
-                Points = new PointCollection
-                {
-                    new Point(673, u2EnvTop), new Point(667, u2EnvTop + 9), new Point(679, u2EnvTop + 9),
-                },
-                Fill = u2Violet,
-            });
-            cv.Items.Add(new PolyItem
-            {
-                Points = new PointCollection
-                {
-                    new Point(673, u2EnvBot), new Point(667, u2EnvBot - 9), new Point(679, u2EnvBot - 9),
-                },
-                Fill = u2Violet,
-            });
-
-            // X 横梁（上料手臂本体）
-            var u2Beam = new RectItem
-            {
-                X = U2X0, Y = U2CY - U2H / 2, W = U2X1 - U2X0, H = U2H, Radius = 5,
-                Fill = new SolidColorBrush(Color.FromArgb(0x7A, 0x2A, 0x18, 0x4A)),
-                Stroke = u2Violet, StrokeThickness = 2,
-            };
-            cv.Items.Add(u2Beam);
-
-            // 横梁上的两个绿色滑块（真机照片里就有，跟着横梁一起走）
-            var u2GreenA = new RectItem
-            {
-                X = U2GA0, Y = U2CY - U2H / 2 + 3, W = U2GA1 - U2GA0, H = U2H - 6, Radius = 3,
-                Fill = u2GreenBrush,
-            };
-            cv.Items.Add(u2GreenA);
-            var u2GreenB = new RectItem
-            {
-                X = U2GB0, Y = U2CY - U2H / 2 + 3, W = U2GB1 - U2GB0, H = U2H - 6, Radius = 3,
-                Fill = u2GreenBrush,
-            };
-            cv.Items.Add(u2GreenB);
-
-            // 红色吸嘴 2×4 组合
-            var u2Nozzle = new RectItem
-            {
-                X = U2NX0, Y = U2CY - U2NH / 2, W = U2NW, H = U2NH, Radius = 5,
-                Fill = u2Red, Stroke = u2RedEdge, StrokeThickness = 2,
-            };
-            cv.Items.Add(u2Nozzle);
-
-            var u2Dots = new List<EllipseItem>();
-            double u2DotD = Math.Min(U2NW / U2NC, U2NH / U2NR) * 0.60;
-            for (int r = 0; r < U2NR; r++)
-            {
-                for (int q = 0; q < U2NC; q++)
-                {
-                    var dot = new EllipseItem
-                    {
-                        X = U2NX0 + U2NW * (q + 0.5) / U2NC - u2DotD / 2,
-                        Y = U2CY - U2NH / 2 + U2NH * (r + 0.5) / U2NR - u2DotD / 2,
-                        W = u2DotD, H = u2DotD, Fill = u2DotBrush,
-                    };
-                    cv.Items.Add(dot);
-                    u2Dots.Add(dot);
-                }
+                var bu = new BitmapImage();
+                bu.BeginInit();
+                bu.UriSource = new Uri("pack://siteoforigin:,,,/image/beam_up.png");
+                bu.CacheOption = BitmapCacheOption.OnLoad;
+                bu.EndInit();
+                bu.Freeze();
+                buBrush = new ImageBrush(bu) { Stretch = Stretch.Fill };
             }
+            catch
+            {
+                // 保持深蓝方块兜底
+            }
+            var beamUp = new RectItem
+            {
+                X = 679.49, Y = BU_Y, W = 246.54, H = 36.90,
+                Fill = buBrush, Stroke = null, StrokeThickness = 0,
+            };
+            cv.Items.Add(beamUp);
 
-            // ---- 「上料X轴」标注框：已按用户要求整块删除 ----
-            // 原来是 236×98 的半透明白底标注框（x 430..666 / y 654..752）+ 标题 +
-            // 三行说明 + 红色图例小方块。撤掉之后这一片照片不再被白底盖住，
-            // 上料横梁与红色吸嘴组看得很清楚，不再需要图例指代。
+            var u2Arm = new RectItem
+            {
+                X = U2_REST, Y = U2_Y, W = 84.56, H = 103.56,
+                Fill = u2Brush, Stroke = null, StrokeThickness = 0,
+            };
+            cv.Items.Add(u2Arm);
+
+            // 原来这里是合成画的「半透明紫横梁 + 两个绿滑块 + 红色吸嘴方块 + 8 个白点」、
+            // 两条 Y 行程限位线 + 一个 Y 行程标尺，以及 236×98 的白底标注框 ——
+            // 现在整根手臂已是真机照片抠图，这些合成图元全部撤掉。
+            // 温启志 18719361399
 
             // ---- 画布署名水印：已按用户要求从画布上撤掉 ----
             // 原来画布左下角有一行「温启志 18719361399 · 整机俯视图仿真（…）」。
@@ -1676,6 +1574,10 @@ namespace HandlerGuide.ViewModels
             // 以及右侧说明栏的页脚里（温启志 18719361399）。
 
             // ---- 逐帧动画：横移臂在导轨上往返，最近的料盘随之点亮 ----
+            // 两根蓝色横梁另有 Y（俯视图里上下）平移的行程：52 照片像素 × 0.595203 ≈ 30.95。
+            // 取「梁自身高度」（下料梁 60px / 上料梁 62px）以内，所以梁升到顶时原地露出来的
+            // 就是底图补好的那一片纯底板，不会露出没补过的区域。
+            const double BEAM_STROKE = 30.95;
             long last = Environment.TickCount64;
             double t = 0;
 
@@ -1694,36 +1596,28 @@ namespace HandlerGuide.ViewModels
                 double headX = armX0 + Triangle(t * 0.11 + 0.4424) * (armX1 - armW - armX0);
                 trayArm.X = headX;
 
-                // ---- 下料X手臂：X 横梁上下平移（Y） ＋ 吸嘴沿横梁左右走（X） ----
-                // ① 横梁整体 Y 平移：从照片里的静止位（行程上端）单向下行到出料盘上方。
-                //    相位不加偏移 ⇒ t = 0 时横梁正好压在真机导轨上，静止状态与照片完全重合。
-                double uaCYn = UAY0 + Triangle(t * 0.13) * (UAY1 - UAY0);
-                uaBeam.Y = uaCYn - UAH / 2;
-                for (int k = 0; k < uaGreenSliders.Count; k++)
-                    uaGreenSliders[k].Y = uaCYn - UAH / 2 + 3;
+                // ---- 两根蓝色横梁的 Y 平移（用户：「整根蓝色横梁上下移动」）----
+                // 相位都取成「t = 0 时为 0」⇒ 静态首屏与真机照片逐像素重合；两条梁用不同
+                // 频率（0.075 / 0.058）与一个整周期偏移，画面不会整齐划一。
+                double beamLiftD = Triangle(t * 0.075) * BEAM_STROKE;
+                beamDown.Y = BD_Y - beamLiftD;
+                double beamLiftU = Triangle(t * 0.058 + 1.0) * BEAM_STROKE;
+                beamUp.Y = BU_Y - beamLiftU;
 
-                // ② 吸嘴组合沿横梁 X 向走位（另一条相位，避免和 Y 同步显得很假）
-                double uaNx = UANX0 + Triangle(t * 0.09 + 0.22) * (UANX1 - UANX0);
-                uaNozzle.X = uaNx;
-                uaNozzle.Y = uaCYn - UANH / 2;
-
-                // 8 个吸嘴点位跟着红色方块走（2 行 × 4 列）
-                for (int r = 0; r < UANR; r++)
-                {
-                    // 注意：外层 cv.Draw 的 lambda 形参就叫 c，这里不能再叫 c（CS0136）
-                    for (int q = 0; q < UANC; q++)
-                    {
-                        var dot = uaDots[r * UANC + q];
-                        dot.X = uaNx + UANW * (q + 0.5) / UANC - dot.W / 2;
-                        dot.Y = uaCYn - UANH / 2 + UANH * (r + 0.5) / UANR - dot.H / 2;
-                    }
-                }
+                // ---- 下料X手臂（照片抠图）：红色滑座沿横梁左右走 = 机器 X ----
+                // 抠图只改 X；Y 跟着横梁一起升降（红滑座坐在梁上，梁升它就升）。
+                // 相位 0.2188 ⇒ t = 0 时 tri = 0.4376，落在行程 72..362 的比例 0.4376 上，
+                // 正好是照片原位 198.9，静态首屏与真机照片逐像素重合。
+                double uaX = UA_X0 + Triangle(t * 0.11 + 0.2188) * (UA_X1 - UA_X0);
+                uaArm.X = uaX;
+                uaArm.Y = UA_Y - beamLiftD;
 
                 // 吸嘴中心离哪张出料盘**最近**，就点亮哪张（琥珀色描边）。
                 // 早先用的是「中心落在 ±8 判定窗内就点亮」，可是吸嘴组合有 70px 宽、
                 // 出料盘才 84px 宽，中心一旦落在两张盘的公共边上，**两张会同时点亮**，
                 // 看着像画错了。改成「最近的那张独占点亮」，一次只有一张，而且逐张推进。
-                double uaNcx = uaNx + UANW / 2;
+                // 滑座中心 = 抠图左沿 + UA_CX_OFF（红块中心相对抠图左沿的固定偏移）。
+                double uaNcx = uaX + UA_CX_OFF;
                 int uaBest = -1;
                 double uaBestD = double.MaxValue;
                 for (int i = 0; i < uaHilite.Count; i++)
@@ -1735,37 +1629,14 @@ namespace HandlerGuide.ViewModels
                 for (int i = 0; i < uaHilite.Count; i++)
                     uaHilite[i].Stroke = (i == uaBest) ? uaAmberOn : uaAmberOff;
 
-                // ---- 上料X轴：横梁上下平移（Y） ＋ 红色吸嘴组沿横梁左右走（X） ----
-                // ① 横梁 Y 平移。相位不加偏移 ⇒ t = 0 时三角波为 0，横梁停在**行程下端**
-                //    （= 照片里的静止位），静止状态与照片完全重合 —— 和下料同一套约定，
-                //    只是方向相反：下料从静止位往下走，上料从静止位往上走。
-                //    行程长度 = (U2Y0 - U2Y1) = 下料的 (UAY1 - UAY0)，两根轴等长。
-                double u2CYn = U2Y0 - Triangle(t * 0.15) * (U2Y0 - U2Y1);
-                u2Beam.Y = u2CYn - U2H / 2;
-                u2GreenA.Y = u2CYn - U2H / 2 + 3;
-                u2GreenB.Y = u2CYn - U2H / 2 + 3;
-
-                // ② 红色吸嘴组沿横梁 X 向走位。
-                //    照片静止位：吸嘴左端 photo x1297 ⇒ 画布 772.39，
-                //    在行程里的比例 = (772.39-694.9)/(843.3-694.9) = 0.522。
-                //    三角波相位要写成「比例的一半」= 0.261（上升沿，tri(0.261)=0.522），
-                //    不能直接把比例 0.522 当相位 —— 那是下降沿上的另一个点，
-                //    tri(0.522)=0.956 会把吸嘴送到 836.8，静止位对不上照片。
-                //    （下料手臂用的是同一套算法：比例 0.441 ⇒ 相位 0.22。）
-                double u2Nx = U2NX0 + Triangle(t * 0.085 + 0.261) * (U2NX1 - U2NX0);
-                u2Nozzle.X = u2Nx;
-                u2Nozzle.Y = u2CYn - U2NH / 2;
-
-                // 8 个吸嘴点位跟着红色方块走（2 行 × 4 列）
-                for (int r = 0; r < U2NR; r++)
-                {
-                    for (int q = 0; q < U2NC; q++)
-                    {
-                        var dot = u2Dots[r * U2NC + q];
-                        dot.X = u2Nx + U2NW * (q + 0.5) / U2NC - dot.W / 2;
-                        dot.Y = u2CYn - U2NH / 2 + U2NH * (r + 0.5) / U2NR - dot.H / 2;
-                    }
-                }
+                // ---- 上料X手臂（照片抠图）：红色滑座沿横梁左右走 = 机器 X ----
+                // 与下料同一套：抠图只改 X；Y 跟着上料横梁一起升降。
+                // 相位 0.2605 ⇒ t = 0 时 tri = 0.521，正好是照片原位 763.5
+                // （行程 674.1..845.6 的比例 0.521），首屏与照片重合。
+                // 两条臂用不同速度（0.11 / 0.085），画面不会整齐划一。
+                double u2X = U2_X0 + Triangle(t * 0.085 + 0.2605) * (U2_X1 - U2_X0);
+                u2Arm.X = u2X;
+                u2Arm.Y = U2_Y - beamLiftU;
 
                 // 离臂头最近的料盘点亮（超过 90px 就都不亮）
                 int best = -1;
