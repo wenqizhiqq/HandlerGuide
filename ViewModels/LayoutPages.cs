@@ -16,8 +16,11 @@
 //        本页现在**只显示「整机俯视图」**：2D平面图 / 整机俯视图 / 3D整机图 这套页签选择条
 //        已按用户要求整个撤掉（先删 3D，再把选择器也去掉），打开本页直接就是俯视图。
 //        画布上的**所有文字**也已按用户要求清掉 —— 分组标签、手臂标注框、行程文字、
-//        署名水印全部撤除。现在画布上只剩「真机照片 + 料盘 / 加热盘 / 两根手臂」的
+//        署名水印全部撤除。现在画布上只剩「真机照片 + 料盘 / 加热盘 / 手臂」的
 //        图形与动画，一句字都没有；所有文字说明统一收到右侧说明栏（见 LayoutPage()）。
+//        俯视图里的「料盘搬运臂」用**真机照片抠图**（image/tray_arm.png）绘制，
+//        底图相应换成抹掉该模组的 image/handler_top_clean.png；该模组只有 X 一个
+//        自由度，动画里只改 X（温启志 18719361399）。
 // ============================================================================
 using System;
 using System.Collections.Generic;
@@ -1027,22 +1030,32 @@ namespace HandlerGuide.ViewModels
             // 演示节拍里逐帧回写，保证「俯视图」与其它页面看到的是同一份层数。
             var mm = MachineModel.Instance;
 
-            // ---- 底图：image/handler_top.jpg（空机台；运行时由 .csproj CopyToOutputDirectory
-            // 复制到 exe 同级目录，pack://siteoforigin 从那里加载）----
-            ImageBrush bgBrush;
-            try
+            // ---- 底图：优先用「已抹掉搬运臂」的修补版 image/handler_top_clean.png ----
+            // 温启志 18719361399：搬运臂单独抠成 image/tray_arm.png 后，底图上原来的
+            // 位置必须先抹平，否则手臂一走位就会在原地留下一个重影。找不到修补版时
+            // 退回原始照片（此时手臂留在底图上不动，功能不中断）。
+            ImageBrush bgBrush = new ImageBrush();
+            foreach (var bgUri in new[]
+                     {
+                         "pack://siteoforigin:,,,/image/handler_top_clean.png",
+                         "pack://siteoforigin:,,,/image/handler_top.jpg",
+                     })
             {
-                var bmp = new BitmapImage();
-                bmp.BeginInit();
-                bmp.UriSource = new Uri("pack://siteoforigin:,,,/image/handler_top.jpg");
-                bmp.CacheOption = BitmapCacheOption.OnLoad;
-                bmp.EndInit();
-                bmp.Freeze();
-                bgBrush = new ImageBrush(bmp) { Stretch = Stretch.Fill };
-            }
-            catch
-            {
-                bgBrush = new ImageBrush();
+                try
+                {
+                    var bmp = new BitmapImage();
+                    bmp.BeginInit();
+                    bmp.UriSource = new Uri(bgUri);
+                    bmp.CacheOption = BitmapCacheOption.OnLoad;
+                    bmp.EndInit();
+                    bmp.Freeze();
+                    bgBrush = new ImageBrush(bmp) { Stretch = Stretch.Fill };
+                    break;
+                }
+                catch
+                {
+                    // 换下一个候选底图
+                }
             }
             cv.Items.Add(new RectItem { X = 0, Y = 0, W = CW, H = CH, Fill = bgBrush });
 
@@ -1057,7 +1070,7 @@ namespace HandlerGuide.ViewModels
                     X = 0, Y = 0, W = CW, H = CH,
                     Fill = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x30))
                 });
-                try { MachineModel.Instance.Log("警告", "整机俯视图底图 image/handler_top.jpg 加载失败，画布以深灰底代替"); }
+                try { MachineModel.Instance.Log("警告", "整机俯视图底图（handler_top_clean.png / handler_top.jpg）加载失败，画布以深灰底代替"); }
                 catch { }
             }
 
@@ -1323,7 +1336,13 @@ namespace HandlerGuide.ViewModels
             // 「左下绿色料盘 ×3（出料）」「加热盘 ×2（8×11 点位 · 芯片刷新）」。
             // 现在画布上一句字都不留，这些分组说明统一放到右侧说明栏的「图例」里。
 
-            // ---- 横移取放臂：沿上排与中排之间的导轨左右走位，走到哪个盘就点亮哪个盘 ----
+            // ---- 料盘搬运臂（真机照片抠图）：只能沿 X 走位，走到哪个盘就点亮哪个盘 ----
+            // 温启志 18719361399 ·「这个搬运料盘的手臂，只能 x 移动，你需要抠图」
+            // 该模组在真机上吊在这条横导轨下面（照片 y 424 起、x 1166..1342），运动学
+            // 只有 X 一个自由度，所以这里把它从整机俯视图里**抠**成透明底图
+            // image/tray_arm.png（176×386 px），逐帧**只改 X、Y 恒定**。
+            // 底图同步换成抹掉该模组的 image/handler_top_clean.png —— 否则手臂一走位，
+            // 原地会留下一个不动的重影。
             const double armY = 240;                       // 导轨中心线（上排盘底 215 / 中排盘顶 292 之间）
             const double armX0 = 120, armX1 = 874;
             cv.Items.Add(new RectItem
@@ -1331,16 +1350,34 @@ namespace HandlerGuide.ViewModels
                 X = armX0, Y = armY - 4, W = armX1 - armX0, H = 8, Radius = 4,
                 Fill = new SolidColorBrush(Color.FromRgb(0x2B, 0x4C, 0x8A)),
             });
-            var armHead = new RectItem
+
+            // 抠图手臂的画布几何：照片框 (1166,424)-(1342,810) × (0.59552, 0.59520)
+            const double armW = 104.8;      // 手臂宽（照片 176 px）
+            const double armH = 229.7;      // 手臂高（照片 386 px）
+            const double armRestX = 694.4;  // 照片原位 x（静态首屏就停这儿）
+            const double armRestY = 252.4;  // 照片原位 y（只能 X 移动 ⇒ Y 永远是这个值）
+            // 抠图加载失败时退回原来的蓝色方块标记，画面不会空一块。
+            Brush armBrush = new SolidColorBrush(Color.FromArgb(230, 0x2F, 0x7C, 0xD6));
+            try
             {
-                X = armX0, Y = armY - 20, W = 46, H = 40, Radius = 6,
-                Fill = new SolidColorBrush(Color.FromArgb(230, 0x2F, 0x7C, 0xD6)),
-                Stroke = new SolidColorBrush(Color.FromRgb(0x14, 0x3F, 0x74)),
-                StrokeThickness = 1.5,
-                // 原来这个方块正中写着一个「臂」字（Text / TextSize / TextColor），
-                // 按用户要求画布不留文字，只保留方块本身作为「取放臂头」的图形标记。
+                var ab = new BitmapImage();
+                ab.BeginInit();
+                ab.UriSource = new Uri("pack://siteoforigin:,,,/image/tray_arm.png");
+                ab.CacheOption = BitmapCacheOption.OnLoad;
+                ab.EndInit();
+                ab.Freeze();
+                armBrush = new ImageBrush(ab) { Stretch = Stretch.Fill };
+            }
+            catch
+            {
+                // 保持蓝色方块兜底
+            }
+            var trayArm = new RectItem
+            {
+                X = armRestX, Y = armRestY, W = armW, H = armH,
+                Fill = armBrush, Stroke = null, StrokeThickness = 0,
             };
-            cv.Items.Add(armHead);
+            cv.Items.Add(trayArm);
 
             // ==============================================================
             //  下料X手臂（真机量测：X 横梁 + 红色吸嘴 2×4 组合）
@@ -1652,9 +1689,10 @@ namespace HandlerGuide.ViewModels
                 // 只有点了「启动演示节拍」才推进；否则保持静态初态
                 if (MotionManager.Instance.AutoCycle) t += dt;
 
-                // 臂头：0..1 三角波映射到导轨两端
-                double headX = armX0 + Triangle(t * 0.11) * (armX1 - armX0);
-                armHead.X = headX;
+                // 搬运臂（抠图）：0..1 三角波映射到导轨两端 —— **只改 X，Y 不动**。
+                // 相位 0.4424 ⇒ t = 0 时正好停在照片原位 694.4，静态首屏与真机照片重合。
+                double headX = armX0 + Triangle(t * 0.11 + 0.4424) * (armX1 - armW - armX0);
+                trayArm.X = headX;
 
                 // ---- 下料X手臂：X 横梁上下平移（Y） ＋ 吸嘴沿横梁左右走（X） ----
                 // ① 横梁整体 Y 平移：从照片里的静止位（行程上端）单向下行到出料盘上方。
@@ -1735,7 +1773,7 @@ namespace HandlerGuide.ViewModels
                 for (int i = 0; i < TrayPlan.Length; i++)
                 {
                     double cx = (TrayPlan[i].U + TrayPlan[i].DU / 2) * CW;
-                    double d = Math.Abs(cx - (headX + 23));
+                    double d = Math.Abs(cx - (headX + armW / 2));
                     if (d < bestD) { bestD = d; best = i; }
                 }
                 for (int i = 0; i < trayHilite.Count; i++)

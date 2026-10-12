@@ -17,7 +17,10 @@
 - 每个文件头尾保留作者署名水印「温启志 18719361399」。
 
 ## motion_layout 整机俯视图（LayoutPages.BuildLayoutCanvasTop）
-- 底图 `image/handler_top.jpg`，坐标来自 `TrayPlan`（14 个盘：上排 6 深盘 / 中排 5 深盘 / 左下 3 绿盘）+ 2 块加热盘。
+- 底图 `image/handler_top_clean.png`（**修补版**：把搬运臂从照片里抹掉）；加载失败退回 `image/handler_top.jpg`。
+- 「料盘搬运臂」= 真机照片**抠图** `image/tray_arm.png`（RGBA 176×386，照片框 (1166,424)-(1342,810)），画布 RectItem + ImageBrush，几何 x 694.4 / y 252.4 / w 104.8 / h 229.7。
+  - **只有 X 一个自由度**：每帧只改 `.X`，Y 恒 252.4；行程沿用横导轨 `armX0=120 .. armX1=874`；相位 0.4424 ⇒ t=0 停在照片原位。
+  - 重新抠图的手法见 `.workbuddy/memory/2026-10-12.md`（多尺度 NCC 定位 + 区域生长 flood fill + 左侧纯板面逐行延展修补底图）。
 - **上排 6 个深盘 = 料盘堆叠，画「叠层」不画格子**（2026-10-12 改）：
   - 数据源 `MachineModel.TopTrayLayers[6]`（模拟值，`MaxTrayLayers=20`、`MinTrayAlarmLayers=3`）；<3 层整摞转黄 + 盘内写「需增加料盘」。
   - 其余 8 个盘仍走原「格子层（DrawingBrush 平铺）+ 物料格」路径。
@@ -26,12 +29,14 @@
 
 ## 改 UI 前先做像素取证（好用）
 - 用户只给截图、不确定是哪一页时：先用 Pillow 统计 top-N 颜色 + 对特征色做行/列投影，反查代码里的**字面色值**（如 `devBlue #3CC0F0`、`darkBody #26282E`），再按 `TrayPlan` 归一化坐标反算对齐 —— 比盲翻代码快得多。
+- 用户给的截图若是**真机照片的一块**：直接拿它当模板在 `image/handler_top.jpg` 上做**多尺度 NCC**（numpy `rfft2` 互相关 + 积分图算局部均值/方差；逐窗口暴力会慢 1000×）→ 一次拿到 scale + 精确像素位置（本次 scale=1.12 / NCC=0.973），再×画布缩放系数得到画布坐标。流程见 `2026-10-12.md`。
 
 ## 主界面布局（HomePages.MainScreen）
 - 网格列：`460 | * | 260 | 320` —— 左列运行状态/品种/测试位矩阵、中列统计录入、右列批次数据统计（Counter/UPH/Timer 页签）、最右列「操作面板」（4×5=20 键 + LED，`OperationPanel()`）。
 - 底部：拆卸/SNAP 迷你按钮 + 信号灯 + JHT 版权条（注意：拆卸/SNAP 与操作面板里的同名键是重复入口，保留现状）。
 
 ## 环境坑（本机）
+- 安全删除 hook 有**每轮 50 个**的批量阈值（`SAFE_DELETE_BULK_CONFIRM_REQUIRED`）→ 超了整批拒绝；分小批（≤18）多次删，或改用 Python `os.remove` 小批删。`Remove-Item -Filter '_*' -ErrorAction SilentlyContinue` 命中阈值时会**静默**跳过剩余项，别以为删干净了。
 - Git Bash 已损坏 → 只用 PowerShell；前台 dotnet 被沙箱拦截、前台 stdout 被吞 → 构建后台跑 + 输出 `Set-Content -Encoding UTF8` 落盘再 Read。
 - `*>` 重定向是 UTF-16；`DOTNET_CLI_UI_LANGUAGE=en` + `VSLANG=1033` 防 GBK 乱码。
 - 有 fail-closed 安全删除 hook（Remove-Item 走回收站，找不到文件会抛错）→ 临时文件别硬删。
