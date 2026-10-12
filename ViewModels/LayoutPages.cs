@@ -13,7 +13,7 @@
 //          (1) 真实轴位置 —— 上/下料臂 X、小车 A/B、测试下压 Z、上料臂 Y；
 //          (2) 时间驱动 —— 流水线走料、料盘升降、手工盘扫描、加热脉冲。
 //        打开本页会自动启动「安全演示节拍」，每一步都过同一套互锁，不会撞机。
-//        「3D整机图」页签已改为真三维仿真，见 ViewModels/Layout3D.cs。
+//        「3D整机图」页签已按用户要求撤掉（不做 3D 仿真），本页只留 2D平面图 / 整机俯视图。
 // ============================================================================
 using System;
 using System.Collections.Generic;
@@ -154,12 +154,11 @@ namespace HandlerGuide.ViewModels
         ///     · 上排 6 个 —— 深色格纹盘（u 0.146..0.785, v 0.048..0.263）
         ///     · 中排 5 个 —— 深色格纹盘 / 料盘缓存位（v 0.357..0.569）
         ///     · 左下 3 个 —— 绿色格纹盘 / 出料盘（v 0.639..0.833）
-        /// 「整机俯视图」画布直接乘画布尺寸落点；
-        /// 「3D整机图」直接把这组 (u,v) 乘到三维机台尺寸上，落成实体料盘。
+        /// 「整机俯视图」画布直接乘画布尺寸落点。
         /// </summary>
         /// <remarks>
-        /// 注意：这里是 <c>internal</c> 而不是 private —— 「3D整机图」
-        /// （<see cref="Layout3D"/>）要复用同一份量测数据，保证两个页签的料盘位置永远一致。
+        /// 注意：这里是 <c>internal</c> 而不是 private —— 量测数据留作公开接口，
+        /// 方便以后新增视图（例如再版三维）复用同一份料盘坐标，保证各视图永远一致。
         /// </remarks>
         internal static readonly (double U, double V, double DU, double DV, bool Green)[] TrayPlan =
         {
@@ -189,7 +188,7 @@ namespace HandlerGuide.ViewModels
         /// <summary>整机模块平面仿真页（motion_layout）。</summary>
         public static Element LayoutPage()
         {
-            // 三个视图页签：本版的重点是「按真机量测绘制料盘」，
+            // 两个视图页签：本版的重点是「按真机量测绘制料盘 + 两根 X 轴手臂」，
             // 所以默认页签直接指定成第 2 个「整机俯视图」（下标 1），打开仿真页第一眼就是料盘布局。
             //
             // 用 Tabs(默认下标, ...) 重载而不是「先 Tabs(...) 再 E.SelectTab(...)」：
@@ -198,15 +197,17 @@ namespace HandlerGuide.ViewModels
             // 会一直挂在 LiveRegistry 快速通道上在后台空跑动画。
             // （想改回默认停在 2D平面图，把下面的 1 改成 0 即可。）
             //
-            // 三个 lambda 显式写成 Func<Element>：否则编译器会把公共类型推成 CanvasElement，
-            // 第三个返回 Element 的 lambda 就转不过去（CS1503）。
+            // lambda 显式写成 Func<Element>：否则编译器会把公共类型推成 CanvasElement，
+            // 返回 Element 的 lambda 就转不过去（CS1503）。
+            //
+            // 「3D整机图」页签已按用户要求**撤掉**（不需要 3D 仿真），
+            // ViewModels/Layout3D.cs 一并删除。要找回那份代码：
+            //   git show 68ec276:ViewModels/Layout3D.cs
             Func<Element> f2d = () => BuildLayoutCanvas();
             Func<Element> fTop = () => BuildLayoutCanvasTop();
-            Func<Element> f3d = () => Layout3D.BuildTab();
             var viewTabs = E.Tabs(1,
                 ("2D平面图", f2d),
-                ("整机俯视图", fTop),
-                ("3D整机图", f3d));
+                ("整机俯视图", fTop));
 
             return E.V(
                 E.H(
@@ -232,14 +233,12 @@ namespace HandlerGuide.ViewModels
 
                 // ---- 主画布 + 右侧说明栏 ----
                 // 两列网格：左列 * 吃满剩余宽度，右列固定 490。
-                // 左列里再放「2D平面图 / 整机俯视图 / 3D整机图」三个标签页 ——
+                // 左列里再放「2D平面图 / 整机俯视图」两个标签页 ——
                 // 2D 标签走 BuildLayoutCanvas() 的 11 模组 540×438 工程图；
                 // 俯视图标签以 image\handler_top.jpg（空机台）为底图，按真机量测坐标
                 // 现画 14 个料盘（上排 6 深盘 / 中排 5 深盘 / 左下 3 绿盘）并做取放动画；
-                // 3D 标签走 Layout3D.BuildTab() —— **自算三维**（世界坐标→相机→透视投影→
-                // 画家算法→逐面朗伯着色），机台 / 料盘 / 加热盘 / 龙门架都是实体，可自由换视角，
-                // 不再是「贴一张斜二测渲染图 + 盖几个平行四边形」。
-                // 右侧命令中心 / 图例 / 模组动作对照三套视图共用。
+                // 俯视图上还叠了上/下料两根 X 轴手臂（红色 2×4 吸嘴组 + XY 走位）。
+                // 右侧命令中心 / 图例 / 模组动作对照两套视图共用。
                 E.Grid()
                     .Cols("*", "490")
                     .Rows("Auto")
@@ -1442,6 +1441,174 @@ namespace HandlerGuide.ViewModels
                 Foreground = new SolidColorBrush(Color.FromRgb(0xA8, 0x18, 0x18)),
             });
 
+            // ==============================================================
+            //  上料X轴（真机量测：X 横梁 + 红色吸嘴 2×4 组合）
+            // ==============================================================
+            // 定位方法：把用户给的截图当模板，在整张真机俯视图上做**归一化互相关**匹配。
+            // 最佳命中 photo (1149, 1202)、模板缩放 1.10×、NCC 0.835。
+            // （同一套流程回代上一张「下料X手臂」截图 → photo (169, 814)、NCC 0.810，
+            //   和当初手工量测完全一致，所以这套定位可信。）
+            //
+            // 画布坐标 = 照片坐标 × (CW/1696, CH/1376) = × (0.59552, 0.59520)。
+            //   · 横梁外框（含两端黄色端板） 照片 x 1148..1550, y 1200..1258
+            //   · 红色吸嘴 2×4 组合         照片 x 1297..1413（117 宽 —— 和下料那颗 118 宽同规格）
+            //   · 绿色滑块 ×2               照片 x 1419..1431 / 1452..1498
+            //   · 横梁内部（吸嘴 X 行程）   照片 x 1167..1533
+            //
+            // 运动学（用户口述「红色是 2*4 的吸嘴组，可以 xy 移动」＋照片印证）：
+            //   ① 红色吸嘴组沿横梁左右走 = 机器 X；
+            //   ② 整根横梁挂在两根竖直导杆上上下平移 = 机器 Y；
+            //   ①×② = 吸嘴拿到 XY 定位，2×4 一次取放 8 颗。
+            // Y 行程：横梁正下方能看到两根竖直导杆（照片 x ≈1270 / 1330，y ≈1135..1297），
+            // 横梁本身 58 高、静止位 y 1200..1258，按导杆可见长度上下各留约 ±26 画布像素。
+            // 俯视图量不出更精确的 Y 行程，所以画布上额外画了行程标尺，标出这是量测上限。
+            const double U2X0 = 683.7, U2X1 = 922.9;       // 横梁外框左右端（画布坐标）
+            const double U2CY = 731.5;                     // 横梁中心线（照片实测 = 静止位）
+            const double U2H = 34.5;                       // 横梁高
+            const double U2YS = 26.0;                      // Y 向行程半幅
+            const double U2NW = 69.1, U2NH = 34.5;         // 红色吸嘴组合尺寸
+            const double U2NX0 = 694.9, U2NX1 = 843.3;     // 吸嘴左端行程范围
+            const double U2GA0 = 845.0, U2GA1 = 852.2;     // 绿滑块 A
+            const double U2GB0 = 864.6, U2GB1 = 892.0;     // 绿滑块 B
+            const int U2NC = 4, U2NR = 2;                  // 2×4 = 8 个吸嘴
+
+            // 上料用紫色系，和下料的蓝色区分开 —— 两根 X 轴同规格，
+            // 不用颜色区分的话画面上会出现两条一模一样的蓝横梁，看着像画重了。
+            // 温启志 18719361399
+            var u2Violet = new SolidColorBrush(Color.FromRgb(0x7C, 0x4F, 0xD0));
+            var u2VioletSoft = new SolidColorBrush(Color.FromArgb(0x9A, 0x7C, 0x4F, 0xD0));
+            var u2GreenBrush = new SolidColorBrush(Color.FromRgb(0x1E, 0x8E, 0x6E));
+            var u2Red = new SolidColorBrush(Color.FromRgb(0xD0, 0x20, 0x20));
+            var u2RedEdge = new SolidColorBrush(Color.FromRgb(0x6B, 0x10, 0x10));
+            var u2DotBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0xDC, 0xDC));
+
+            double u2EnvTop = U2CY - U2YS - U2H / 2 - 5;
+            double u2EnvBot = U2CY + U2YS + U2H / 2 + 5;
+
+            // 行程上下限（横梁外缘能到的两个极限位置）
+            var u2Limit = new SolidColorBrush(Color.FromArgb(0x8C, 0x7C, 0x4F, 0xD0));
+            foreach (double u2Ly in new[] { u2EnvTop, u2EnvBot })
+            {
+                cv.Items.Add(new RectItem
+                {
+                    X = U2X0 - 4, Y = u2Ly, W = (U2X1 - U2X0) + 8, H = 1.4, Fill = u2Limit,
+                });
+            }
+
+            // Y 行程标尺（画在横梁左端外侧，x 667..679，避开左边标注框的右边缘 666）
+            cv.Items.Add(new RectItem
+            {
+                X = 672, Y = u2EnvTop + 3, W = 2, H = u2EnvBot - u2EnvTop - 6, Fill = u2VioletSoft,
+            });
+            cv.Items.Add(new PolyItem
+            {
+                Points = new PointCollection
+                {
+                    new Point(673, u2EnvTop), new Point(667, u2EnvTop + 9), new Point(679, u2EnvTop + 9),
+                },
+                Fill = u2Violet,
+            });
+            cv.Items.Add(new PolyItem
+            {
+                Points = new PointCollection
+                {
+                    new Point(673, u2EnvBot), new Point(667, u2EnvBot - 9), new Point(679, u2EnvBot - 9),
+                },
+                Fill = u2Violet,
+            });
+            cv.Items.Add(new TextItem
+            {
+                Text = "上下平移（Y）", X = 686, Y = 690, TextSize = 9.5, TextWidth = 120,
+                Align = TextAlignment.Left, Foreground = u2Limit,
+            });
+
+            // X 横梁（上料手臂本体）
+            var u2Beam = new RectItem
+            {
+                X = U2X0, Y = U2CY - U2H / 2, W = U2X1 - U2X0, H = U2H, Radius = 5,
+                Fill = new SolidColorBrush(Color.FromArgb(0x7A, 0x2A, 0x18, 0x4A)),
+                Stroke = u2Violet, StrokeThickness = 2,
+            };
+            cv.Items.Add(u2Beam);
+
+            // 横梁上的两个绿色滑块（真机照片里就有，跟着横梁一起走）
+            var u2GreenA = new RectItem
+            {
+                X = U2GA0, Y = U2CY - U2H / 2 + 3, W = U2GA1 - U2GA0, H = U2H - 6, Radius = 3,
+                Fill = u2GreenBrush,
+            };
+            cv.Items.Add(u2GreenA);
+            var u2GreenB = new RectItem
+            {
+                X = U2GB0, Y = U2CY - U2H / 2 + 3, W = U2GB1 - U2GB0, H = U2H - 6, Radius = 3,
+                Fill = u2GreenBrush,
+            };
+            cv.Items.Add(u2GreenB);
+
+            // 红色吸嘴 2×4 组合
+            var u2Nozzle = new RectItem
+            {
+                X = U2NX0, Y = U2CY - U2NH / 2, W = U2NW, H = U2NH, Radius = 5,
+                Fill = u2Red, Stroke = u2RedEdge, StrokeThickness = 2,
+            };
+            cv.Items.Add(u2Nozzle);
+
+            var u2Dots = new List<EllipseItem>();
+            double u2DotD = Math.Min(U2NW / U2NC, U2NH / U2NR) * 0.60;
+            for (int r = 0; r < U2NR; r++)
+            {
+                for (int q = 0; q < U2NC; q++)
+                {
+                    var dot = new EllipseItem
+                    {
+                        X = U2NX0 + U2NW * (q + 0.5) / U2NC - u2DotD / 2,
+                        Y = U2CY - U2NH / 2 + U2NH * (r + 0.5) / U2NR - u2DotD / 2,
+                        W = u2DotD, H = u2DotD, Fill = u2DotBrush,
+                    };
+                    cv.Items.Add(dot);
+                    u2Dots.Add(dot);
+                }
+            }
+
+            // 标注框：横梁左下方的空白带（x 430..666 / y 654..752）。
+            // 上面是「下料X手臂」的标注框（到 y 648），右边是行程标尺（x 667 起），互不遮挡。
+            cv.Items.Add(new RectItem
+            {
+                X = 430, Y = 654, W = 236, H = 98, Radius = 6,
+                Fill = new SolidColorBrush(Color.FromArgb(0xDC, 0xFF, 0xFF, 0xFF)),
+                Stroke = new SolidColorBrush(Color.FromArgb(0x66, 0x4A, 0x2E, 0x8C)),
+                StrokeThickness = 1,
+            });
+            cv.Items.Add(new TextItem
+            {
+                Text = "上料X轴（真机量测 · 照片 x1148..1549）",
+                X = 439, Y = 661, TextSize = 10.5, TextWidth = 220,
+                Align = TextAlignment.Left,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x4A, 0x2E, 0x8C)),
+            });
+            cv.Items.Add(new TextItem
+            {
+                Text = "① 红色吸嘴组沿 X 横梁左右走（机器 X）\n"
+                     + "② 整根横梁沿两根竖直导杆上下平移（机器 Y）\n"
+                     + "①×② = 吸嘴 XY 定位 · 2×4 = 8 头",
+                X = 439, Y = 679, TextSize = 9.5, TextWidth = 220,
+                Align = TextAlignment.Left,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x5A, 0x62, 0x70)),
+            });
+            // 图例：一个红色小方块，和横梁上的红色吸嘴组合同色
+            cv.Items.Add(new RectItem
+            {
+                X = 439, Y = 726, W = 13, H = 13, Radius = 2,
+                Fill = u2Red, Stroke = u2RedEdge, StrokeThickness = 1,
+            });
+            cv.Items.Add(new TextItem
+            {
+                Text = "= 吸嘴 2×4 组合（8 头）",
+                X = 458, Y = 727, TextSize = 10, TextWidth = 200,
+                Align = TextAlignment.Left,
+                Foreground = new SolidColorBrush(Color.FromRgb(0xA8, 0x18, 0x18)),
+            });
+
             // ---- 作者署名水印 ----
             cv.Items.Add(new TextItem
             {
@@ -1509,6 +1676,36 @@ namespace HandlerGuide.ViewModels
                 }
                 for (int i = 0; i < uaHilite.Count; i++)
                     uaHilite[i].Stroke = (i == uaBest) ? uaAmberOn : uaAmberOff;
+
+                // ---- 上料X轴：横梁上下平移（Y） ＋ 红色吸嘴组沿横梁左右走（X） ----
+                // ① 横梁 Y 平移。相位 +0.25 ⇒ t = 0 时三角波正好 0.5，横梁停在行程中点，
+                //    也就是照片里的静止位，静止状态与照片完全重合。
+                double u2CYn = U2CY + (Triangle(t * 0.15 + 0.25) - 0.5) * 2.0 * U2YS;
+                u2Beam.Y = u2CYn - U2H / 2;
+                u2GreenA.Y = u2CYn - U2H / 2 + 3;
+                u2GreenB.Y = u2CYn - U2H / 2 + 3;
+
+                // ② 红色吸嘴组沿横梁 X 向走位。
+                //    照片静止位：吸嘴左端 photo x1297 ⇒ 画布 772.39，
+                //    在行程里的比例 = (772.39-694.9)/(843.3-694.9) = 0.522。
+                //    三角波相位要写成「比例的一半」= 0.261（上升沿，tri(0.261)=0.522），
+                //    不能直接把比例 0.522 当相位 —— 那是下降沿上的另一个点，
+                //    tri(0.522)=0.956 会把吸嘴送到 836.8，静止位对不上照片。
+                //    （下料手臂用的是同一套算法：比例 0.441 ⇒ 相位 0.22。）
+                double u2Nx = U2NX0 + Triangle(t * 0.085 + 0.261) * (U2NX1 - U2NX0);
+                u2Nozzle.X = u2Nx;
+                u2Nozzle.Y = u2CYn - U2NH / 2;
+
+                // 8 个吸嘴点位跟着红色方块走（2 行 × 4 列）
+                for (int r = 0; r < U2NR; r++)
+                {
+                    for (int q = 0; q < U2NC; q++)
+                    {
+                        var dot = u2Dots[r * U2NC + q];
+                        dot.X = u2Nx + U2NW * (q + 0.5) / U2NC - dot.W / 2;
+                        dot.Y = u2CYn - U2NH / 2 + U2NH * (r + 0.5) / U2NR - dot.H / 2;
+                    }
+                }
 
                 // 离臂头最近的料盘点亮（超过 90px 就都不亮）
                 int best = -1;

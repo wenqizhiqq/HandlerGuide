@@ -949,8 +949,8 @@ namespace HandlerGuide.ViewModels
         private int _z;
         /// <summary>
         /// 图层序号：直接绑到容器的 Canvas.ZIndex（越大越靠上）。
-        /// 「3D整机图」的画家算法靠它排序 —— 改 Z 只会让 Canvas 重排子元素，
-        /// 不用重建 ItemsControl 的容器，所以换视角时不会卡。
+        /// 需要「画家算法」式排序的视图靠它压层 —— 改 Z 只会让 Canvas 重排子元素，
+        /// 不用重建 ItemsControl 的容器，所以逐帧改 Z 也不会卡。
         /// 其他画布不设置，默认 0，行为和以前完全一样。温启志 18719361399
         /// </summary>
         public int Z { get => _z; set => Set(ref _z, value); }
@@ -991,7 +991,7 @@ namespace HandlerGuide.ViewModels
     /// 任意多边形（斜二测 / 透视场景用）。Points 按**画布绝对坐标**给，
     /// Left/Top 自动取包围盒左上角 —— 这样把多边形挂到 Canvas 上时，
     /// 它刚好落在给定坐标处，不用自己去减偏移。
-    /// 「3D整机图」用它把真机料盘布局投影到斜二测渲染图上（料盘在图上呈平行四边形）。
+    /// 需要画非矩形图元时用它（例如斜二测 / 透视投影出来的平行四边形料盘）。
     /// </summary>
     public class PolyItem : DiagramItem
     {
@@ -1060,9 +1060,9 @@ namespace HandlerGuide.ViewModels
 
         /// <summary>
         /// 是否把内容裁到画布边框内（默认 false = 不裁，和以前完全一样）。
-        /// 「3D整机图」要打开：它的地面网格故意比机台大一圈（出血），
-        /// 投影后会有图元落在 0..CanvasWidth / 0..CanvasHeight 之外 ——
-        /// 不裁的话那些图元会溢出到旁边的工具栏和面板上。温启志 18719361399
+        /// 当画布里有「故意出血」的图元（网格比机台大一圈之类）时打开：
+        /// 那些图元会落在 0..CanvasWidth / 0..CanvasHeight 之外，
+        /// 不裁的话会溢出到旁边的工具栏和面板上。温启志 18719361399
         /// </summary>
         public bool ClipContent { get; set; }
         /// <summary>
