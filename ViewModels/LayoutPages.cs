@@ -13,7 +13,8 @@
 //          (1) 真实轴位置 —— 上/下料臂 X、小车 A/B、测试下压 Z、上料臂 Y；
 //          (2) 时间驱动 —— 流水线走料、料盘升降、手工盘扫描、加热脉冲。
 //        打开本页会自动启动「安全演示节拍」，每一步都过同一套互锁，不会撞机。
-//        「3D整机图」页签已按用户要求撤掉（不做 3D 仿真），本页只留 2D平面图 / 整机俯视图。
+//        本页现在**只显示「整机俯视图」**：2D平面图 / 整机俯视图 / 3D整机图 这套页签选择条
+//        已按用户要求整个撤掉（先删 3D，再把选择器也去掉），打开本页直接就是俯视图。
 // ============================================================================
 using System;
 using System.Collections.Generic;
@@ -188,26 +189,23 @@ namespace HandlerGuide.ViewModels
         /// <summary>整机模块平面仿真页（motion_layout）。</summary>
         public static Element LayoutPage()
         {
-            // 两个视图页签：本版的重点是「按真机量测绘制料盘 + 两根 X 轴手臂」，
-            // 所以默认页签直接指定成第 2 个「整机俯视图」（下标 1），打开仿真页第一眼就是料盘布局。
+            // 本页**只显示「整机俯视图」**：页签选择条（2D平面图 / 整机俯视图）
+            // 已按用户要求整个撤掉 —— 打开本页直接就是俯视图，不用再选。
             //
-            // 用 Tabs(默认下标, ...) 重载而不是「先 Tabs(...) 再 E.SelectTab(...)」：
-            // 页签内容是懒加载的，但 SelectTab 会立刻构建被选中的那一页，
-            // 走两步的话第 1 页（2D平面图）会先被建出来 —— 那是一块逐帧重绘的画布，
-            // 会一直挂在 LiveRegistry 快速通道上在后台空跑动画。
-            // （想改回默认停在 2D平面图，把下面的 1 改成 0 即可。）
+            // 俯视图以 image\handler_top.jpg（空机台照片）为底图，按真机量测坐标现画
+            // 14 个料盘（上排 6 深盘 / 中排 5 深盘 / 左下 3 绿盘）+ 2 个加热盘，
+            // 并叠上「下料X手臂」「上料X轴」两根手臂（红色 2×4 吸嘴组 + XY 走位）做取放动画。
             //
-            // lambda 显式写成 Func<Element>：否则编译器会把公共类型推成 CanvasElement，
-            // 返回 Element 的 lambda 就转不过去（CS1503）。
-            //
-            // 「3D整机图」页签已按用户要求**撤掉**（不需要 3D 仿真），
-            // ViewModels/Layout3D.cs 一并删除。要找回那份代码：
-            //   git show 68ec276:ViewModels/Layout3D.cs
-            Func<Element> f2d = () => BuildLayoutCanvas();
-            Func<Element> fTop = () => BuildLayoutCanvasTop();
-            var viewTabs = E.Tabs(1,
-                ("2D平面图", f2d),
-                ("整机俯视图", fTop));
+            // 2D 平面工程图（BuildLayoutCanvas()，11 模组 540×438）现在**没有入口**了，
+            // 代码原样保留着。哪天要放回来，把下面这行换成：
+            //     Func<Element> f2d  = () => BuildLayoutCanvas();
+            //     Func<Element> fTop = () => BuildLayoutCanvasTop();
+            //     var topCanvas = E.Tabs(1, ("2D平面图", f2d), ("整机俯视图", fTop));
+            // 即可。注意 lambda 必须显式写成 Func<Element>，否则编译器会把公共类型
+            // 推成 CanvasElement，返回 Element 的 lambda 转不过去（CS1503）。
+            // 另外「3D整机图」页签与 ViewModels/Layout3D.cs 已删除，
+            // 要找回那份三维代码：git show 68ec276:ViewModels/Layout3D.cs
+            var topCanvas = BuildLayoutCanvasTop();
 
             return E.V(
                 E.H(
@@ -232,17 +230,15 @@ namespace HandlerGuide.ViewModels
                         10, E.Sec, false, TextWrapping.Wrap)),
 
                 // ---- 主画布 + 右侧说明栏 ----
-                // 两列网格：左列 * 吃满剩余宽度，右列固定 490。
-                // 左列里再放「2D平面图 / 整机俯视图」两个标签页 ——
-                // 2D 标签走 BuildLayoutCanvas() 的 11 模组 540×438 工程图；
-                // 俯视图标签以 image\handler_top.jpg（空机台）为底图，按真机量测坐标
+                // 两列网格：左列 * 吃满剩余宽度放整机俯视图画布，右列固定 490。
+                // 俯视图以 image\handler_top.jpg（空机台）为底图，按真机量测坐标
                 // 现画 14 个料盘（上排 6 深盘 / 中排 5 深盘 / 左下 3 绿盘）并做取放动画；
-                // 俯视图上还叠了上/下料两根 X 轴手臂（红色 2×4 吸嘴组 + XY 走位）。
-                // 右侧命令中心 / 图例 / 模组动作对照两套视图共用。
+                // 画布上还叠了上/下料两根 X 轴手臂（红色 2×4 吸嘴组 + XY 走位）。
+                // 右侧命令中心 / 图例 / 模组动作对照与画布并排。
                 E.Grid()
                     .Cols("*", "490")
                     .Rows("Auto")
-                    .Add(viewTabs, 0, 0)
+                    .Add(topCanvas, 0, 0)
                     .Add(
                         E.V(
                             // ---- 命令中心（生产控制 + 批次管理）从主界面搬到本仿真页右侧 ----
