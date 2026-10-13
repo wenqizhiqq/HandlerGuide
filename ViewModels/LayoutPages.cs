@@ -1420,7 +1420,10 @@ namespace HandlerGuide.ViewModels
             // 需求 43：中排 5 工位 = 皮带传输线（照片底图上那条皮带），running 时
             // 在皮带上叠加一组滚动的亮纹理，示意「皮带正在传输料盘」。
             double beltX = TrayPlan[6].U * CW;
-            double beltW = (TrayPlan[10].U + TrayPlan[10].DU) * CW - beltX;
+            // 需求 44：皮带右端延长到上料位（进料盘正下方那条输送段，右沿 ≈793.1，
+            // 原来到缓存盘10右沿 667.7）—— 让「上料位 → 皮带 → 出空盘」在画面上
+            // 连成同一条输送线。
+            double beltW = (TrayPlan[5].U + TrayPlan[5].DU) * CW - beltX;
             double beltY = (TrayPlan[6].V + TrayPlan[6].DV) * CH + 3;
             var beltDots = new List<RectItem>();
             for (int b = 0; b < 10; b++)
@@ -1433,6 +1436,64 @@ namespace HandlerGuide.ViewModels
                 };
                 cv.Items.Add(dot);
                 beltDots.Add(dot);
+            }
+
+            // ==============================================================
+            //  需求 44：上料位料盘（进料盘正下方、皮带延长段上）
+            // ==============================================================
+            // 温启志 18719361399 · 用户：「这里也需要一个料盘，而且是从上面的进料盘
+            // 进来的，上料吸嘴会2*4地去吸物料芯片，然后料盘就减少对应的，如果这个
+            // 料盘空了，就会被搬运料盘手臂搬运到出空盘的位置，通过皮带到出空盘层」。
+            //  · 盘体与中排缓存盘同款（深色盘身 + 格纹），X 与进料盘对齐、Y 与中排
+            //    皮带同一高度带 = 进料盘下方那条输送段上的工位；
+            //  · 芯片格 5 列 × 8 行 = 40 颗：上料吸嘴每吸一次 2×4 = 8 颗（动画里
+            //    逐格熄灭，剩余芯片留在盘底 = 吸嘴从最上层往下吸）；
+            //  · 吸空后由搬运臂「空盘搬运」剧本端走（见 Draw 内需求 44 块）。
+            double feedX = TrayPlan[5].U * CW, feedW = TrayPlan[5].DU * CW;   // ≈710.3 / 82.8
+            double feedY = TrayPlan[6].V * CH, feedH = TrayPlan[6].DV * CH;   // ≈292.0 / 174.2
+            const int FEED_COLS = 5, FEED_ROWS = 8;
+            const int FEED_FULL = FEED_COLS * FEED_ROWS;     // 40 颗 = 5 次 2×4 吸取
+            cv.Items.Add(new RectItem
+            {
+                X = feedX, Y = feedY, W = feedW, H = feedH, Radius = 3,
+                Fill = darkBody, Stroke = darkEdge, StrokeThickness = 1.2,
+            });
+            double feedCw = feedW / FEED_COLS, feedCh = feedH / FEED_ROWS;
+            cv.Items.Add(new RectItem
+            {
+                X = feedX, Y = feedY, W = feedW, H = feedH, Radius = 3,
+                Fill = new DrawingBrush
+                {
+                    TileMode = TileMode.Tile,
+                    Viewport = new Rect(0, 0, feedCw, feedCh),
+                    ViewportUnits = BrushMappingMode.Absolute,
+                    Stretch = Stretch.Fill,
+                    Drawing = new GeometryDrawing
+                    {
+                        Brush = darkBody,
+                        Pen = new Pen(darkLine, 1),
+                        Geometry = new RectangleGeometry(new Rect(0.5, 0.5, feedCw - 1, feedCh - 1)),
+                    },
+                },
+                Stroke = darkBody, StrokeThickness = 0,
+            });
+            // 芯片格：列表头部 = 最底行（填充序「从下到上、从左到右」）→ 剩余芯片
+            // 画在盘底、上层先被吸空（Draw 里按 feedChips 逐格点亮）。
+            var feedCells = new List<RectItem>();
+            double fedW = (feedW - 8) / FEED_COLS, fedH = (feedH - 8) / FEED_ROWS;
+            for (int fr = FEED_ROWS - 1; fr >= 0; fr--)
+            {
+                for (int fc = 0; fc < FEED_COLS; fc++)
+                {
+                    var cell = new RectItem
+                    {
+                        X = feedX + 4 + fc * fedW + 1, Y = feedY + 4 + fr * fedH + 1,
+                        W = fedW - 2, H = fedH - 2, Radius = 1.5,
+                        Fill = devBlue, Stroke = null, StrokeThickness = 0,
+                    };
+                    cv.Items.Add(cell);
+                    feedCells.Add(cell);
+                }
             }
 
             // ==============================================================
@@ -1761,11 +1822,21 @@ namespace HandlerGuide.ViewModels
             //  · 「下面的满料了就需要上移」体现为：放盘瞬间塔整摞上移一格（6px），
             //    停 1.2s 再落回（顶升让位后复位）。
             double pickCX = (TrayPlan[3].U + TrayPlan[3].DU / 2) * CW;   // 进空盘塔中心 ≈ 506.9
+            // 需求 44：上料位中心（与进料盘同 X ≈ 751.7）、出空盘中心（空盘搬运
+            // 目的地 ≈ 628.5）。
+            double feedCX = (TrayPlan[5].U + TrayPlan[5].DU / 2) * CW;
+            double outEmptyCX = (TrayPlan[4].U + TrayPlan[4].DU / 2) * CW;
             double beltPh = 0;                       // 皮带纹理滚动相位（px）
             double[] towerLift = new double[6];      // 塔顶升偏移（<0 = 已上移）
             double[] towerHold = new double[6];      // 顶升保持倒计时（s）
             bool holdingTray = false;                // 搬运臂是否抓着一片空盘
             bool didGrab = false, didDrop = false;   // 本时隙抓/放事件是否已触发
+            // 需求 44：上料位料盘状态 —— 剩余芯片数（上料吸嘴每轮 2×4 吸走 8 颗）
+            // 与吸取事件锁存（每个上料时隙最多吸一次）；carryCycle = 本轮搬运时隙
+            // 是否改演「空盘搬运」剧本（进 slot 2 前按 feedChips<=0 锁存）。
+            int feedChips = FEED_FULL;
+            bool didPick = false;
+            bool carryCycle = false;
             bool demo = Environment.GetEnvironmentVariable("HG_DEMO") == "1";   // 自检抓拍模式：事件写日志 + 动画 dt 固定（见 Draw 内）
 
             cv.Draw = c =>
@@ -1845,6 +1916,18 @@ namespace HandlerGuide.ViewModels
                 u2Arm.X = u2X;
                 u2Arm.Y = U2_Y + beamLiftU;
 
+                // ---- 需求 44：上料吸嘴 2×4 取料（slot 1，吸嘴中心对准上料位才吸）----
+                // 每个上料时隙最多吸一次（didPick 锁存，slot≠1 复位）：扫过一次吸走
+                // 2×4 = 8 颗，不足 8 颗时吸到 0 为止；吸空后由搬运臂端走空盘补新盘。
+                if (running && slot == 1 && !didPick && feedChips > 0 &&
+                    Math.Abs(u2X + U2_W / 2.0 - feedCX) <= TrayPlan[5].DU * CW / 2.0)
+                {
+                    didPick = true;
+                    feedChips = Math.Max(0, feedChips - 8);
+                    if (demo) App.Log("req44 pick cyc=" + ((int)(t / (3.0 * SLOT_SEC))) +
+                                      " chips=" + feedChips + "（上料吸嘴 2×4 取走 8 颗）");
+                }
+
                 // ---- 搬运臂（抠图）：**只改 X，Y 不动** + 需求 38/39 硬避让 ----
                 // 目标位由自己的相位给出；随后把它的脚印 [X, X+armW] 从**正在干活的
                 // 那组**取放臂的「脚印 + ARM_CLR」禁区里推出去 —— 推到离目标更近的
@@ -1855,7 +1938,8 @@ namespace HandlerGuide.ViewModels
                 // 实际渲染位置 trayX 对目标**限速跟随**（上限 ≈ 三角波最大扫速，自由
                 // 扫掠时逐帧贴满目标）：让位钳位释放的突跳被限速成平滑滑移，不会瞬移。
                 // 需求 43：slot 2 改为「抓放剧本」分段插值（关键帧首尾都精确回停放位），
-                // slot 0/1 停在停放位。剧本时间轴（u 0..1，共 8s，各段速率 ≈130px/s，
+                // slot 0/1 停在停放位。需求 44：上料位空盘待搬（feedChips=0）时本轮
+                // 改演「空盘搬运」剧本（见下）。常规剧本时间轴（u 0..1，共 8s，各段速率 ≈130px/s，
                 // 均低于限速跟随上限 170px/s ⇒ trayX 无滞后、边界精确回位）：
                 //   0.000-0.073  停放位 → 进空盘（臂头对准塔中心）
                 //   0.073-0.196  抓盘停留（u≥0.10 抓走一片：进空盘 -1 层，臂下挂空盘）
@@ -1866,37 +1950,77 @@ namespace HandlerGuide.ViewModels
                 double pickX = pickCX - armW / 2.0;
                 double dropCX = (TrayPlan[grabIdx].U + TrayPlan[grabIdx].DU / 2) * CW;
                 double dropX = dropCX - armW / 2.0;
+                // 需求 44：空盘搬运剧本关键帧 —— 停放位 → 上料位（抓空盘）→ 出空盘
+                // 下方皮带上（放盘）→ 回停放位；各段速率 ≤71px/s，低于限速跟随上限
+                // ⇒ trayX 无滞后、边界精确回位。本轮模式在进 slot 2 前按 feedChips<=0
+                // 锁存（搬运放盘会立刻补料置回满，锁存保证本轮剧本不被中途切换）。
+                double carryPickX = feedCX - armW / 2.0;      // ≈699.3（上料位）
+                double carryDropX = outEmptyCX - armW / 2.0;  // ≈576.1（出空盘）
+                if (slot != 2) carryCycle = feedChips <= 0;   // 需求 44：进 slot 2 前锁存本轮模式
                 double trayTarget = armRestX;
                 if (slot == 2)
                 {
-                    trayTarget = u < 0.073 ? armRestX + (pickX - armRestX) * (u / 0.073)
-                               : u < 0.196 ? pickX
-                               : u < 0.501 ? pickX + (dropX - pickX) * ((u - 0.196) / 0.305)
-                               : u < 0.624 ? dropX
-                               : dropX + (armRestX - dropX) * ((u - 0.624) / 0.376);
+                    trayTarget = carryCycle
+                        ? (u < 0.30 ? armRestX + (carryPickX - armRestX) * (u / 0.30)
+                          : u < 0.42 ? carryPickX
+                          : u < 0.72 ? carryPickX + (carryDropX - carryPickX) * ((u - 0.42) / 0.30)
+                          : u < 0.84 ? carryDropX
+                          : carryDropX + (armRestX - carryDropX) * ((u - 0.84) / 0.16))
+                        : (u < 0.073 ? armRestX + (pickX - armRestX) * (u / 0.073)
+                          : u < 0.196 ? pickX
+                          : u < 0.501 ? pickX + (dropX - pickX) * ((u - 0.196) / 0.305)
+                          : u < 0.624 ? dropX
+                          : dropX + (armRestX - dropX) * ((u - 0.624) / 0.376));
                 }
                 double headX = trayTarget;
                 if (running)
                 {
                     if (slot == 2)
                     {
-                        if (!didGrab && u >= 0.10)
+                        if (carryCycle)
                         {
-                            didGrab = true; holdingTray = true;
-                            if (layerCnt[3] > 1) layerCnt[3]--;      // 从进空盘抓走一片
-                            if (demo) App.Log("req43 grab cyc=" + ((int)(t / (3.0 * SLOT_SEC))) +
-                                              " tray3=" + layerCnt[3] + "层（进空盘抓走一片后）");
+                            // 需求 44：空盘搬运 —— 上料位抓空盘 → 出空盘下方皮带放下；
+                            // 「通过皮带到出空盘层」：放盘即并入出空盘摞（+1 层 + 顶升
+                            // 一格再落回），同时进料盘补一片新盘、上料位重新装满芯片。
+                            if (!didGrab && u >= 0.32)
+                            {
+                                didGrab = true; holdingTray = true;
+                                if (demo) App.Log("req44 carry grab cyc=" + ((int)(t / (3.0 * SLOT_SEC))) +
+                                                  "（从上料位抓走空盘）");
+                            }
+                            if (!didDrop && u >= 0.74)
+                            {
+                                didDrop = true; holdingTray = false;
+                                if (layerCnt[4] < MachineModel.MaxTrayLayers) layerCnt[4]++;  // 出空盘 +1 层
+                                towerHold[4] = 1.2;                       // 出空盘摞顶升一格再落回
+                                if (layerCnt[5] > 1) layerCnt[5]--;       // 进料盘补一片下来
+                                feedChips = FEED_FULL;                    // 新料盘就位（芯片装满）
+                                if (demo) App.Log("req44 carry drop cyc=" + ((int)(t / (3.0 * SLOT_SEC))) +
+                                                  " out=" + layerCnt[4] + "层 feed=" + layerCnt[5] +
+                                                  "层（空盘经皮带并入出空盘，新盘自进料盘补位）");
+                            }
                         }
-                        if (!didDrop && u >= 0.52)
+                        else
                         {
-                            didDrop = true; holdingTray = false;
-                            if (layerCnt[grabIdx] < MachineModel.MaxTrayLayers) layerCnt[grabIdx]++;
-                            towerHold[grabIdx] = 1.2;                // 塔顶升一格再落回
-                            if (demo) App.Log("req43 drop cyc=" + ((int)(t / (3.0 * SLOT_SEC))) +
-                                              " tower=" + grabIdx + " layers=" + layerCnt[grabIdx] + "层（放盘后）");
+                            if (!didGrab && u >= 0.10)
+                            {
+                                didGrab = true; holdingTray = true;
+                                if (layerCnt[3] > 1) layerCnt[3]--;      // 从进空盘抓走一片
+                                if (demo) App.Log("req43 grab cyc=" + ((int)(t / (3.0 * SLOT_SEC))) +
+                                                  " tray3=" + layerCnt[3] + "层（进空盘抓走一片后）");
+                            }
+                            if (!didDrop && u >= 0.52)
+                            {
+                                didDrop = true; holdingTray = false;
+                                if (layerCnt[grabIdx] < MachineModel.MaxTrayLayers) layerCnt[grabIdx]++;
+                                towerHold[grabIdx] = 1.2;                // 塔顶升一格再落回
+                                if (demo) App.Log("req43 drop cyc=" + ((int)(t / (3.0 * SLOT_SEC))) +
+                                                  " tower=" + grabIdx + " layers=" + layerCnt[grabIdx] + "层（放盘后）");
+                            }
                         }
                     }
                     else didGrab = didDrop = false;   // 需求 43：离开搬运时隙即复位，下一轮剧本重新抓放（三塔轮换才能轮起来）
+                    if (slot != 1) didPick = false;   // 需求 44：离开上料时隙即复位，下一轮再吸
                     if (slot == 0 && YOverlap(armRestY, armH, UA_Y + beamLiftD, UA_H))
                         headX = PushOut(headX, armW, uaX - ARM_CLR, uaX + UA_W + ARM_CLR,
                                         armX0, armX1 - armW);
@@ -1912,6 +2036,7 @@ namespace HandlerGuide.ViewModels
                 else
                 {
                     didGrab = didDrop = false;   // 非运行状态重置，重新启动后剧本从头演
+                    didPick = false;             // 需求 44：吸取锁存一并复位
                 }
                 trayArm.X = trayX;
                 // 需求 43：抓着的空盘贴在臂头下方（抓起后显示，放盘后隐藏）
@@ -2007,6 +2132,11 @@ namespace HandlerGuide.ViewModels
                     for (int j = 0; j < n; j++)
                         devs[j].Fill = j < target ? devBrush : null;
                 }
+
+                // ---- 需求 44：上料位芯片显示（剩余 feedChips 颗；填充序从下到上，
+                //      所以剩余芯片留在盘底、上层先被吸空）----
+                for (int k = 0; k < feedCells.Count; k++)
+                    feedCells[k].Fill = k < feedChips ? devBlue : null;
 
                 // ---- 需求 43：自动盘塔顶升（放盘瞬间整摞上移一格，停 1.2s 后落回）----
                 for (int i = 0; i < 6; i++)
