@@ -121,6 +121,21 @@
     上排 6 叠层盘加中文盘名 —— `TrayNames[6]`（下标 = TrayPlan[0..5]），顶部文字带
     bandH 30→40 三行（盘名 9px / N层 11px / 报警 9.5px），叠层区自适应。构建 0W0E、
     自检全绿、截图目检通过（`artifacts/req42_names.png`）。
+  - **需求 43（用户：「使用皮带传输料盘，自动盘的如果下面的满料了就需要上移，然后搬运料盘手臂从进空盘位置抓取一个料盘过去」）**：
+    slot 2 从三角波全行程改成**抓放剧本**分段插值（断点 0.073/0.196/0.501/0.624，grab@u≥0.10、drop@u≥0.52）：
+    停放位 530.2 → pickX≈455.10（上排进空盘 TrayPlan[3] 中心 507.50）→ 自动盘 TrayPlan[0..2]
+    （DROP_X≈137.87/239.44/341.63，`grabIdx=(int)(t/(3*SLOT_SEC))%3` **三塔轮换**）→ 回停放位。
+    事件：grab → 进空盘 −1 层（>1 才减）；drop → 自动盘 +1 层（<20 才加）+ `towerHold=1.2s`
+    该塔上移 6px（20px/s）再落回（=「满料上移」）；中排 5 工位加皮带青点滚动 `beltPh+=30*dt`。
+    ⚠️ **didGrab/didDrop 必须 slot≠2 时复位**，否则连续运行只抓放一次、三塔轮换失效。
+    自动盘初值 = `NewTopTrayLayers()` 固定种子 Random(20261012) = **[6,19,17,7,4,2]**（`Load()` 不覆盖；
+    Python 镜像要逐位复刻 .NET Knuth 减法消去法 PRNG，`random` 库算法不同）。
+    ⚠️ HG_DEMO 下 Draw 的 dt 固定 0.05，但 Draw 每 FastTick 被调多次 ⇒ 动画时间 ≠ 帧号×0.05，
+    **定位剧本事件以 `req43 grab/drop` 日志行为准**（`%TEMP%\handlerguide.log`）；App.xaml.cs 演示循环
+    只跑 491 帧（延长到 900 会让真轴演示节拍多跑拍 → StopDemo 遗留轴位置 → motion/ops 自检顶软限位误报）。
+    镜像 req39_verify.py **11/11**（slot2 范围=剧本、三轮命中 pick/drop、无瞬移）、
+    req41_verify.py **16/16**（层变化只在 slot 2、轮换 [0,1,2]×2、PRNG 对齐、slot1 冻结）；
+    **轮换回归常驻哨兵 = req41 C3 断言**；截图证据 `artifacts/shots43/`。
 
 ## 改 UI 前先做像素取证（好用）
 - 用户只给截图、不确定是哪一页时：先用 Pillow 统计 top-N 颜色 + 对特征色做行/列投影，反查代码里的**字面色值**（如 `devBlue #3CC0F0`、`darkBody #26282E`），再按 `TrayPlan` 归一化坐标反算对齐 —— 比盲翻代码快得多。

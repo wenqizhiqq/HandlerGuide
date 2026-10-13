@@ -210,7 +210,26 @@ namespace HandlerGuide
                 var guardHits = new System.Collections.Generic.HashSet<string>();
                 var guardCanvas = ViewModels.LayoutPages.LastLayoutCanvas;
 
-                for (int i = 0; i < 80; i++)
+                // 需求 43 · 可选钩子：HG_DEMO=1 时先启动演示节拍再渲染 80 帧 ——
+                // 布局页动画只在 AutoCycle 为真时推进（需求 41 起全部门控），
+                // 默认自检全程静态（pixelDiff=0 属预期）；设了 HG_DEMO 才能拍到
+                // 剧本中间态（抓盘 / 皮带滚动 / 塔顶升），pixelDiff 也恢复诊断意义。
+                // 循环结束后必须 StopDemo 还原，否则演示会泄漏进后面的 ops 自检。
+                bool demoStarted = Environment.GetEnvironmentVariable("HG_DEMO") == "1";
+                if (demoStarted) m.StartDemo();
+
+                // HG_DEMO 时拍 slot 2 剧本序列：需求 43 起 HG_DEMO 下 Draw 的 dt 固定
+                // 0.05（见 LayoutPages.cs），剧本事件在「动画时间轴」上逐帧确定、
+                // 可复现 —— 触发瞬间由 req43 grab/drop 日志行记录（权威证据），
+                // 序列截图只作辅助目检。注意 Draw 在每次 FastTick 的布局/泵帧里
+                // 会被调用多次，动画时间 ≠ 循环帧号 × 0.05，按帧号定位事件不可靠。
+                // 只跑到帧 491：曾试过延长到帧 900 想抓第 2 轮剧本（已完成验证，
+                // 存证 evidence_c2_drop_tower2.png），但真轴演示节拍也随之多跑 410 拍，
+                // StopDemo 后遗留的轴位置会让后续 motion/ops 自检顶上软限位误报 ——
+                // 轮换回归的常驻哨兵是 artifacts/req41_verify.py 的 C3 断言。
+                int seqLo = 330, seqHi = 470;
+                int frames = 0, frameMax = demoStarted ? 1000 : 80;
+                while (frames < frameMax)
                 {
                     vm.FastTick(0.05);
                     win.UpdateLayout();
@@ -220,8 +239,12 @@ namespace HandlerGuide
                     // （之前这里 pixelDiff=0，看起来「动画坏了」，其实是探针读到了旧视觉树）。
                     win.Dispatcher.Invoke(() => { },
                         System.Windows.Threading.DispatcherPriority.Background);
-                    if (i == 19 && a != null) Shoot(win, a);
-                    if (i == 79 && b != null) Shoot(win, b);
+                    if (frames == 19 && a != null) Shoot(win, a);
+                    if (frames == 79 && b != null) Shoot(win, b);
+                    if (demoStarted && frames >= seqLo && frames <= seqHi && frames % 2 == 0)
+                        Shoot(win, Path.Combine(shotDir, "_demo_seq_" + frames + ".png"));
+                    if (demoStarted && frames > seqHi + 20) break;
+                    frames++;
                     if (guardCanvas != null)
                         foreach (var g in guardCanvas.CheckGuards()) guardHits.Add(g);
                 }
@@ -245,7 +268,7 @@ namespace HandlerGuide
                 long diff = -1;
                 if (a != null && b != null) diff = ComparePng(a, b);
 
-                Log("layout selftest: frames=80 demoCycles=" + m.DemoCycles
+                Log("layout selftest: frames=" + frames + " demoCycles=" + m.DemoCycles
                     + " step=" + m.DemoStepText
                     + " upArmX=" + m.Position(4).ToString("0.0")
                     + " downArmX=" + m.Position(16).ToString("0.0")
@@ -259,6 +282,7 @@ namespace HandlerGuide
                        : diff == 0 ? " （警告：画面没有变化）"
                        : " （未开启截图，跳过像素比较）"));
 
+                if (demoStarted) m.StopDemo();     // 还原现场，别泄漏进 ops 自检
                 win.Close();
             }
             catch (Exception ex)

@@ -1408,6 +1408,33 @@ namespace HandlerGuide.ViewModels
             };
             cv.Items.Add(trayArm);
 
+            // 需求 43：搬运臂抓着的空盘（一片灰白薄盘，抓起后显示、放盘后隐藏）
+            var grabTray = new RectItem
+            {
+                X = armRestX + (armW - 62) / 2, Y = armRestY + armH * 0.52,
+                W = 62, H = 7, Radius = 1.5,
+                Fill = null, Stroke = null, StrokeThickness = 0,   // 默认隐藏
+            };
+            cv.Items.Add(grabTray);
+
+            // 需求 43：中排 5 工位 = 皮带传输线（照片底图上那条皮带），running 时
+            // 在皮带上叠加一组滚动的亮纹理，示意「皮带正在传输料盘」。
+            double beltX = TrayPlan[6].U * CW;
+            double beltW = (TrayPlan[10].U + TrayPlan[10].DU) * CW - beltX;
+            double beltY = (TrayPlan[6].V + TrayPlan[6].DV) * CH + 3;
+            var beltDots = new List<RectItem>();
+            for (int b = 0; b < 10; b++)
+            {
+                var dot = new RectItem
+                {
+                    X = 0, Y = beltY, W = 5, H = 4, Radius = 2,
+                    Fill = new SolidColorBrush(Color.FromArgb(130, 0x40, 0xC0, 0xF0)),
+                    Stroke = null, StrokeThickness = 0,
+                };
+                cv.Items.Add(dot);
+                beltDots.Add(dot);
+            }
+
             // ==============================================================
             //  下料X手臂（真机照片抠图：红色滑座 + 上下蓝导杆 + 白色法兰）
             // ==============================================================
@@ -1706,9 +1733,9 @@ namespace HandlerGuide.ViewModels
             //     停放位永远精确落位；未启动时 t = 0：两根取放臂在照片原位，
             //     搬运臂在默认停放位 530.2（需求 40，照片原位 694.4 靠左 2 个料盘宽度）。
             // 硬避让随之**按时隙门控**：搬运臂只对「正在干活的那组」让位（slot 0 让下料 /
-            // slot 1 让上料）；slot 2 里两组都在停放位 = 走廊已让出，不再钳位，搬运臂
-            // 全行程走位（俯视图里停放的下料臂头与搬运臂包络还剩 ~36px 名义相交，
-            // 真机上两臂不同高度 —— 与 SR-11「停放位不占走廊」一致）。
+            // slot 1 让上料）；slot 2 里两组都在停放位 = 走廊已让出，不再钳位，搬运臂按
+            // 需求 43 的「抓放剧本」走位（进空盘抓空盘 → 送自动盘；停放的下料臂头与搬运臂
+            // 包络还剩 ~36px 名义相交，真机上两臂不同高度 —— 与 SR-11「停放位不占走廊」一致）。
             // 搬运臂实际位置 trayX 对目标做**限速跟随**（上限 ≈ 三角波最大扫速）：
             // 让位钳位释放时从让位点平滑滑回停放位，不会瞬移。
             const double ARM_CLR = 34.0;                    // 安全间隙（画布 px，≈40mm）
@@ -1725,14 +1752,33 @@ namespace HandlerGuide.ViewModels
             for (int i = 0; i < cellPh.Length; i++) cellPh[i] = i * 0.19;
             int[] layerCnt = new int[6];                    // 上排 6 深盘的层数状态
             for (int i = 0; i < 6; i++) layerCnt[i] = mm.TopTrayLayers[i];
-            double layerProg = 0;                           // 叠层减少的小数累积（一次只对准一张盘）
+
+            // 需求 43（用户：「这里和上面的对应，使用皮带传输料盘，自动盘的如果下面的
+            // 满料了就需要上移，然后搬运料盘手臂从进空盘位置抓取一个料盘过去」）：
+            //  · 中排 5 工位 = 皮带传输线：running 时叠加滚动纹理示意皮带传动；
+            //  · 搬运臂时隙改成「抓放剧本」：停放位 → 进空盘抓一片空盘 → 送到自动盘
+            //    （三塔轮换）→ 回停放位；抓取 = 进空盘 -1 层，放盘 = 自动盘 +1 层 + 塔顶升；
+            //  · 「下面的满料了就需要上移」体现为：放盘瞬间塔整摞上移一格（6px），
+            //    停 1.2s 再落回（顶升让位后复位）。
+            double pickCX = (TrayPlan[3].U + TrayPlan[3].DU / 2) * CW;   // 进空盘塔中心 ≈ 506.9
+            double beltPh = 0;                       // 皮带纹理滚动相位（px）
+            double[] towerLift = new double[6];      // 塔顶升偏移（<0 = 已上移）
+            double[] towerHold = new double[6];      // 顶升保持倒计时（s）
+            bool holdingTray = false;                // 搬运臂是否抓着一片空盘
+            bool didGrab = false, didDrop = false;   // 本时隙抓/放事件是否已触发
+            bool demo = Environment.GetEnvironmentVariable("HG_DEMO") == "1";   // 自检抓拍模式：事件写日志 + 动画 dt 固定（见 Draw 内）
 
             cv.Draw = c =>
             {
                 long now = Environment.TickCount64;
                 double dt = (now - last) / 1000.0;
                 last = now;
-                if (dt <= 0 || dt > 0.5) dt = 0.05;
+                // 需求 43 自检经验：自检空转时相邻 Draw 的墙钟 dt 落在 TickCount64
+                // 分辨率(~15.6ms)内会被钳成 0.05，而抓拍帧本身又耗时几百 ms ——
+                // 动画时间和帧号脱钩，按帧号定位剧本事件会失准。HG_DEMO 下把 dt
+                // 固定为 0.05：动画秒 = 帧号 / 20，逐帧确定、离线回归可精确复现。
+                if (demo) dt = 0.05;
+                else if (dt <= 0 || dt > 0.5) dt = 0.05;
 
                 // 只有点了「启动演示节拍」才推进；否则保持静态初态。
                 // 需求 39：相位由 t 直接算出（见上方说明），不再逐帧累加 ——
@@ -1749,13 +1795,9 @@ namespace HandlerGuide.ViewModels
                 double phBeamU = (slot == 1 ? u : 0.0);             // 上料横梁/滑座（t = 0 → lift 0）
                 double phDown = 0.2188 + (slot == 0 ? u : 0.0);     // 下料臂（初值 = 照片原位 198.9）
                 double phUp = 0.2605 + (slot == 1 ? u : 0.0);       // 上料臂（初值 = 照片原位 763.5）
-                double phTray = 0.31593 + (slot == 2 ? u : 0.0);    // 搬运臂（初值 = 默认停放位 530.2，需求 40）
-
-                // 搬运臂的 X 分两块算：① 它自己相位给出的**目标位**；
-                // ② 等两个取放臂的 X 算完之后，再统一做硬避让钳位（见下方）。
-                // 需求 40：相位 0.31593 ⇒ 未启动时正好停在默认停放位 530.2
-                // （= 照片原位 694.4 靠左 2 个料盘宽度）。时隙内走位顺序不变：
-                // 先右到 769.2、再左到 120、最后回 530.2。
+                // 需求 40：搬运臂未启动时停在默认停放位 530.2（照片原位 694.4 靠左
+                // 2 个料盘宽度）。需求 43：slot 2 的目标位改为「抓放剧本」分段插值
+                //（见下方搬运臂块），不再走全行程三角波 —— 首尾仍精确回 530.2。
 
                 // ---- 两根蓝色横梁 + 两个红滑座的 Y 平移（整组沿竖直导轨升降）----
                 // 相位初值都取成「t = 0 时 lift = 0」⇒ 静态首屏与真机照片逐像素重合。
@@ -1812,10 +1854,49 @@ namespace HandlerGuide.ViewModels
                 // 搬运臂全行程走位（与真机 SR-11「停放位不占走廊」同语义）。
                 // 实际渲染位置 trayX 对目标**限速跟随**（上限 ≈ 三角波最大扫速，自由
                 // 扫掠时逐帧贴满目标）：让位钳位释放的突跳被限速成平滑滑移，不会瞬移。
-                double trayTarget = armX0 + Triangle(phTray) * (armX1 - armW - armX0);
+                // 需求 43：slot 2 改为「抓放剧本」分段插值（关键帧首尾都精确回停放位），
+                // slot 0/1 停在停放位。剧本时间轴（u 0..1，共 8s，各段速率 ≈130px/s，
+                // 均低于限速跟随上限 170px/s ⇒ trayX 无滞后、边界精确回位）：
+                //   0.000-0.073  停放位 → 进空盘（臂头对准塔中心）
+                //   0.073-0.196  抓盘停留（u≥0.10 抓走一片：进空盘 -1 层，臂下挂空盘）
+                //   0.196-0.501  → 本轮目标自动盘（三塔轮换）
+                //   0.501-0.624  放盘停留（u≥0.52 放下：+1 层 + 塔顶升一格再落回）
+                //   0.624-1.000  → 回停放位
+                int grabIdx = (int)(t / (3.0 * SLOT_SEC)) % 3;   // 三张自动盘轮换补盘
+                double pickX = pickCX - armW / 2.0;
+                double dropCX = (TrayPlan[grabIdx].U + TrayPlan[grabIdx].DU / 2) * CW;
+                double dropX = dropCX - armW / 2.0;
+                double trayTarget = armRestX;
+                if (slot == 2)
+                {
+                    trayTarget = u < 0.073 ? armRestX + (pickX - armRestX) * (u / 0.073)
+                               : u < 0.196 ? pickX
+                               : u < 0.501 ? pickX + (dropX - pickX) * ((u - 0.196) / 0.305)
+                               : u < 0.624 ? dropX
+                               : dropX + (armRestX - dropX) * ((u - 0.624) / 0.376);
+                }
                 double headX = trayTarget;
                 if (running)
                 {
+                    if (slot == 2)
+                    {
+                        if (!didGrab && u >= 0.10)
+                        {
+                            didGrab = true; holdingTray = true;
+                            if (layerCnt[3] > 1) layerCnt[3]--;      // 从进空盘抓走一片
+                            if (demo) App.Log("req43 grab cyc=" + ((int)(t / (3.0 * SLOT_SEC))) +
+                                              " tray3=" + layerCnt[3] + "层（进空盘抓走一片后）");
+                        }
+                        if (!didDrop && u >= 0.52)
+                        {
+                            didDrop = true; holdingTray = false;
+                            if (layerCnt[grabIdx] < MachineModel.MaxTrayLayers) layerCnt[grabIdx]++;
+                            towerHold[grabIdx] = 1.2;                // 塔顶升一格再落回
+                            if (demo) App.Log("req43 drop cyc=" + ((int)(t / (3.0 * SLOT_SEC))) +
+                                              " tower=" + grabIdx + " layers=" + layerCnt[grabIdx] + "层（放盘后）");
+                        }
+                    }
+                    else didGrab = didDrop = false;   // 需求 43：离开搬运时隙即复位，下一轮剧本重新抓放（三塔轮换才能轮起来）
                     if (slot == 0 && YOverlap(armRestY, armH, UA_Y + beamLiftD, UA_H))
                         headX = PushOut(headX, armW, uaX - ARM_CLR, uaX + UA_W + ARM_CLR,
                                         armX0, armX1 - armW);
@@ -1828,7 +1909,15 @@ namespace HandlerGuide.ViewModels
                     else if (trayStep < -trayV) trayStep = -trayV;
                     trayX += trayStep;
                 }
+                else
+                {
+                    didGrab = didDrop = false;   // 非运行状态重置，重新启动后剧本从头演
+                }
                 trayArm.X = trayX;
+                // 需求 43：抓着的空盘贴在臂头下方（抓起后显示，放盘后隐藏）
+                grabTray.Fill = holdingTray ? layerPlate : null;
+                grabTray.X = trayX + (armW - 62) / 2.0;
+                grabTray.Y = armRestY + armH * 0.52;
                 headX = trayX;      // 点亮判据按实际渲染位置算
 
                 // 离臂头最近的料盘点亮（超过 90px 就都不亮）
@@ -1863,17 +1952,8 @@ namespace HandlerGuide.ViewModels
                     int layers;
                     if (running)
                     {
-                        // 需求 41：搬运臂臂头对准这张深盘（与点亮同一判据 best < 90px，
-                        // 且只认上排 6 深盘）时才逐层取走（6 层/s，见底补满 = 换新盘）。
-                        if (slot == 2 && best >= 0 && best < 6 && bestD < 90 && i == best)
-                        {
-                            layerProg += dt * 6.0;
-                            while (layerProg >= 1.0)
-                            {
-                                layerProg -= 1.0;
-                                layerCnt[i] = layerCnt[i] <= 1 ? MachineModel.MaxTrayLayers : layerCnt[i] - 1;
-                            }
-                        }
+                        // 需求 43：slot 2 的层变化由搬运臂抓放剧本接管（抓取 = 进空盘 -1、
+                        // 放盘 = 自动盘 +1，见搬运臂块），叠层本身不再按对准/时间自走。
                         layers = layerCnt[i];
                         mm.TopTrayLayers[i] = layers;      // 回写模型，其它页面可直接读
                     }
@@ -1926,6 +2006,30 @@ namespace HandlerGuide.ViewModels
 
                     for (int j = 0; j < n; j++)
                         devs[j].Fill = j < target ? devBrush : null;
+                }
+
+                // ---- 需求 43：自动盘塔顶升（放盘瞬间整摞上移一格，停 1.2s 后落回）----
+                for (int i = 0; i < 6; i++)
+                {
+                    if (towerHold[i] > 0) towerHold[i] = Math.Max(0, towerHold[i] - dt);
+                    double tgt = towerHold[i] > 0 ? -6.0 : 0.0;
+                    if (towerLift[i] != tgt)
+                    {
+                        double mv = Math.Sign(tgt - towerLift[i]) *
+                                    Math.Min(Math.Abs(tgt - towerLift[i]), 20.0 * dt);
+                        towerLift[i] += mv;
+                        var plates = trayLayers[i];
+                        if (plates != null)
+                            for (int j = 0; j < plates.Count; j++) plates[j].Y += mv;  // 整摞增量平移
+                    }
+                }
+
+                // ---- 需求 43：皮带传动（中排 5 工位下方的皮带，running 时纹理滚动）----
+                if (running)
+                {
+                    beltPh = (beltPh + 30.0 * dt) % beltW;
+                    for (int b = 0; b < beltDots.Count; b++)
+                        beltDots[b].X = beltX + (b * (beltW / beltDots.Count) + beltPh) % beltW;
                 }
 
                 // ---- 加热盘上的芯片刷新 ----
