@@ -1402,6 +1402,7 @@ namespace HandlerGuide.ViewModels
             // 单独上下平移 —— 真机照片里横梁上下都是一整片有细节的机台底板，把横梁整体
             // 挪走会露出一大块需要凭空捏造的区域，所以只做 X（详见文件头 motion_layout 说明）。
             const double UA_X0 = 72.0, UA_X1 = 362.0;      // 抠图左沿的 X 行程（红块始终留在梁上）
+            const double UA_W = 113.15, UA_H = 114.28;     // 抠图尺寸（画布）：需求 38 避让要按它算脚印
             const double UA_REST = 198.9;                  // 照片原位（静态首屏与真机照片重合）
             const double UA_CX_OFF = 59.8;                 // 红块中心相对抠图左沿的偏移（画布）
 
@@ -1488,7 +1489,7 @@ namespace HandlerGuide.ViewModels
             const double UA_Y = 446.4;                     // 红滑座静止时的画布 y
             var uaArm = new RectItem
             {
-                X = UA_REST, Y = UA_Y, W = 113.15, H = 114.28,
+                X = UA_REST, Y = UA_Y, W = UA_W, H = UA_H,
                 Fill = uaBrush, Stroke = null, StrokeThickness = 0,
             };
             cv.Items.Add(uaArm);
@@ -1537,6 +1538,7 @@ namespace HandlerGuide.ViewModels
             //         image/beam_up.png —— 与下料梁同一套做法。
             // 画布几何 = 照片 × (0.59552, 0.59520)：763.46 / 680.91 / 84.56 / 103.56。
             const double U2_X0 = 674.1, U2_X1 = 845.6;     // 抠图左沿的 X 行程（红块始终留在梁上）
+            const double U2_W = 84.56, U2_H = 103.56;      // 抠图尺寸（画布）：需求 38 避让要按它算脚印
             const double U2_REST = 763.5;                  // 照片原位（静态首屏与真机照片重合）
             const double U2_Y = 680.9;                     // 红滑座静止时的画布 y
 
@@ -1615,7 +1617,7 @@ namespace HandlerGuide.ViewModels
 
             var u2Arm = new RectItem
             {
-                X = U2_REST, Y = U2_Y, W = 84.56, H = 103.56,
+                X = U2_REST, Y = U2_Y, W = U2_W, H = U2_H,
                 Fill = u2Brush, Stroke = null, StrokeThickness = 0,
             };
             cv.Items.Add(u2Arm);
@@ -1646,6 +1648,39 @@ namespace HandlerGuide.ViewModels
             const double BEAM_STROKE = 398.79;              // 两根梁 / 两个滑座共用的 Y 行程
             const double BD_UP = 236.89;                    // 下料：静止位 → 行程上端（向上）
             const double BD_PHASE = 0.29701;                // = (BD_UP / BEAM_STROKE) / 2，使 t = 0 落在静止位
+
+            // ==============================================================
+            //  需求 38 · 三臂分时轮流 + 硬避让（温启志 18719361399）
+            // ==============================================================
+            // 用户：「搬运料盘手臂需要和上料下料手臂不能冲突了，怕撞击」
+            // 画布几何实测：三条臂的扫掠包络在 X 与 Y 两个方向都相交 ——
+            //   搬运臂 X[120, 874]  Y[252.4, 482.1]
+            //   下料臂 X[ 72, 475.15] Y[209.5, 722.6]
+            //   上料臂 X[674.1, 930.16] Y[282.1, 784.5]
+            //   ⇒ 真实 2D 重叠 355×230 px（搬运∩下料）与 200×200 px（搬运∩上料）。
+            // 靠缩小行程解决不了：两个取放臂都按满行程扫掠时，搬运臂左沿只剩 94 px 窗口。
+            // 所以按用户选定的方案做**分时轮流 + 硬避让**两件事：
+            //   · 分时轮流：主时钟把一轮切成 3 个等长时隙（各 SLOT_SEC 秒），每个时隙
+            //     只动**一组机构**（横梁 Y + 滑座 Y + 手臂 X 绑在一起动），另外两组原地
+            //     不动 —— 从时间上杜绝「两组机构同时对穿」。时隙归属：
+            //       0 = 下料组（下料横梁 + 下料滑座 + 下料臂 X）
+            //       1 = 上料组（上料横梁 + 上料滑座 + 上料臂 X）
+            //       2 = 搬运臂 X
+            //     横梁必须一起冻结：否则搬运臂的时隙里横梁还在升，会升进搬运臂的高度层。
+            //   · 硬避让：搬运臂的 X 每帧被钳位，使它的脚印 [X, X+armW] 与取放臂脚印
+            //     留够 ARM_CLR 间隙 —— 但**只在 Y 向高度区间真的相交时**才钳。
+            //     静止位（照片）里：下料臂 Y 相交但 X 不碰、上料臂 X 相交但 Y 不碰，
+            //     所以一次钳位都不触发 ⇒ 静态首屏与真机照片逐像素重合、启动不瞬移。
+            //     这是**兜底的安全保证**：即使分时上出现边界重合，几何上也不会压上去。
+            // 间隙换算：画布 1010 px 对应机台横向 ~1205 mm ⇒ 0.838 px/mm，40mm ≈ 34 px。
+            // 相位速率统一 0.125/s：一个时隙（4s）推进 0.5，即每组机构一个单程。
+            const double ARM_CLR = 34.0;                    // 安全间隙（画布 px，≈40mm）
+            const double SLOT_SEC = 4.0;                    // 每个时隙秒数（一轮 = 3 × 4 = 12s）
+            double phBeamD = BD_PHASE;                      // 下料横梁/滑座相位（t = 0 → lift 0）
+            double phBeamU = 0.0;                           // 上料横梁/滑座相位（t = 0 → lift 0）
+            double phDown = 0.2188;                         // 下料臂相位（初始 = 照片原位 198.9）
+            double phUp = 0.2605;                           // 上料臂相位（初始 = 照片原位 763.5）
+            double phTray = 0.4424;                         // 搬运臂相位（初始 = 照片原位 694.4）
             long last = Environment.TickCount64;
             double t = 0;
 
@@ -1656,26 +1691,42 @@ namespace HandlerGuide.ViewModels
                 last = now;
                 if (dt <= 0 || dt > 0.5) dt = 0.05;
 
-                // 只有点了「启动演示节拍」才推进；否则保持静态初态
-                if (MotionManager.Instance.AutoCycle) t += dt;
+                // 只有点了「启动演示节拍」才推进；否则保持静态初态。
+                // 需求 38：推进时按**分时轮流**走 —— 主时钟把一轮切成 3 个等长时隙，
+                // 每个时隙只推进**本组**的相位，另外两组原地不动。横梁与手臂绑在一起，
+                // 所以搬运臂的时隙里两根横梁也是冻结的（否则它们会升进搬运臂的高度层）。
+                bool running = MotionManager.Instance.AutoCycle;
+                if (running)
+                {
+                    t += dt;
+                    double m = Mod(t / (3.0 * SLOT_SEC), 1.0);
+                    int slot = (int)(m * 3);
+                    if (slot > 2) slot = 2;
+                    if (slot == 0)
+                    {
+                        phBeamD = Mod(phBeamD + dt * 0.125, 1.0);
+                        phDown = Mod(phDown + dt * 0.125, 1.0);
+                    }
+                    else if (slot == 1)
+                    {
+                        phBeamU = Mod(phBeamU + dt * 0.125, 1.0);
+                        phUp = Mod(phUp + dt * 0.125, 1.0);
+                    }
+                    else phTray = Mod(phTray + dt * 0.125, 1.0);
+                }
 
-                // 搬运臂（抠图）：0..1 三角波映射到导轨两端 —— **只改 X，Y 不动**。
-                // 相位 0.4424 ⇒ t = 0 时正好停在照片原位 694.4，静态首屏与真机照片重合。
-                double headX = armX0 + Triangle(t * 0.11 + 0.4424) * (armX1 - armW - armX0);
-                trayArm.X = headX;
+                // 搬运臂的 X 分两块算：① 它自己相位给出的**目标位**；
+                // ② 等两个取放臂的 X 算完之后，再统一做硬避让钳位（见下方）。
+                // 相位 0.4424 ⇒ 未启动时正好停在照片原位 694.4，静态首屏与真机照片重合。
 
-                // ---- 两根蓝色横梁的 Y 平移（用户：「整根蓝色横梁上下移动」）----
-                // 相位都取成「t = 0 时为 0」⇒ 静态首屏与真机照片逐像素重合；两条梁用不同
-                // 频率（0.075 / 0.058）与一个整周期偏移，画面不会整齐划一。
                 // ---- 两根蓝色横梁 + 两个红滑座的 Y 平移（整组沿竖直导轨升降）----
-                // 下料：行程上下都走（静止位在行程内偏上），相位取成 t = 0 时为 0
-                //       ⇒ 静态首屏与真机照片逐像素重合。
-                // 上料：静止位就在行程下端，只向上走；频率与下料不同（0.058 / 0.075）
-                //       并加一个整周期偏移，两根梁不会整齐划一。
-                double beamLiftD = Triangle(t * 0.075 + BD_PHASE) * BEAM_STROKE - BD_UP;
+                // 相位初值都取成「t = 0 时 lift = 0」⇒ 静态首屏与真机照片逐像素重合。
+                // 需求 38 起改由**时隙门控**推进（见上方），不再直接吃 t —— 这样搬运臂
+                // 的时隙里横梁是冻结的，不会升进搬运臂的高度层。
+                double beamLiftD = Triangle(phBeamD) * BEAM_STROKE - BD_UP;
                 beamDown.Y = BD_Y + beamLiftD;
                 carriageDown.Y = CD_Y + beamLiftD;
-                double beamLiftU = -Triangle(t * 0.058 + 1.0) * BEAM_STROKE;
+                double beamLiftU = -Triangle(phBeamU) * BEAM_STROKE;
                 beamUp.Y = BU_Y + beamLiftU;
                 carriageUp.Y = CU_Y + beamLiftU;
 
@@ -1683,7 +1734,7 @@ namespace HandlerGuide.ViewModels
                 // 抠图只改 X；Y 跟着横梁一起升降（红滑座坐在梁上，梁升它就升）。
                 // 相位 0.2188 ⇒ t = 0 时 tri = 0.4376，落在行程 72..362 的比例 0.4376 上，
                 // 正好是照片原位 198.9，静态首屏与真机照片逐像素重合。
-                double uaX = UA_X0 + Triangle(t * 0.11 + 0.2188) * (UA_X1 - UA_X0);
+                double uaX = UA_X0 + Triangle(phDown) * (UA_X1 - UA_X0);
                 uaArm.X = uaX;
                 uaArm.Y = UA_Y + beamLiftD;
 
@@ -1709,9 +1760,28 @@ namespace HandlerGuide.ViewModels
                 // 相位 0.2605 ⇒ t = 0 时 tri = 0.521，正好是照片原位 763.5
                 // （行程 674.1..845.6 的比例 0.521），首屏与照片重合。
                 // 两条臂用不同速度（0.11 / 0.085），画面不会整齐划一。
-                double u2X = U2_X0 + Triangle(t * 0.085 + 0.2605) * (U2_X1 - U2_X0);
+                double u2X = U2_X0 + Triangle(phUp) * (U2_X1 - U2_X0);
                 u2Arm.X = u2X;
                 u2Arm.Y = U2_Y + beamLiftU;
+
+                // ---- 搬运臂（抠图）：**只改 X，Y 不动** + 需求 38 硬避让 ----
+                // 目标位由自己的相位给出；随后把它的脚印 [X, X+armW] 从取放臂的
+                // 「脚印 + ARM_CLR」禁区里推出去 —— 推到离目标更近的那一侧。
+                // ⚠ 只在 **Y 向高度区间真的相交**时才钳：静止位两根臂高度不同，
+                //    本来就不撞，硬钳反而会把静态首屏从照片原位顶开。
+                // 只在启动演示节拍时钳位，静态首屏保持照片原位不动。
+                double trayTarget = armX0 + Triangle(phTray) * (armX1 - armW - armX0);
+                double headX = trayTarget;
+                if (running)
+                {
+                    if (YOverlap(armRestY, armH, UA_Y + beamLiftD, UA_H))
+                        headX = PushOut(headX, armW, uaX - ARM_CLR, uaX + UA_W + ARM_CLR,
+                                        armX0, armX1 - armW);
+                    if (YOverlap(armRestY, armH, U2_Y + beamLiftU, U2_H))
+                        headX = PushOut(headX, armW, u2X - ARM_CLR, u2X + U2_W + ARM_CLR,
+                                        armX0, armX1 - armW);
+                }
+                trayArm.X = headX;
 
                 // 离臂头最近的料盘点亮（超过 90px 就都不亮）
                 int best = -1;
@@ -1736,7 +1806,6 @@ namespace HandlerGuide.ViewModels
                 // （回到满 20 层），每盘各走各的相位，画面不会整齐划一。
                 // 层数 < MinTrayAlarmLayers 时：整摞转黄 + 盘内写「需增加料盘」。
                 // 静态（未启动演示节拍）时用模型里的层数，首屏就能看到各盘实际层数与报警。
-                bool running = MotionManager.Instance.AutoCycle;
                 for (int i = 0; i < trayLayers.Count; i++)
                 {
                     var plates = trayLayers[i];
@@ -1826,6 +1895,32 @@ namespace HandlerGuide.ViewModels
             if (b <= 0) return 0;
             double r = a % b;
             return r < 0 ? r + b : r;
+        }
+
+        /// <summary>
+        /// 需求 38 · 两个 Y 区间 [aY, aY+aH] 与 [bY, bY+bH] 是否相交。
+        /// 用来判断「取放臂是否真的升/降到了搬运臂所在的高度层」——
+        /// 静止位两根臂高度不同，X 走廊虽然重叠，几何上却不冲突。
+        /// </summary>
+        private static bool YOverlap(double aY, double aH, double bY, double bH)
+            => aY < bY + bH && bY < aY + aH;
+
+        /// <summary>
+        /// 需求 38 · 把宽度 w、左沿在 x 的矩形脚印 [x, x+w] 推出禁区 [bl, br]：
+        /// 取离当前位更近的一侧推出去，并夹在 [xmin, xmax] 内。
+        /// 本来就不相交时原样返回；两侧都推不动时也原样返回（上层兜底，不会出现这种布局）。
+        /// </summary>
+        private static double PushOut(double x, double w, double bl, double br, double xmin, double xmax)
+        {
+            if (x + w <= bl || x >= br) return x;      // 不相交，不用动
+            double left = bl - w;                       // 推到禁区左边（脚印右沿贴 bl）
+            double right = br;                          // 推到禁区右边（脚印左沿贴 br）
+            bool okL = left >= xmin;
+            bool okR = right <= xmax;
+            if (okL && okR) return (x - left <= right - x) ? left : right;
+            if (okL) return left;
+            if (okR) return right;
+            return x;
         }
 
         /// <summary>0..1 三角波（周期 1）。</summary>

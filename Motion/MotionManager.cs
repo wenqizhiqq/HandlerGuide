@@ -357,14 +357,29 @@ namespace HandlerGuide.Motion
             Rules.Add(new SafetyRule
             {
                 Id = "SR-08", Name = "双臂走廊互斥",
-                Detail = "上/下料取放臂 X 轴共享走廊，间距不得小于 80mm", Blocking = true,
+                Detail = "上/下料取放臂 X 轴共享走廊，间距不得小于 " + RailClearance("ARM_X").ToString("0") + "mm",
+                Blocking = true,
                 Satisfied = () => RailClear("ARM_X")
             });
             Rules.Add(new SafetyRule
             {
                 Id = "SR-09", Name = "小车导轨互斥",
-                Detail = "运料小车 A/B 共享导轨，间距不得小于 120mm", Blocking = true,
+                Detail = "运料小车 A/B 共享导轨，间距不得小于 " + RailClearance("SHUTTLE").ToString("0") + "mm",
+                Blocking = true,
                 Satisfied = () => RailClear("SHUTTLE")
+            });
+            Rules.Add(new SafetyRule
+            {
+                Id = "SR-11", Name = "X 走廊三臂分时互斥",
+                Detail = "上料取放臂X / 下料取放臂X / 料盘搬运臂 共享 X 走廊，同一时刻只允许一根离开停放位" + "（回停放位永远放行，否则会死锁）",
+                Blocking = true,
+                Satisfied = () =>
+                {
+                    int off = 0;
+                    foreach (var idx in CorridorX)
+                        if (Math.Abs(Position(idx) - Axes[idx].HomeMm) > Axes[idx].ClearanceMm) off++;
+                    return off <= 1;
+                }
             });
             Rules.Add(new SafetyRule
             {
@@ -489,6 +504,37 @@ namespace HandlerGuide.Motion
             return a?.ZUpMm ?? 0;
         }
 
+        /// <summary>
+        /// 需求 38：共享同一条 X 走廊的三根轴 —— 上料取放臂X(4) / 下料取放臂X(16) / 料盘搬运臂(30)。
+        /// 用户：「搬运料盘手臂需要和上料下料手臂不能冲突了，怕撞击」
+        /// ⇒ 三者**分时轮流**：同一时刻只允许一根轴离开停放位（HomeMm）。
+        /// 注意 30 号轴不挂 RailId —— 它与 4 号的停放位都是 0mm，若挂同一条导轨会被
+        /// RailClear 判成「间距 0 < 40」，规则表一开机就是红的；分时互斥才是正确的语义。
+        /// </summary>
+        private static readonly int[] CorridorX = { 4, 16, 30 };
+
+        /// <summary>
+        /// 需求 38 判据：X 走廊上除 movingAxis 之外，是否已有别的轴离开停放位。
+        /// 返回 null = 走廊空闲、可以动；否则返回可直接用于拒绝的原因文本。
+        /// </summary>
+        private string CorridorBusyBy(int movingAxis, double clearance)
+        {
+            foreach (var idx in CorridorX)
+            {
+                if (idx == movingAxis) continue;
+                var o = Axes[idx];
+                double op = Position(idx);
+                if (Math.Abs(op - o.HomeMm) > clearance)
+                    return "互锁：X 走廊上 " + o.Name + " 已离开停放位（" + F(op) + "，停放 " + F(o.HomeMm)
+                         + "），三臂分时互斥，已拒绝（防撞）";
+            }
+            return null;
+        }
+
+        /// <summary>取某条共享导轨上实际生效的安全间隙（同轨各轴取最大值，与 RailClear 一致）。</summary>
+        private double RailClearance(string railId)
+            => Axes.Where(a => a.RailId == railId).Select(a => a.ClearanceMm).DefaultIfEmpty(0).Max();
+
         /// <summary>共享导轨上任意两轴间距是否都满足安全间隙。</summary>
         private bool RailClear(string railId)
         {
@@ -555,6 +601,16 @@ namespace HandlerGuide.Motion
                                                       + "，落在 " + c.Name + " 本次扫掠区间 [" + F(slo) + ", " + F(shi)
                                                       + "] 内，已拒绝（防撞）");
                     }
+                }
+
+                // 3) 需求 38：X 走廊三臂分时互斥 —— 上料取放臂X / 下料取放臂X / 料盘搬运臂。
+                //    同一时刻只允许一根轴离开停放位；别的臂还在走廊里时，本次运动直接拒绝。
+                //    **回停放位永远放行** —— 否则走廊清空只能靠回停放位，会把自己锁死。
+                if (Array.IndexOf(CorridorX, axis) >= 0
+                    && Math.Abs(target - c.HomeMm) > c.ClearanceMm)
+                {
+                    string busy = CorridorBusyBy(axis, c.ClearanceMm);
+                    if (busy != null) return MotionResult.Reject(busy);
                 }
             }
             else
