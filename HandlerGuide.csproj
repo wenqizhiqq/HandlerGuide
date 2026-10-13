@@ -91,6 +91,17 @@
     <None Update="image\beam_up.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <!-- 下料侧「红色滑座」抠图：照片框 (80,664)-(180,1004)，RGBA 101×341。
+         红滑座 + 下方白色支架，随下料横梁一起沿竖直导轨升降；底图同一块已用
+         上料侧同一 y 行的导轨列补平。温启志 18719361399 -->
+    <None Update="image\unload_carriage.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <!-- 上料侧「红色滑座」抠图：照片框 (1519,1042)-(1621,1318)，RGBA 103×277。
+         与下料侧同一套做法，随上料横梁升降。温启志 18719361399 -->
+    <None Update="image\load_carriage.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>

@@ -1447,6 +1447,36 @@ namespace HandlerGuide.ViewModels
             {
                 // 保持深蓝方块兜底
             }
+            // ---- 下料侧「红色滑座」（真机照片抠图）：与下料横梁一起沿竖直导轨升降 ----
+            // 温启志 18719361399 · 用户指出「红色滑座是横梁的安装座，行程一放大，梁走开就会
+            // 跟滑座脱开」，要求把它从底图上抠出来、跟着梁一起走。
+            // image/unload_carriage.png = 照片框 (80,664)-(180,1004)（RGBA 101×341）：
+            // 红滑座 + 下方白色支架。底图上这一块（连导轨一起）已用**上料侧同一 y 行的导轨列**
+            // 补平 —— 两根导轨的绿滑块相位完全相同（照片 y 322/458/592/726），逐行平移
+            // 1446px 就能严丝合缝接上，补完是一条完整的导轨（含被红滑座压住的那块绿滑块）。
+            // 画布几何 = 照片 × (0.595518, 0.595203)：47.64 / 395.22 / 60.15 / 202.96。
+            const double CD_Y = 395.22;                    // 静止时滑座顶的画布 y（t = 0 与照片重合）
+            Brush cdBrush = new SolidColorBrush(Color.FromRgb(0xB0, 0x10, 0x14));
+            try
+            {
+                var cbb = new BitmapImage();
+                cbb.BeginInit();
+                cbb.UriSource = new Uri("pack://siteoforigin:,,,/image/unload_carriage.png");
+                cbb.CacheOption = BitmapCacheOption.OnLoad;
+                cbb.EndInit();
+                cbb.Freeze();
+                cdBrush = new ImageBrush(cbb) { Stretch = Stretch.Fill };
+            }
+            catch
+            {
+                // 保持红色方块兜底
+            }
+            var carriageDown = new RectItem
+            {
+                X = 47.64, Y = CD_Y, W = 60.15, H = 202.96,
+                Fill = cdBrush, Stroke = null, StrokeThickness = 0,
+            };
+            cv.Items.Add(carriageDown);
             var beamDown = new RectItem
             {
                 X = 84.56, Y = BD_Y, W = 389.47, H = 35.71,
@@ -1549,6 +1579,33 @@ namespace HandlerGuide.ViewModels
             {
                 // 保持深蓝方块兜底
             }
+            // ---- 上料侧「红色滑座」（真机照片抠图）：与上料横梁一起升降 ----
+            // 温启志 18719361399 · 与下料侧同一套做法。
+            // image/load_carriage.png = 照片框 (1519,1042)-(1621,1318)（RGBA 103×277）：
+            // 红滑座 + 下方白色支架；底图同一块已用下料侧同一 y 行的导轨列补平。
+            // 画布几何 = 照片 × (0.595518, 0.595203)：904.59 / 620.20 / 61.34 / 164.87。
+            const double CU_Y = 620.20;                    // 静止时滑座顶的画布 y
+            Brush cuBrush = new SolidColorBrush(Color.FromRgb(0xB0, 0x10, 0x14));
+            try
+            {
+                var cub = new BitmapImage();
+                cub.BeginInit();
+                cub.UriSource = new Uri("pack://siteoforigin:,,,/image/load_carriage.png");
+                cub.CacheOption = BitmapCacheOption.OnLoad;
+                cub.EndInit();
+                cub.Freeze();
+                cuBrush = new ImageBrush(cub) { Stretch = Stretch.Fill };
+            }
+            catch
+            {
+                // 保持红色方块兜底
+            }
+            var carriageUp = new RectItem
+            {
+                X = 904.59, Y = CU_Y, W = 61.34, H = 164.87,
+                Fill = cuBrush, Stroke = null, StrokeThickness = 0,
+            };
+            cv.Items.Add(carriageUp);
             var beamUp = new RectItem
             {
                 X = 679.49, Y = BU_Y, W = 246.54, H = 36.90,
@@ -1574,10 +1631,21 @@ namespace HandlerGuide.ViewModels
             // 以及右侧说明栏的页脚里（温启志 18719361399）。
 
             // ---- 逐帧动画：横移臂在导轨上往返，最近的料盘随之点亮 ----
-            // 两根蓝色横梁另有 Y（俯视图里上下）平移的行程：52 照片像素 × 0.595203 ≈ 30.95。
-            // 取「梁自身高度」（下料梁 60px / 上料梁 62px）以内，所以梁升到顶时原地露出来的
-            // 就是底图补好的那一片纯底板，不会露出没补过的区域。
-            const double BEAM_STROKE = 30.95;
+            // 温启志 18719361399 · Y 行程按**竖直导轨的实测高度**取。
+            // 用户：「这个是下料 y，固定的，高度是下料手臂的 y 移动范围」→ 整根导轨全行程。
+            //   下料导轨：照片 y 266..1277 → 画布 y 158.32..760.07，高 601.75。
+            //   骑在导轨上的滑座：照片 y 664..1004 → 画布高 202.96。
+            //   ⇒ 真正能走的行程 = 导轨高 601.75 − 滑座高 202.96 = 398.79，
+            //     滑座顶边正好走到导轨顶端 158.32、底边正好走到导轨底端 760.07，
+            //     两头都不越界 —— 这才是「整根导轨全行程」。
+            //   静止位（滑座顶 395.22）在行程内偏上：向上 236.89 / 向下 161.90。
+            // 上料按下料**同一个行程值**走（用户：「跟下料同一个行程值」），
+            // 它的静止位正好在行程下端，所以只向上走。
+            // 底图上整条导轨都在（没有需要补的区域），滑座抠走以后露出来的是导轨本体，
+            // 不会再像 30.95 那版一样「一动就露出没补过的底板」。
+            const double BEAM_STROKE = 398.79;              // 两根梁 / 两个滑座共用的 Y 行程
+            const double BD_UP = 236.89;                    // 下料：静止位 → 行程上端（向上）
+            const double BD_PHASE = 0.29701;                // = (BD_UP / BEAM_STROKE) / 2，使 t = 0 落在静止位
             long last = Environment.TickCount64;
             double t = 0;
 
@@ -1599,10 +1667,17 @@ namespace HandlerGuide.ViewModels
                 // ---- 两根蓝色横梁的 Y 平移（用户：「整根蓝色横梁上下移动」）----
                 // 相位都取成「t = 0 时为 0」⇒ 静态首屏与真机照片逐像素重合；两条梁用不同
                 // 频率（0.075 / 0.058）与一个整周期偏移，画面不会整齐划一。
-                double beamLiftD = Triangle(t * 0.075) * BEAM_STROKE;
-                beamDown.Y = BD_Y - beamLiftD;
-                double beamLiftU = Triangle(t * 0.058 + 1.0) * BEAM_STROKE;
-                beamUp.Y = BU_Y - beamLiftU;
+                // ---- 两根蓝色横梁 + 两个红滑座的 Y 平移（整组沿竖直导轨升降）----
+                // 下料：行程上下都走（静止位在行程内偏上），相位取成 t = 0 时为 0
+                //       ⇒ 静态首屏与真机照片逐像素重合。
+                // 上料：静止位就在行程下端，只向上走；频率与下料不同（0.058 / 0.075）
+                //       并加一个整周期偏移，两根梁不会整齐划一。
+                double beamLiftD = Triangle(t * 0.075 + BD_PHASE) * BEAM_STROKE - BD_UP;
+                beamDown.Y = BD_Y + beamLiftD;
+                carriageDown.Y = CD_Y + beamLiftD;
+                double beamLiftU = -Triangle(t * 0.058 + 1.0) * BEAM_STROKE;
+                beamUp.Y = BU_Y + beamLiftU;
+                carriageUp.Y = CU_Y + beamLiftU;
 
                 // ---- 下料X手臂（照片抠图）：红色滑座沿横梁左右走 = 机器 X ----
                 // 抠图只改 X；Y 跟着横梁一起升降（红滑座坐在梁上，梁升它就升）。
@@ -1610,7 +1685,7 @@ namespace HandlerGuide.ViewModels
                 // 正好是照片原位 198.9，静态首屏与真机照片逐像素重合。
                 double uaX = UA_X0 + Triangle(t * 0.11 + 0.2188) * (UA_X1 - UA_X0);
                 uaArm.X = uaX;
-                uaArm.Y = UA_Y - beamLiftD;
+                uaArm.Y = UA_Y + beamLiftD;
 
                 // 吸嘴中心离哪张出料盘**最近**，就点亮哪张（琥珀色描边）。
                 // 早先用的是「中心落在 ±8 判定窗内就点亮」，可是吸嘴组合有 70px 宽、
@@ -1636,7 +1711,7 @@ namespace HandlerGuide.ViewModels
                 // 两条臂用不同速度（0.11 / 0.085），画面不会整齐划一。
                 double u2X = U2_X0 + Triangle(t * 0.085 + 0.2605) * (U2_X1 - U2_X0);
                 u2Arm.X = u2X;
-                u2Arm.Y = U2_Y - beamLiftU;
+                u2Arm.Y = U2_Y + beamLiftU;
 
                 // 离臂头最近的料盘点亮（超过 90px 就都不亮）
                 int best = -1;
