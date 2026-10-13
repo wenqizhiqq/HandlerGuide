@@ -1363,7 +1363,11 @@ namespace HandlerGuide.ViewModels
             // 抠图手臂的画布几何：照片框 (1166,424)-(1342,810) × (0.59552, 0.59520)
             const double armW = 104.8;      // 手臂宽（照片 176 px）
             const double armH = 229.7;      // 手臂高（照片 386 px）
-            const double armRestX = 694.4;  // 照片原位 x（静态首屏就停这儿）
+            // 需求 40（用户：「抓取料盘手臂的默认位置应该靠左2个料盘宽度」）：
+            // 默认停放位不再是照片原位 694.4，而是靠左 2 个料盘宽度。
+            // 一个料盘宽度 = TrayPlan 深盘 DU 均值 0.08126 × CW 1010 ≈ 82.1 px。
+            const double TRAY_W = 82.1;                    // 一个料盘宽度（画布 px）
+            const double armRestX = 694.4 - 2 * TRAY_W;    // = 530.2，静态首屏就停这儿
             const double armRestY = 252.4;  // 照片原位 y（只能 X 移动 ⇒ Y 永远是这个值）
             // 抠图加载失败时退回原来的蓝色方块标记，画面不会空一块。
             Brush armBrush = new SolidColorBrush(Color.FromArgb(230, 0x2F, 0x7C, 0xD6));
@@ -1673,16 +1677,29 @@ namespace HandlerGuide.ViewModels
             //     所以一次钳位都不触发 ⇒ 静态首屏与真机照片逐像素重合、启动不瞬移。
             //     这是**兜底的安全保证**：即使分时上出现边界重合，几何上也不会压上去。
             // 间隙换算：画布 1010 px 对应机台横向 ~1205 mm ⇒ 0.838 px/mm，40mm ≈ 34 px。
-            // 相位速率统一 0.125/s：一个时隙（4s）推进 0.5，即每组机构一个单程。
+            // ------------------------------------------------------------------
+            // 需求 39（方案 A · 用户：「搬运臂运行时，上/下料臂先回橙色框停放位让出走廊」）
+            // 在需求 38 基础上改三件事：
+            //   · **每组时隙内相位推进 1.0**（三角波周期 1 ⇒ 一个完整来回），时隙结束
+            //     正好回到各自停放位 —— 轮到搬运臂时两根取放臂必定已回停放位让出走廊，
+            //     与真机 SR-11「别组都回停放位才允许离位 / 回停放位永远放行」同一套语义。
+            //   · 时隙 4s → 8s：速率保持 0.125/s（画面速度不变），8s × 0.125 = 1.0 相位，
+            //     一轮 = 3 × 8 = 24s。
+            //   · 相位改由 t **直接算出**（不再逐帧累加）：时隙内进度 u ∈ [0,1)，
+            //     本组相位 = 初值 + (轮到本组 ? u : 0) —— 时隙边界没有累加误差，
+            //     停放位永远精确落位；未启动时 t = 0：两根取放臂在照片原位，
+            //     搬运臂在默认停放位 530.2（需求 40，照片原位 694.4 靠左 2 个料盘宽度）。
+            // 硬避让随之**按时隙门控**：搬运臂只对「正在干活的那组」让位（slot 0 让下料 /
+            // slot 1 让上料）；slot 2 里两组都在停放位 = 走廊已让出，不再钳位，搬运臂
+            // 全行程走位（俯视图里停放的下料臂头与搬运臂包络还剩 ~36px 名义相交，
+            // 真机上两臂不同高度 —— 与 SR-11「停放位不占走廊」一致）。
+            // 搬运臂实际位置 trayX 对目标做**限速跟随**（上限 ≈ 三角波最大扫速）：
+            // 让位钳位释放时从让位点平滑滑回停放位，不会瞬移。
             const double ARM_CLR = 34.0;                    // 安全间隙（画布 px，≈40mm）
-            const double SLOT_SEC = 4.0;                    // 每个时隙秒数（一轮 = 3 × 4 = 12s）
-            double phBeamD = BD_PHASE;                      // 下料横梁/滑座相位（t = 0 → lift 0）
-            double phBeamU = 0.0;                           // 上料横梁/滑座相位（t = 0 → lift 0）
-            double phDown = 0.2188;                         // 下料臂相位（初始 = 照片原位 198.9）
-            double phUp = 0.2605;                           // 上料臂相位（初始 = 照片原位 763.5）
-            double phTray = 0.4424;                         // 搬运臂相位（初始 = 照片原位 694.4）
+            const double SLOT_SEC = 8.0;                    // 每个时隙秒数（一轮 = 3 × 8 = 24s）
             long last = Environment.TickCount64;
             double t = 0;
+            double trayX = armRestX;                        // 搬运臂实际渲染位置（限速跟随目标）
 
             cv.Draw = c =>
             {
@@ -1692,32 +1709,27 @@ namespace HandlerGuide.ViewModels
                 if (dt <= 0 || dt > 0.5) dt = 0.05;
 
                 // 只有点了「启动演示节拍」才推进；否则保持静态初态。
-                // 需求 38：推进时按**分时轮流**走 —— 主时钟把一轮切成 3 个等长时隙，
-                // 每个时隙只推进**本组**的相位，另外两组原地不动。横梁与手臂绑在一起，
-                // 所以搬运臂的时隙里两根横梁也是冻结的（否则它们会升进搬运臂的高度层）。
+                // 需求 39：相位由 t 直接算出（见上方说明），不再逐帧累加 ——
+                // 每组只在自己的时隙里从初值走一个完整来回（+1.0 相位，三角波周期 1），
+                // 时隙结束精确回到停放位，其余时间停在停放位。
                 bool running = MotionManager.Instance.AutoCycle;
-                if (running)
-                {
-                    t += dt;
-                    double m = Mod(t / (3.0 * SLOT_SEC), 1.0);
-                    int slot = (int)(m * 3);
-                    if (slot > 2) slot = 2;
-                    if (slot == 0)
-                    {
-                        phBeamD = Mod(phBeamD + dt * 0.125, 1.0);
-                        phDown = Mod(phDown + dt * 0.125, 1.0);
-                    }
-                    else if (slot == 1)
-                    {
-                        phBeamU = Mod(phBeamU + dt * 0.125, 1.0);
-                        phUp = Mod(phUp + dt * 0.125, 1.0);
-                    }
-                    else phTray = Mod(phTray + dt * 0.125, 1.0);
-                }
+                if (running) t += dt;
+                double cyc = Mod(t, 3.0 * SLOT_SEC);
+                int slot = (int)(cyc / SLOT_SEC);
+                if (slot > 2) slot = 2;
+                double u = (cyc - slot * SLOT_SEC) / SLOT_SEC;  // 时隙内进度 0..1
+                // 需求 38 时隙归属：0 = 下料组 / 1 = 上料组 / 2 = 搬运臂。
+                double phBeamD = BD_PHASE + (slot == 0 ? u : 0.0);  // 下料横梁/滑座（t = 0 → lift 0）
+                double phBeamU = (slot == 1 ? u : 0.0);             // 上料横梁/滑座（t = 0 → lift 0）
+                double phDown = 0.2188 + (slot == 0 ? u : 0.0);     // 下料臂（初值 = 照片原位 198.9）
+                double phUp = 0.2605 + (slot == 1 ? u : 0.0);       // 上料臂（初值 = 照片原位 763.5）
+                double phTray = 0.31593 + (slot == 2 ? u : 0.0);    // 搬运臂（初值 = 默认停放位 530.2，需求 40）
 
                 // 搬运臂的 X 分两块算：① 它自己相位给出的**目标位**；
                 // ② 等两个取放臂的 X 算完之后，再统一做硬避让钳位（见下方）。
-                // 相位 0.4424 ⇒ 未启动时正好停在照片原位 694.4，静态首屏与真机照片重合。
+                // 需求 40：相位 0.31593 ⇒ 未启动时正好停在默认停放位 530.2
+                // （= 照片原位 694.4 靠左 2 个料盘宽度）。时隙内走位顺序不变：
+                // 先右到 769.2、再左到 120、最后回 530.2。
 
                 // ---- 两根蓝色横梁 + 两个红滑座的 Y 平移（整组沿竖直导轨升降）----
                 // 相位初值都取成「t = 0 时 lift = 0」⇒ 静态首屏与真机照片逐像素重合。
@@ -1759,29 +1771,39 @@ namespace HandlerGuide.ViewModels
                 // 与下料同一套：抠图只改 X；Y 跟着上料横梁一起升降。
                 // 相位 0.2605 ⇒ t = 0 时 tri = 0.521，正好是照片原位 763.5
                 // （行程 674.1..845.6 的比例 0.521），首屏与照片重合。
-                // 两条臂用不同速度（0.11 / 0.085），画面不会整齐划一。
+                // 需求 39：上料组只在上料时隙里走一个完整来回（+1.0 相位），
+                // 时隙结束回到停放位 763.5，把走廊让给搬运臂。
                 double u2X = U2_X0 + Triangle(phUp) * (U2_X1 - U2_X0);
                 u2Arm.X = u2X;
                 u2Arm.Y = U2_Y + beamLiftU;
 
-                // ---- 搬运臂（抠图）：**只改 X，Y 不动** + 需求 38 硬避让 ----
-                // 目标位由自己的相位给出；随后把它的脚印 [X, X+armW] 从取放臂的
-                // 「脚印 + ARM_CLR」禁区里推出去 —— 推到离目标更近的那一侧。
-                // ⚠ 只在 **Y 向高度区间真的相交**时才钳：静止位两根臂高度不同，
-                //    本来就不撞，硬钳反而会把静态首屏从照片原位顶开。
-                // 只在启动演示节拍时钳位，静态首屏保持照片原位不动。
+                // ---- 搬运臂（抠图）：**只改 X，Y 不动** + 需求 38/39 硬避让 ----
+                // 目标位由自己的相位给出；随后把它的脚印 [X, X+armW] 从**正在干活的
+                // 那组**取放臂的「脚印 + ARM_CLR」禁区里推出去 —— 推到离目标更近的
+                // 一侧，且只在 Y 向高度区间真的相交时才钳。
+                // 需求 39（方案 A）：避让**按时隙门控** —— slot 0 只避下料、slot 1 只避
+                // 上料；轮到搬运臂（slot 2）时两组都已回停放位 = 走廊已让出，不再钳位，
+                // 搬运臂全行程走位（与真机 SR-11「停放位不占走廊」同语义）。
+                // 实际渲染位置 trayX 对目标**限速跟随**（上限 ≈ 三角波最大扫速，自由
+                // 扫掠时逐帧贴满目标）：让位钳位释放的突跳被限速成平滑滑移，不会瞬移。
                 double trayTarget = armX0 + Triangle(phTray) * (armX1 - armW - armX0);
                 double headX = trayTarget;
                 if (running)
                 {
-                    if (YOverlap(armRestY, armH, UA_Y + beamLiftD, UA_H))
+                    if (slot == 0 && YOverlap(armRestY, armH, UA_Y + beamLiftD, UA_H))
                         headX = PushOut(headX, armW, uaX - ARM_CLR, uaX + UA_W + ARM_CLR,
                                         armX0, armX1 - armW);
-                    if (YOverlap(armRestY, armH, U2_Y + beamLiftU, U2_H))
+                    if (slot == 1 && YOverlap(armRestY, armH, U2_Y + beamLiftU, U2_H))
                         headX = PushOut(headX, armW, u2X - ARM_CLR, u2X + U2_W + ARM_CLR,
                                         armX0, armX1 - armW);
+                    double trayV = 2.1 * 0.125 * (armX1 - armW - armX0) * dt;
+                    double trayStep = headX - trayX;
+                    if (trayStep > trayV) trayStep = trayV;
+                    else if (trayStep < -trayV) trayStep = -trayV;
+                    trayX += trayStep;
                 }
-                trayArm.X = headX;
+                trayArm.X = trayX;
+                headX = trayX;      // 点亮判据按实际渲染位置算
 
                 // 离臂头最近的料盘点亮（超过 90px 就都不亮）
                 int best = -1;
