@@ -194,6 +194,16 @@ namespace HandlerGuide.ViewModels
             (0.29050, 0.63887, 0.07697, 0.19434, true),
         };
 
+        /// <summary>
+        /// 上排 6 个叠层深盘的中文名（需求 42，用户：「从左到右分别：自动盘3，自动盘2，
+        /// 自动盘1，进空盘，出空盘，进料盘，需要中文显示出来」）。下标与 TrayPlan[0..5] 对齐
+        /// （U 递增 = 从左到右），叠层盘构建时直接取用。
+        /// </summary>
+        internal static readonly string[] TrayNames =
+        {
+            "自动盘3", "自动盘2", "自动盘1", "进空盘", "出空盘", "进料盘",
+        };
+
         // ==================================================================
         //  页面
         // ==================================================================
@@ -1160,7 +1170,7 @@ namespace HandlerGuide.ViewModels
                 if (i < 6 && !tp.Green)
                 {
                     const double pad = 5;      // 盘内留边
-                    const double bandH = 30;   // 顶部文字带（层数 + 报警两行）
+                    const double bandH = 40;   // 顶部文字带（盘名 + 层数 + 报警三行，需求 42 加中文名）
                     double wellX = x + pad, wellW = w - pad * 2;
                     // 盘内槽底
                     cv.Items.Add(new RectItem
@@ -1195,17 +1205,23 @@ namespace HandlerGuide.ViewModels
                         cv.Items.Add(plate);
                         plates.Add(plate);
                     }
+                    // 盘名（需求 42：盘内最顶一行，静态文字，构建期写死）
+                    cv.Items.Add(new TextItem
+                    {
+                        Text = TrayNames[i], X = wellX, Y = y + pad + 1, TextSize = 9,
+                        Foreground = layerCountInk, TextWidth = wellW, Align = TextAlignment.Center,
+                    });
                     // 层数文字（盘内顶部居中）
                     var label = new TextItem
                     {
-                        Text = "", X = wellX, Y = y + pad + 2, TextSize = 11,
+                        Text = "", X = wellX, Y = y + pad + 12, TextSize = 11,
                         Foreground = layerCountInk, TextWidth = wellW, Align = TextAlignment.Center,
                     };
                     cv.Items.Add(label);
                     // 「需增加料盘」黄色提示（层数不足时才写字，否则留空）
                     var warn = new TextItem
                     {
-                        Text = "", X = wellX, Y = y + pad + 16, TextSize = 9.5,
+                        Text = "", X = wellX, Y = y + pad + 26, TextSize = 9.5,
                         Foreground = layerWarnInk, TextWidth = wellW, Align = TextAlignment.Center,
                     };
                     cv.Items.Add(warn);
@@ -1701,6 +1717,16 @@ namespace HandlerGuide.ViewModels
             double t = 0;
             double trayX = armRestX;                        // 搬运臂实际渲染位置（限速跟随目标）
 
+            // 需求 41（用户：「料盘的格子不是随便就变化的，需要吸嘴组去吸取然后搬运才变化」）：
+            // 格子 / 叠层不再是 t 的函数自顾自循环，改成**状态量**：只有吸嘴真的对准
+            // 那张盘时才推进，吸嘴一离开立即冻结。初值都取成与旧版 t = 0 一致，
+            // 静态首屏逐像素不变。
+            double[] cellPh = new double[TrayPlan.Length];  // 每张盘的物料相位（下标 = TrayPlan 序号）
+            for (int i = 0; i < cellPh.Length; i++) cellPh[i] = i * 0.19;
+            int[] layerCnt = new int[6];                    // 上排 6 深盘的层数状态
+            for (int i = 0; i < 6; i++) layerCnt[i] = mm.TopTrayLayers[i];
+            double layerProg = 0;                           // 叠层减少的小数累积（一次只对准一张盘）
+
             cv.Draw = c =>
             {
                 long now = Environment.TickCount64;
@@ -1825,7 +1851,8 @@ namespace HandlerGuide.ViewModels
 
                 // ---- 上排 6 个深盘：料盘堆叠层数（叠层图元） ----
                 // 温启志 18719361399 · 演示节拍里这一摞盘被逐层取走，见底后补新盘
-                // （回到满 20 层），每盘各走各的相位，画面不会整齐划一。
+                // （回到满 20 层）。需求 41：只有搬运臂（slot 2）的臂头对准这张盘时
+                // 层数才减少，吸嘴不在上方就冻结 —— 不再按 t 自顾自走。
                 // 层数 < MinTrayAlarmLayers 时：整摞转黄 + 盘内写「需增加料盘」。
                 // 静态（未启动演示节拍）时用模型里的层数，首屏就能看到各盘实际层数与报警。
                 for (int i = 0; i < trayLayers.Count; i++)
@@ -1836,14 +1863,24 @@ namespace HandlerGuide.ViewModels
                     int layers;
                     if (running)
                     {
-                        double p = Mod(t * 0.055 + i * 0.19, 1.0);
-                        layers = MachineModel.MaxTrayLayers - (int)(p * MachineModel.MaxTrayLayers);
-                        if (layers < 1) layers = 1;
+                        // 需求 41：搬运臂臂头对准这张深盘（与点亮同一判据 best < 90px，
+                        // 且只认上排 6 深盘）时才逐层取走（6 层/s，见底补满 = 换新盘）。
+                        if (slot == 2 && best >= 0 && best < 6 && bestD < 90 && i == best)
+                        {
+                            layerProg += dt * 6.0;
+                            while (layerProg >= 1.0)
+                            {
+                                layerProg -= 1.0;
+                                layerCnt[i] = layerCnt[i] <= 1 ? MachineModel.MaxTrayLayers : layerCnt[i] - 1;
+                            }
+                        }
+                        layers = layerCnt[i];
                         mm.TopTrayLayers[i] = layers;      // 回写模型，其它页面可直接读
                     }
                     else
                     {
                         layers = mm.TopTrayLayers[i];
+                        layerCnt[i] = layers;              // 未启动时同步状态，启动瞬间从当前层数出发
                     }
                     if (layers > MachineModel.MaxTrayLayers) layers = MachineModel.MaxTrayLayers;
                     if (layers < 1) layers = 1;
@@ -1859,13 +1896,23 @@ namespace HandlerGuide.ViewModels
                     trayLayerWarn[i].Text = warn ? "需增加料盘" : "";
                 }
 
-                // ---- 格子里的物料变化 ----
-                // 每个料盘按自己的相位在「满 / 空」之间循环，逐格地取走或累积：
-                //   · 中排 5 个 = 缓存盘：空 → 满 → 空
-                //   · 左下 3 个 = 出料盘：空 → 满（逐格累积已测品）
-                // 填充顺序统一「从上到下、从左到右」，所以看起来是从下往上被清空的。
-                // 只有真的发生变化的格子才会触发属性通知（Set 里做了相等判断），
-                // 所以每帧实际刷新的图元只有一两个，不会拖慢界面。
+                // ---- 格子里的物料变化（需求 41：吸嘴吸到哪张盘，哪张盘的格子才变）----
+                // 旧版按 Triangle(t*0.08 + i*0.19) 自顾自循环 = 用户说的「随便变化」。
+                // 现在每张盘一个相位状态 cellPh[i]，**只有下料臂（slot 0）的吸嘴中心
+                // 真的对准这张盘时才推进** —— 经过缓存盘 = 取料、经过出料盘 = 放已测品，
+                // 吸嘴一离开立即冻结。缓存盘 9/10 与上排深盘不在下料臂行程内，没有吸嘴
+                // 能对准它们 ⇒ 一直停在首屏状态（这正是「不吸就不变」）。
+                // 填充顺序统一「从上到下、从左到右」；只有真的变化的格子才触发属性通知。
+                if (running && slot == 0)
+                {
+                    double ncx = uaX + UA_CX_OFF;          // 吸嘴组中心（与出料盘点亮同一判据）
+                    for (int i = 6; i < TrayPlan.Length; i++)
+                    {
+                        double cx = (TrayPlan[i].U + TrayPlan[i].DU / 2) * CW;
+                        double half = TrayPlan[i].DU * CW / 2.0;
+                        if (Math.Abs(ncx - cx) < half) cellPh[i] += dt * 0.4;
+                    }
+                }
                 for (int i = 0; i < trayDevices.Count; i++)
                 {
                     var devs = trayDevices[i];
@@ -1875,8 +1922,7 @@ namespace HandlerGuide.ViewModels
 
                     bool green = TrayPlan[i].Green;
                     var devBrush = green ? devGreen : devBlue;
-                    double k = Triangle(t * 0.08 + i * 0.19);
-                    int target = (int)Math.Round(n * k);   // 缓存盘 / 出料盘：空 → 满
+                    int target = (int)Math.Round(n * Triangle(cellPh[i]));
 
                     for (int j = 0; j < n; j++)
                         devs[j].Fill = j < target ? devBrush : null;
