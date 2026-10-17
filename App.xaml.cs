@@ -227,8 +227,12 @@ namespace HandlerGuide
                 // 存证 evidence_c2_drop_tower2.png），但真轴演示节拍也随之多跑 410 拍，
                 // StopDemo 后遗留的轴位置会让后续 motion/ops 自检顶上软限位误报 ——
                 // 轮换回归的常驻哨兵是 artifacts/req41_verify.py 的 C3 断言。
-                int seqLo = 330, seqHi = 470;
-                int frames = 0, frameMax = demoStarted ? 1000 : 80;
+                // 抓拍窗口可由 HG_SEQLO / HG_SEQHI 覆盖（默认 330..470 沿用需求 43 的
+                // slot 2 剧本序列）；需求 48 要看取放臂挂料中间态，那些事件发生在更早的帧。
+                int seqLo = int.TryParse(Environment.GetEnvironmentVariable("HG_SEQLO"), out int slo) ? slo : 330;
+                int seqHi = int.TryParse(Environment.GetEnvironmentVariable("HG_SEQHI"), out int shi) ? shi : 470;
+                int seqStep = int.TryParse(Environment.GetEnvironmentVariable("HG_SEQSTEP"), out int sst) ? sst : 2;
+                int frames = 0, frameMax = demoStarted ? Math.Max(1000, seqHi + 60) : 80;
                 while (frames < frameMax)
                 {
                     vm.FastTick(0.05);
@@ -241,9 +245,9 @@ namespace HandlerGuide
                         System.Windows.Threading.DispatcherPriority.Background);
                     if (frames == 19 && a != null) Shoot(win, a);
                     if (frames == 79 && b != null) Shoot(win, b);
-                    if (demoStarted && frames >= seqLo && frames <= seqHi && frames % 2 == 0)
+                    if (demoStarted && frames >= seqLo && frames <= seqHi && frames % seqStep == 0)
                         Shoot(win, Path.Combine(shotDir, "_demo_seq_" + frames + ".png"));
-                    if (demoStarted && frames > seqHi + 20) break;
+                    if (demoStarted && frames > Math.Max(seqHi, 470) + 20) break;
                     frames++;
                     if (guardCanvas != null)
                         foreach (var g in guardCanvas.CheckGuards()) guardHits.Add(g);

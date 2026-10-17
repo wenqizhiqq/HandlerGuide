@@ -6,6 +6,10 @@
   - 日志 `%TEMP%\handlerguide.log`；判读 `selftest done ok=52 bad=0 bind=0`（52 = `Pages/*.xaml` 文件数）+ `ops selftest done ALL PASS ok=223`。
   - ⚠️ 日志里的 `layout guard: 未拿到画布…跳过包含性校验` 是**正常现状**（`LastLayoutCanvas` 由已无入口的 `BuildLayoutCanvas()` 设置）；若看到 `guards=12` 那是旧构建残留。
   - 截图产物：`HG_SHOT` 指定目录，主界面页 id = `home`，`_layout_t1/_layout_t4.png` = motion_layout 两帧。
+  - `HG_DEMO=1` 的剧本抓拍窗口可用 `HG_SEQLO / HG_SEQHI / HG_SEQSTEP` 覆盖（默认 330..470 / 每 2 帧）。
+    取放类事件发生在更早的帧，写死窗口永远拍不到「挂料中间态」。
+  - ⚠️ 拍得很长（`HG_SEQHI>=1700`）会让 StopDemo 后残留轴位置 ⇒ ops 自检级联报
+    「DisassembleArm 后轴在动 → 禁止关机」+12 条 FAIL，这是长拍诊断的副作用，不是回归；默认窗口 ALL PASS。
 - 备选：根目录 `verify_layout.py`（uiautomation + PrintWindow 抓真实窗口）。
 - ⚠️ 脱离 `HG_SELFTEST` 直接启动 exe 在本机会被杀（退出码 `0x80000053`，EDR 类干扰）→ 实机交互验证需换机器。
 
@@ -152,6 +156,23 @@
     ⚠️ **HG_DEMO 必须配 HG_SHOT**：App.xaml.cs 演示序列截图块 `Path.Combine(shotDir,…)` 未判空
     （需求 43 遗留）→ 裸跑 layout selftest 崩 path1=null 且 StopDemo 泄漏进 motion 自检。
 
+  - **需求 45（用户：「仿真页面的俯视图的搬运料盘手臂需要判断自动盘空了才搬运过去」）**：
+    补盘剧本从「每轮必演·三塔轮换」改为**判空门控**：进 slot 2 前锁存 `refilling`——只有
+    自动盘1..3 里最空的塔 `layerCnt < MinTrayAlarmLayers(3)`（即黄旗「需增加料盘」的塔）
+    才演，目标 = 最空塔 `refillIdx`（平手取靠左）；三塔都有料 ⇒ 整轮停停放位不抓不放。
+    塔靠真实消耗见底：**上料位换新盘的供盘方由进料盘改为自动盘三塔轮供**（`srcTower`
+    0→1→2，每次 carry drop 供一盘 −1 层；轮到空塔退回进料盘兜底不断流）⇒ 物料闭环
+    进空盘→(搬运)→自动盘→(皮带)→上料位→(吸空后搬运)→出空盘。叠层显示钳位
+    `<1→1` 改 `<0→0`（塔可见「0层」）。Model.cs 静态首屏演示报警位从 a[5] 改钉 **a[0]**
+    （自动盘3 = 2 层）⇒ 演示第一轮就能看到「判空 → 补盘」。
+    镜像同步：req41_verify.py 重写 **17/17**（C3 主窗仅 cyc0 补塔0、cyc1-3 门控静音；
+    C5 144s：carry 供盘塔0 3→2 → cyc5 门控放行补回 3，idx5 全程不动）、req39_verify.py
+    **17/17**（state() 加 refill/gi 形参 + 新 G 断言：refill=False ⇒ slot2 钉死停放位）。
+    实跑日志：`req43 grab cyc=0 tray3=6层` + `req43 drop cyc=0 tower=0 layers=3层`，
+    cyc1-3 无 req43 事件（旧版每轮都有）。构建 0W0E、HG_SELFTEST ok=52、ops ALL PASS ok=223。
+    ⚠️ 本轮发现 `bin/Debug/net8.0-windows/` 里 runtimeconfig.json / deps.json 变成全零垃圾
+    字节（exe 起不来 exit 147/139）→ `rm -rf bin/Debug` 全量重建即恢复；遇到同类报错先查这两个 json。
+
 ## 改 UI 前先做像素取证（好用）
 - 用户只给截图、不确定是哪一页时：先用 Pillow 统计 top-N 颜色 + 对特征色做行/列投影，反查代码里的**字面色值**（如 `devBlue #3CC0F0`、`darkBody #26282E`），再按 `TrayPlan` 归一化坐标反算对齐 —— 比盲翻代码快得多。
 - 用户给的截图若是**真机照片的一块**：直接拿它当模板在 `image/handler_top.jpg` 上做**多尺度 NCC**（numpy `rfft2` 互相关 + 积分图算局部均值/方差；逐窗口暴力会慢 1000×）→ 一次拿到 scale + 精确像素位置，再×画布缩放系数得到画布坐标。流程见 `2026-10-12.md`。
@@ -177,3 +198,39 @@
 - ⚠️ **PowerShell 里 `& <WinExe>` 不等待进程结束**（GUI 子系统）→ `$LASTEXITCODE` 是上一条命令的残留，且会留下后台实例继续跑/继续写截图 → 表现为「NO_LOG / SHOTS=0」但其实跑了。要同步等待：用 Bash 前台跑 exe（`HG_SELFTEST=1 ./HandlerGuide.exe`），或 `[Diagnostics.Process]::Start` + `WaitForExit`。
 - ⚠️ 本机沙箱：`Start-Process powershell.exe`（以 shell 为目标的子进程）被拦；从 Bash 调 `powershell.exe` 也被拦 → **只能用 PowerShell 工具直接跑**。Write 工具产出的 `.ps1` 会被 PS 5.1 按 ANSI 读成乱码 → **不要写 .ps1**，把命令拼成 `;` 分隔的**单行**塞进 PowerShell 工具；若必须要脚本文件，先 `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force`。
 - 自检日志里 `layout selftest ... upArmX/downArmX` 是 **`MachineModel` 的轴位置**（`m.Position(4)`/`Position(16)`），**不是**俯视图 sprite 的 canvas 坐标，别误读成抠图臂没动。
+
+## 需求 46（2026-10-15）：上料位料盘物料与其他料盘同尺寸
+- 用户：「进料盘这个需要和其他料盘的物料大小一样」（附截图：上料位盘格子明显偏大）。
+- 两步修复（LayoutPages.cs BuildLayoutCanvasTop 需求 44 块）：
+  1. 格网 5×8 → 5 列 × 10 行（FEED_GRID_ROWS=10，与中排缓存盘同款；40 颗占下面 8 行，
+     上 2 行空格；填充序不变：列表头 = 最底行）；
+  2. **关键坑**：RectItem 渲染成 Border，默认 StrokeThickness=1（透明边框会把可见填充
+     内收 1px/边）。其他盘物料格都吃默认值 ⇒ 实际像素 = W-2；我第一版给上料位格显式
+     写了 StrokeThickness=0，像素反而大 2px。删掉显式 Stroke/StrokeThickness 走默认，
+     两边才真正对上（截图实测：两盘物料均 7-8px 宽 × 8-9px 高、行距 17-18px）。
+- 验证：build 0W0E；HG_SELFTEST 二次跑 ops ALL PASS ok=223（第一次 bad=11 是伺服报警
+  残留的 flaky，与本次改动无关，重跑即绿）；artifacts/shots46c/_layout_t1.png +
+  crop_cmp.png 目检通过。
+
+## 需求 48（2026-10-16）：按真机平移分选机改造俯视图物料链路
+- 用户：「你网上搜搜平移分选机的内容…需要和实际机台一样，芯片物料抓取，料盘移动」，**并显式授权运行仿真**（「你自己运行仿真」）。
+- 链路：上料位 → 上料吸嘴 2×4 整排吸取 → 加热盘测试 → 每 6s 出一批上皮带 → 皮带在途送到缓存盘 →
+  下料吸嘴 2×4 按 bin 放进出料盘 → 满 32 整盘回仓换空盘。`cellPh` 自走波浪与 `beltQueue` 瞬移计数全部退役。
+- **进程内守恒自检**（比离线镜像更硬）：每跨一个 24s 循环打一行 `req48 conservation`，
+  校验 `上料位+挂上+加热盘+在途+挂下+Σ(6..13)+回仓 == 160 + 40×换盘次数`。改物料链路时先保证这行不飘。
+- 离线镜像拆两份：`artifacts/req48_verify.py` = 物料链路（T1..T7），
+  `artifacts/req41_verify.py` = 只留层数/搬运臂剧本（cellPh 的 A/B/D1 断言已删，F 改成只查层数冻结）。
+
+## 抠图量圆心：手臂「挂料」要画在吸嘴圆心上（需求 48 的坑）
+- 俯视图里芯片被吸嘴从**下方**真空吸住 ⇒ 芯片 XY 与吸嘴阵列重合；第一版画在贴图下沿（`Y = arm.Y + H + 2`）
+  是侧视图思维，看着像盘子掉在手臂外面。
+- 量法（比肉眼准）：PIL 读 `image/load_arm_head.png` / `unload_arm_head.png`，取 alpha>200 且
+  低饱和高亮（min(RGB)>170 且 max-min<30）的像素，**手写 8 邻域连通域**（本机没装 scipy/skimage），
+  按尺寸筛出 ~9×9 的圆点 ⇒ 直接得到 2×4 圆心的显示坐标。乘 `显示尺寸/像素尺寸`（两图都是 0.5955）换算。
+- 交叉印证：下料吸嘴 4 列中点算出来 59.85，与既有常量 `UA_CX_OFF = 59.8` 对得上。
+
+## WPF 小坑（本轮新增）
+- `System.Windows.Media.Color.FromArgb` **没有** `(int,int,int,int)` 重载（那是 System.Drawing）。
+  四个参数全写字面量才走 `byte` 重载；一旦 alpha 是变量必须显式 `(byte)a`，否则 CS1503。
+- 逐帧改颜色做脉冲：`RectItem` 没有 Opacity，用「持有一个 `SolidColorBrush`，每帧改 `.Color` 的 alpha」即可，
+  比每帧 new 刷子省（画布图元多，逐帧 new 会卡）。

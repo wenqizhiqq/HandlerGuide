@@ -253,8 +253,10 @@ namespace HandlerGuide
                 a[i] = rnd.Next(1, MaxTrayLayers + 1);
                 if (a[i] < MinTrayAlarmLayers) hasAlarm = true;
             }
-            // 演示用：保证静态首屏至少能看到一处黄色报警（否则要等演示节拍跑到底才出现）
-            if (!hasAlarm) a[a.Length - 1] = MinTrayAlarmLayers - 1;
+            // 演示用：保证静态首屏至少有一处黄色报警（否则要等演示节拍跑到底才出现）。
+            // 需求 45 起报警位钉在自动盘塔 a[0]（原先钉 a[5] 进料盘）：俯视图演示一启动
+            // 就能看到「判断到自动盘空了 → 搬运臂从进空盘补盘」这一幕。
+            if (!hasAlarm) a[0] = MinTrayAlarmLayers - 1;
             return a;
         }
 
