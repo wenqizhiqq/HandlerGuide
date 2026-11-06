@@ -929,8 +929,8 @@ namespace HandlerGuide.ViewModels
                 m12Cyl.Fill = tri < 0.07 ? Red : Steel;
 
                 // ---- 移盘模组：穿梭小车（小车 A 在动就跟着走，否则按时间） ----
-                double car = m.Position(28);
-                double mvT = (m.State(28).Busy || m.State(29).Busy)
+                double car = m.Position(Ops.Ax("前梭车X轴"));
+                double mvT = (m.State(Ops.Ax("前梭车X轴")).Busy || m.State(Ops.Ax("后梭车X轴")).Busy)
                     ? Math.Min(1, Math.Max(0, car / 1200.0))
                     : Triangle(t * 0.38);
                 m6Car.X = SX(M6RailX + mvT * M6CarSpan);
@@ -962,9 +962,9 @@ namespace HandlerGuide.ViewModels
                     mpCells[i].Fill = d == 0 ? Green : d < 3 ? Teal : TealDim;
                 }
 
-                // ---- 压测模组：压头随真实 Z 轴（轴 2） ----
-                double zp = m.Position(2);
-                double zMax = Math.Max(1, m.Axes[2].MaxMm);
+                // ---- 压测模组：压头随真实 Z 轴（前压头Z轴） ----
+                double zp = m.Position(Ops.Ax("前压头Z轴"));
+                double zMax = Math.Max(1, m.Cfg(Ops.Ax("前压头Z轴")).MaxMm);
                 double zT = Math.Min(1, Math.Max(0, zp / zMax));
                 double headTop = M9Y + 22;
                 double headBottom = M9Y + M9H - 42;   // 压到底时压头下沿正好贴住测试座上沿
@@ -977,9 +977,9 @@ namespace HandlerGuide.ViewModels
                 m9Head.Fill = pressed ? Red : Purple;
                 m9Text.Text = zp.ToString("0.0") + "mm" + (pressed ? " 压到位" : "");
 
-                // ---- 料枪模组：枪管随真实 Y 轴（轴 5） ----
-                double gy = m.Position(5);
-                double gyMax = Math.Max(1, m.Axes[5].MaxMm);
+                // ---- 料枪模组：枪管随真实 Y 轴（上料Y轴） ----
+                double gy = m.Position(Ops.Ax("上料Y轴"));
+                double gyMax = Math.Max(1, m.Cfg(Ops.Ax("上料Y轴")).MaxMm);
                 double gT = Math.Min(1, Math.Max(0, gy / gyMax));
                 double gunLen = 8 + gT * 20;
                 maBar.W = SW(gunLen);
@@ -990,7 +990,7 @@ namespace HandlerGuide.ViewModels
                 maCar.Y = SY(MAY + 20 + gT * 46);
 
                 // ---- 加热盘模组：OUT15 加热使能 ----
-                bool heatOn = m.ReadOut(15);
+                bool heatOn = m.ReadOut(Ops.OutBit("加热使能"));
                 if (heatOn)
                 {
                     double pulse = 0.5 + 0.5 * Math.Sin(t * 4);
@@ -1015,11 +1015,11 @@ namespace HandlerGuide.ViewModels
 
                 // ---- 顶部读数条 ----
                 readout.Text = "卡：" + m.CardName + (m.IsSim ? "（仿真）" : "（真卡）")
-                    + "　|　上料臂 X=" + m.Position(4).ToString("0.0")
-                    + "　下料臂 X=" + m.Position(16).ToString("0.0")
-                    + "　间距=" + Math.Abs(m.Position(4) - m.Position(16)).ToString("0.0")
+                    + "　|　上料臂 X=" + m.Position(Ops.Ax("上料X轴")).ToString("0.0")
+                    + "　下料臂 X=" + m.Position(Ops.Ax("下料X轴")).ToString("0.0")
+                    + "　间距=" + Math.Abs(m.Position(Ops.Ax("上料X轴")) - m.Position(Ops.Ax("下料X轴"))).ToString("0.0")
                     + "　|　小车A=" + car.ToString("0.0")
-                    + "　小车B=" + m.Position(29).ToString("0.0")
+                    + "　小车B=" + m.Position(Ops.Ax("后梭车X轴")).ToString("0.0")
                     + "　|　" + (m.EStop ? "【急停】" : "运行正常")
                     + "　步骤：" + m.DemoStepText;
             };

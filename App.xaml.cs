@@ -274,13 +274,13 @@ namespace HandlerGuide
 
                 Log("layout selftest: frames=" + frames + " demoCycles=" + m.DemoCycles
                     + " step=" + m.DemoStepText
-                    + " upArmX=" + m.Position(4).ToString("0.0")
-                    + " downArmX=" + m.Position(16).ToString("0.0")
-                    + " carA=" + m.Position(28).ToString("0.0")
-                    + " carB=" + m.Position(29).ToString("0.0")
-                    + " pressZ=" + m.Position(2).ToString("0.0")
-                    + " gunY=" + m.Position(5).ToString("0.0")
-                    + " heat=" + m.ReadOut(15)
+                    + " upArmX=" + m.Position(m.AxisIndex("上料X轴")).ToString("0.0")
+                    + " downArmX=" + m.Position(m.AxisIndex("下料X轴")).ToString("0.0")
+                    + " carA=" + m.Position(m.AxisIndex("前梭车X轴")).ToString("0.0")
+                    + " carB=" + m.Position(m.AxisIndex("后梭车X轴")).ToString("0.0")
+                    + " pressZ=" + m.Position(m.AxisIndex("前压头Z轴")).ToString("0.0")
+                    + " gunY=" + m.Position(m.AxisIndex("上料Y轴")).ToString("0.0")
+                    + " heat=" + m.ReadOut(m.OutBitOf("加热使能"))
                     + " pixelDiff=" + diff
                     + (diff > 0 ? " （动画正常）"
                        : diff == 0 ? " （警告：画面没有变化）"
@@ -409,39 +409,42 @@ namespace HandlerGuide
                 Chk("HomeAll 完成", () => { }, () => !Ops.HomeActive);
                 // 队列清空不等于归零成功（被互锁拒绝也会清空），所以要用 Homed 位判定
                 Chk("HomeAll 真的归零了", () => { }, () => mm.Axes.All(a => mm.State(a.Index).Homed));
+                // 自检里这几处要用一根「长行程水平轴」：真表 0 号轴是 前压头Z轴（0~25），
+                // 拿它做 100 / 160mm 定位会被软限位直接拒绝，所以统一走 前压头Y轴（0~320）。
+                int axH = mm.AxisIndex("前压头Y轴");
                 Chk("HomeAll 后位置=回零位", () => { },
-                    () => Math.Abs(mm.Position(0) - mm.Axes[0].HomeMm) < 1.0);
+                    () => Math.Abs(mm.Position(axH) - mm.Cfg(axH).HomeMm) < 1.0);
                 // 单轴归零直接走 Mm.Home()，不经过 Ops 的归零队列 —— 所以判返回是否被接受
                 Chk("HomeAxisByName", () =>
                 {
                     if (!Ops.HomeAxisByName("料盘传送臂")) throw new Exception("单轴归零被拒绝");
                 });
-                Chk("HomeAxis(0)", () =>
+                Chk("HomeAxis(前压头Y轴)", () =>
                 {
-                    if (!Ops.HomeAxis(0)) throw new Exception("单轴归零被拒绝");
+                    if (!Ops.HomeAxis(axH)) throw new Exception("单轴归零被拒绝");
                 });
                 Pump(400);
                 Chk("单轴归零后已回零位", () => { },
-                    () => Math.Abs(mm.Position(30) - mm.Axes[30].HomeMm) < 1.0);
+                    () => Math.Abs(mm.Position(axH) - mm.Cfg(axH).HomeMm) < 1.0);
 
                 // ---------- 3. 轴运动 ----------
                 // 先离开回零位，否则 Jog 的位移可能被软限位吃掉
-                mm.MoveAbs(0, 160);
+                mm.MoveAbs(axH, 160);
                 Pump(200);
-                double p0 = mm.Position(0);
-                Chk("JogAxis(0,+1)", () => Ops.JogAxis(0, 1));
+                double p0 = mm.Position(axH);
+                Chk("JogAxis(+1)", () => Ops.JogAxis(axH, 1));
                 Pump(20);
-                Chk("JogAxis 生效", () => { }, () => Math.Abs(mm.Position(0) - p0) > 0.001);
-                Chk("StopAxis(0)", () => Ops.StopAxis(0));
-                Chk("MoveAxisTo(0,100)", () => Ops.MoveAxisTo(0, 100));
+                Chk("JogAxis 生效", () => { }, () => Math.Abs(mm.Position(axH) - p0) > 0.001);
+                Chk("StopAxis", () => Ops.StopAxis(axH));
+                Chk("MoveAxisTo(100)", () => Ops.MoveAxisTo(axH, 100));
                 Pump(200);
-                Chk("MoveAxisTo 到位", () => { }, () => Math.Abs(mm.Position(0) - 100) < 1.0);
+                Chk("MoveAxisTo 到位", () => { }, () => Math.Abs(mm.Position(axH) - 100) < 1.0);
                 Chk("MoveAxisByName", () => Ops.MoveAxisByName("测试位移动Y1", 50));
                 Pump(200);
                 Chk("JogAxisByName", () => Ops.JogAxisByName("测试位下压Z1", 1));
                 Pump(10);
                 Chk("StopAxisByName", () => Ops.StopAxisByName("测试位下压Z1"));
-                Chk("JogAxisBy", () => Ops.JogAxisBy(0, -5));
+                Chk("JogAxisBy", () => Ops.JogAxisBy(axH, -5));
                 Pump(10);
                 Chk("JogStep 读写", () => { Ops.JogStep = 2.5; }, () => Math.Abs(Ops.JogStep - 2.5) < 1e-9);
 
@@ -510,11 +513,11 @@ namespace HandlerGuide
                 Chk("TestArmStep", Ops.TestArmStep);
                 Chk("ManualTestTrigger", Ops.ManualTestTrigger);
                 Pump(5);
-                Chk("TickManualPulse 回落", () => { }, () => !mm.ReadOut(0));
+                Chk("TickManualPulse 回落", () => { }, () => !mm.ReadOut(Ops.OutBit("测试机启动")));
                 Chk("ExitTestArmCalibration", Ops.ExitTestArmCalibration);
                 Chk("TestIo_Sot", Ops.TestIo_Sot);
                 Pump(5);
-                Chk("TickTestIoPulse 回落", () => { }, () => !mm.ReadOut(0));
+                Chk("TickTestIoPulse 回落", () => { }, () => !mm.ReadOut(Ops.OutBit("测试机启动")));
                 Chk("TestIo_Send", () => Ops.TestIo_Send("SELFTEST"), () => Ops.TestIoRx.Contains("SELFTEST"));
                 Chk("TestIo_TestInfo", Ops.TestIo_TestInfo, () => Ops.TestIoRx.Contains("测试系统信息"));
 

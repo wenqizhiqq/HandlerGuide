@@ -321,7 +321,7 @@ namespace HandlerGuide.ViewModels
             if (ids.Count == 0) { Warn("没有勾选任何电机，请先在《电机归零》页勾选"); return false; }
 
             // 先让垂直轴抬起，再回水平轴 —— 否则可能拖着料臂撞工位
-            var ordered = ids.OrderBy(i => Mm.Axes[i].IsVertical ? 0 : 1).ThenBy(i => i).ToList();
+            var ordered = ids.OrderBy(i => Mm.Cfg(i).IsVertical ? 0 : 1).ThenBy(i => i).ToList();
             _homeQueue.Clear();
             foreach (var i in ordered) _homeQueue.Enqueue(i);
             _homeActive = true;
@@ -361,7 +361,7 @@ namespace HandlerGuide.ViewModels
             }
             int ax = _homeQueue.Dequeue();
             var r = Mm.Home(ax);
-            if (!r.Accepted) M.Log("警告", "归零被拒绝：" + Mm.Axes[ax].Name + " · " + r.Reason);
+            if (!r.Accepted) M.Log("警告", "归零被拒绝：" + Mm.Cfg(ax).Name + " · " + r.Reason);
         }
 
         // ==================================================================
@@ -404,7 +404,7 @@ namespace HandlerGuide.ViewModels
             double delta = JogStep * Math.Sign(dir);
             var r = Mm.Jog(axis, delta);
             if (!r.Accepted) Warn("点动被拒绝：" + r.Reason);
-            else M.Log("信息", Mm.Axes[axis].Name + " 点动 " + (delta > 0 ? "+" : "") + delta.ToString("0.###") + "mm");
+            else M.Log("信息", Mm.Cfg(axis).Name + " 点动 " + (delta > 0 ? "+" : "") + delta.ToString("0.###") + "mm");
         }
 
         /// <summary>绝对定位到目标位置。</summary>
@@ -414,7 +414,7 @@ namespace HandlerGuide.ViewModels
             if (IsRunning) { Warn("自动运行中禁止手动定位"); return; }
             var r = Mm.MoveAbs(axis, target);
             if (!r.Accepted) Warn("定位被拒绝：" + r.Reason);
-            else M.Log("信息", Mm.Axes[axis].Name + " → " + target.ToString("0.###") + "mm");
+            else M.Log("信息", Mm.Cfg(axis).Name + " → " + target.ToString("0.###") + "mm");
         }
 
         /// <summary>停止单轴。</summary>
@@ -428,7 +428,7 @@ namespace HandlerGuide.ViewModels
             if (Math.Abs(delta) < 1e-9) return;
             var r = Mm.Jog(axis, delta);
             if (!r.Accepted) Warn("点动被拒绝：" + r.Reason);
-            else M.Log("信息", Mm.Axes[axis].Name + " 点动 "
+            else M.Log("信息", Mm.Cfg(axis).Name + " 点动 "
                        + (delta > 0 ? "+" : "") + delta.ToString("0.###") + "mm");
         }
 
@@ -490,6 +490,46 @@ namespace HandlerGuide.ViewModels
         }
 
         // ==================================================================
+        //  工位流程线程（Motion/FlowEngine.cs）：界面入口
+        // ==================================================================
+
+        /// <summary>
+        /// 启动工位流程线程：每工位一条 while 线程（安全扫描 / IO 镜像 / 轴镜像 /
+        /// 三个料盘仓 / 搬运 / 上下料臂 / 前后梭车 / 前后压头 / Auto1~3 / OK-NG / 视觉飞拍 / 守恒自检）。
+        /// 本版只跑握手与计数、不动轴；MotionManager 的 _demo 22 步节拍照旧继续给界面动画与自检供数。
+        /// 注意：App 启动时**不会**自动调用这里，必须由界面 / 自检显式拉起。
+        /// </summary>
+        public static void FlowStart()
+        {
+            var fe = Motion.FlowEngine.Instance;
+            fe.Start();
+            Info("工位流程线程已启动：" + fe.Threads.Count + " 条（只握手与计数，未下发运动指令）");
+            RaiseStatus();
+        }
+
+        /// <summary>停止全部工位流程线程（每条 join 2s，令牌强制清零，绝不留残余互斥）。</summary>
+        public static void FlowStop()
+        {
+            var fe = Motion.FlowEngine.Instance;
+            if (fe.Status == "已停止") { Info("工位流程线程本来就没在跑"); return; }
+            fe.Stop();
+            Info("工位流程线程已停止");
+            RaiseStatus();
+        }
+
+        /// <summary>流程线程是否在跑（界面按钮可用性用）。</summary>
+        public static bool FlowRunning => Motion.FlowEngine.Instance.Status != "已停止";
+
+        /// <summary>流程线程总体状态文本。</summary>
+        public static string FlowStatus => Motion.FlowEngine.Instance.Status;
+
+        /// <summary>流程线程最近一行动作描述。</summary>
+        public static string FlowStepText => Motion.FlowEngine.Instance.StepText;
+
+        /// <summary>变量黑板快照（按 key 排序），界面「变量」页与信息记录导出共用。</summary>
+        public static List<string> VarBoxSnapshot() => Motion.VarBox.Snapshot().ToList();
+
+        // ==================================================================
         //  温控（一阶热模型，加热输出自动闭环）
         // ==================================================================
 
@@ -499,7 +539,13 @@ namespace HandlerGuide.ViewModels
         public static double TempActual => _tempActual;
 
         /// <summary>加热器当前是否通电。</summary>
-        public static bool HeaterOn => Mm.ReadOut(15);
+        /// <summary>加热使能输出点的全局位号（旧代码写死 OUT15，现在按点名解析）。</summary>
+        private static int OutHeater => Mm.OutBitOf("加热使能");
+
+        /// <summary>测试机启动（SOT）输出点的全局位号（旧代码写死 OUT0）。</summary>
+        private static int OutSot => Mm.OutBitOf("测试机启动");
+
+        public static bool HeaterOn => Mm.ReadOut(OutHeater);
 
         /// <summary>应用温控设定：模式 → 设定值，并决定加热输出点。</summary>
         public static void ApplyTemp()
@@ -521,10 +567,10 @@ namespace HandlerGuide.ViewModels
             double set = M.TempSet <= 0 ? 25 : M.TempSet;
 
             // 滞环控制：低于设定-0.5 通电，高于设定+0.5 断电（避免输出抖动）
-            bool heat = Mm.ReadOut(15);
+            bool heat = Mm.ReadOut(OutHeater);
             if (!heat && _tempActual < set - 0.5) heat = true;
             else if (heat && _tempActual > set + 0.5) heat = false;
-            if (heat != Mm.ReadOut(15)) Mm.WriteOut(15, heat);
+            if (heat != Mm.ReadOut(OutHeater)) Mm.WriteOut(OutHeater, heat);
 
             // 一阶热模型：加热时向设定值靠，断电时向环境温度（25℃）回落
             double target = heat ? set : 25.0;
@@ -958,7 +1004,8 @@ namespace HandlerGuide.ViewModels
             double contact = M.GetNum("ta_contact", 0);
             int n = 0;
             // 测试臂 Z 轴：抬起 → 下压到接触位
-            foreach (var a in Mm.Axes.Where(x => x.IsVertical && x.Name.Contains("测试")))
+            foreach (var a in Mm.Axes.Where(x => x.IsVertical
+                       && (x.Name.Contains("测试") || x.Name.Contains("压头"))))
             {
                 Mm.MoveAbs(a.Index, contact);
                 n++;
@@ -974,8 +1021,8 @@ namespace HandlerGuide.ViewModels
         public static void ManualTestTrigger()
         {
             if (Mm.AnyAlarm()) { Warn("存在报警，请先解除报警"); return; }
-            Mm.WriteOut(0, true);
-            M.Log("信息", "手动触发测试信号 T.Start（OUT0 脉冲 20ms）");
+            Mm.WriteOut(OutSot, true);
+            M.Log("信息", "手动触发测试信号 T.Start（测试机启动点脉冲 20ms）");
             _manualTestPulse = 0.02;
             RaiseStatus();
         }
@@ -985,7 +1032,7 @@ namespace HandlerGuide.ViewModels
         {
             if (_manualTestPulse <= 0) return;
             _manualTestPulse -= dt;
-            if (_manualTestPulse <= 0) { Mm.WriteOut(0, false); _manualTestPulse = 0; }
+            if (_manualTestPulse <= 0) { Mm.WriteOut(OutSot, false); _manualTestPulse = 0; }
         }
 
         /// <summary>退出高度校准模式。</summary>
@@ -1124,13 +1171,39 @@ namespace HandlerGuide.ViewModels
 
         // ---------------- 轴查找与按轴名操作 ----------------
 
-        /// <summary>按轴名查轴（先精确匹配，再「包含」匹配）。</summary>
+        /// <summary>
+        /// 按轴名查轴：真名 → 旧名别名（MotionManager.AxisAlias）→ 「包含」匹配。
+        /// 页面上还写着「测试位下压Z1 / 上料取放臂X轴 / 料盘传送臂」这些旧名，
+        /// 靠这张别名表落到交接资料的 45 根真轴上，不需要逐页改字面量。
+        /// </summary>
         public static AxisConfig FindAxis(string name)
         {
             if (string.IsNullOrEmpty(name)) return null;
-            return Mm.Axes.FirstOrDefault(a => a.Name == name)
-                ?? Mm.Axes.FirstOrDefault(a => a.Name.Contains(name));
+            return Mm.FindByName(name);
         }
+
+        /// <summary>按轴名取轴号（真名 / 旧名都行；找不到返回 -1，调用方会走空状态）。</summary>
+        public static int Ax(string axisName) => Mm.AxisIndex(axisName);
+
+        /// <summary>
+        /// 某轴名在《诊断 / 电机状态》表（MachineModel.Motors）里的行号。
+        /// Motors 现在按交接资料的轴号顺序建立（45 行），列表行号 != 轴号（缺 17 / 38），
+        /// 所以页面要显示某根轴的实时值时必须按名字取行号，不能再写死 Motors[4+k]。
+        /// </summary>
+        public static int MotorRow(string axisName)
+        {
+            var a = FindAxis(axisName);
+            if (a == null) return -1;
+            for (int row = 0; row < Mm.Axes.Count; row++)
+                if (Mm.Axes[row].Index == a.Index) return row;
+            return -1;
+        }
+
+        /// <summary>按点名取输入全局位号（找不到返回 -1）。</summary>
+        public static int InBit(string pointName) => Mm.InBitOf(pointName);
+
+        /// <summary>按点名取输出全局位号（找不到返回 -1）。</summary>
+        public static int OutBit(string pointName) => Mm.OutBitOf(pointName);
 
         /// <summary>按轴名点动（dir = -1 / +1）。</summary>
         public static bool JogAxisByName(string name, int dir)
@@ -1466,13 +1539,13 @@ namespace HandlerGuide.ViewModels
             TestInterfaceService.SendSot();
         }
 
-        /// <summary>TTL 通道的 SOT 脉冲（OUT0 置位，40ms 后由快节拍回落）。</summary>
+        /// <summary>TTL 通道的 SOT 脉冲（测试机启动点置位，40ms 后由快节拍回落）。</summary>
         public static void TestIo_SotPulse()
         {
-            Mm.WriteOut(0, true);
+            Mm.WriteOut(OutSot, true);
             _tioSotPulse = 0.04;
-            TestInterfaceService.AddLog("[" + DateTime.Now.ToString("HH:mm:ss.fff") + "] → TTL : SOT（OUT0 脉冲 40ms）");
-            Info("手动激活开始测试信号 SOT（OUT0 脉冲 40ms）");
+            TestInterfaceService.AddLog("[" + DateTime.Now.ToString("HH:mm:ss.fff") + "] → TTL : SOT（测试机启动点脉冲 40ms）");
+            Info("手动激活开始测试信号 SOT（测试机启动点脉冲 40ms）");
             RaiseStatus();
         }
 
@@ -1481,7 +1554,7 @@ namespace HandlerGuide.ViewModels
         {
             if (_tioSotPulse <= 0) return;
             _tioSotPulse -= dt;
-            if (_tioSotPulse <= 0) { Mm.WriteOut(0, false); _tioSotPulse = 0; }
+            if (_tioSotPulse <= 0) { Mm.WriteOut(OutSot, false); _tioSotPulse = 0; }
         }
 
         /// <summary>[Send]：把 msg 按当前接口方式**真实**发出去（TCP / RS232 / GPIB 走报文通道）。</summary>

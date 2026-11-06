@@ -369,23 +369,14 @@ namespace HandlerGuide
 
         private void InitMotors()
         {
-            // 轴名称与手册《诊断 / 电机状态》表一致（共 31 轴）
-            string[] names =
-            {
-                "测试位移动Y1", "测试位移动Y2", "测试位下压Z1", "测试位下压Z2",
-                "上料取放臂X轴", "上料取放臂Y轴", "上料取放臂PX轴", "上料取放臂PY轴",
-                "上料取放臂Z1轴", "上料取放臂Z2轴", "上料取放臂Z3轴", "上料取放臂Z4轴",
-                "上料取放臂Z5轴", "上料取放臂Z6轴", "上料取放臂Z7轴", "上料取放臂Z8轴",
-                "下料取放臂X轴", "下料取放臂Y轴", "下料取放臂PX轴", "下料取放臂PY轴",
-                "下料取放臂Z1轴", "下料取放臂Z2轴", "下料取放臂Z3轴", "下料取放臂Z4轴",
-                "下料取放臂Z5轴", "下料取放臂Z6轴", "下料取放臂Z7轴", "下料取放臂Z8轴",
-                "测试运料小车A", "测试运料小车B", "料盘传送臂"
-            };
-            foreach (var n in names)
+            // 轴名称直接取自交接资料实测轴表（MotionManager.Axes，45 根，顺序 = 轴号顺序），
+            // 这样《诊断 / 电机状态》页与真机一一对应，不会再出现「界面上的轴名对不上设备」的情况。
+            var axes = Motion.MotionManager.Instance.Axes;
+            foreach (var a in axes)
             {
                 var m = new MotorInfo
                 {
-                    Name = n,
+                    Name = a.Name,
                     ORG = true,
                     Homed = true,
                     INP = true,

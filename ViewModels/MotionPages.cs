@@ -356,11 +356,15 @@ namespace HandlerGuide.ViewModels
             var outWrap = new WrapElement();
             foreach (var p in m.Outputs) outWrap.Children.Add(OutChip(p));
 
+            // 点数 / 位号区间都取自真实 IO 表（交接资料 303 入 + 兼容点 / 123 出 + 兼容点），
+            // 不再写死「32 点 IN0~IN31」。
+            int inMax = m.Inputs.Count == 0 ? 0 : m.Inputs.Max(x => x.Bit);
+            int outMax = m.Outputs.Count == 0 ? 0 : m.Outputs.Max(x => x.Bit);
             return E.V(
-                E.T("输入信号（32 点，实时）—— 绿色 = 激活；红边表示低电平有效（急停类）", 11.5, E.Sec),
-                E.Group("输入信号 IN0 ~ IN31", inWrap),
-                E.T("输出信号（32 点）—— 点击 ⇄ 可手动翻转输出；带联动的输出会同时刷新对应输入反馈", 11.5, E.Sec),
-                E.Group("输出信号 OUT0 ~ OUT31", outWrap),
+                E.T("输入信号（" + m.Inputs.Count + " 点，实时）—— 绿色 = 激活；红边表示低电平有效（急停 / 门禁类）", 11.5, E.Sec),
+                E.Group("输入信号 全局位号 0 ~ " + inMax + "（真表 U0~U10 + 兼容段）", inWrap),
+                E.T("输出信号（" + m.Outputs.Count + " 点）—— 点击 ⇄ 可手动翻转输出；带联动的输出会同时刷新对应输入反馈", 11.5, E.Sec),
+                E.Group("输出信号 全局位号 0 ~ " + outMax + "（真表 U20~U24 + 兼容段）", outWrap),
                 E.H(
                     E.MiniBtn("全部输出复位", Ops.ResetOutputs, 124),
                     E.T("输出→输入反馈映射：真空电磁阀1~8 → 真空反馈1~8；测试臂下压气缸 → 测试座下压到位；加热使能 → 加热器就绪",
@@ -404,7 +408,7 @@ namespace HandlerGuide.ViewModels
             var canvas = BuildTraceCanvas();
             return E.V(
                 E.H(
-                    E.T("共享走廊：上/下料取放臂 X 轴（0~900mm）", 11, E.Sec).Wd(300),
+                    E.T("共享走廊：上料X轴 / 下料X轴（0~900mm）", 11, E.Sec).Wd(300),
                     E.T("小车导轨：小车 A / B（0~1200mm）", 11, E.Sec).Wd(260),
                     E.T("Z 轴高度（0~30mm）", 11, E.Sec)),
                 canvas,
@@ -514,7 +518,13 @@ namespace HandlerGuide.ViewModels
             var zBars = new RectItem[3];
             var zLabels = new TextItem[3];
             string[] zNames = { "上料Z1", "下料Z1", "测试Z1" };
-            int[] zAxes = { 8, 20, 2 };
+            // 轴号按真表名解析（旧写法硬编码 8 / 20 / 2）
+            int[] zAxes =
+            {
+                MotionManager.Instance.AxisIndex("上料吸嘴1Z轴"),
+                MotionManager.Instance.AxisIndex("下料吸嘴1Z轴"),
+                MotionManager.Instance.AxisIndex("前压头Z轴")
+            };
             for (int k = 0; k < 3; k++)
             {
                 double x = 200 + k * 240;
@@ -543,8 +553,8 @@ namespace HandlerGuide.ViewModels
             cv.Draw = c =>
             {
                 var m = MotionManager.Instance;
-                double lp = m.Position(4), up = m.Position(16);
-                double sa = m.Position(28), sb = m.Position(29);
+                double lp = m.Position(m.AxisIndex("上料X轴")), up = m.Position(m.AxisIndex("下料X轴"));
+                double sa = m.Position(m.AxisIndex("前梭车X轴")), sb = m.Position(m.AxisIndex("后梭车X轴"));
                 double clearance = 80;
 
                 load.X = CorridorX0 + lp * cScale - 29;
@@ -568,7 +578,7 @@ namespace HandlerGuide.ViewModels
                     zBars[k].H = h;
                     zBars[k].Y = ZBaseY - h;
                     // 垂直轴数值越大越靠上；≥ ZUpMm 视为已抬起（安全）
-                    zBars[k].Fill = zp >= m.Axes[ax].ZUpMm ? ZBrush : DangerBrush;
+                    zBars[k].Fill = zp >= m.Cfg(ax).ZUpMm ? ZBrush : DangerBrush;
                     zLabels[k].Text = zNames[k] + " " + zp.ToString("0.0") + "mm";
                 }
 
@@ -628,7 +638,7 @@ namespace HandlerGuide.ViewModels
             foreach (var a in m.Axes)
             {
                 int idx = a.Index;
-                var cfg = m.Axes[idx];
+                var cfg = m.Cfg(idx);
                 rows.Children.Add(E.H(
                     E.T(a.Name, 11.5, E.P, false, TextWrapping.NoWrap).Wd(126),
                     E.Num("mc_eq_" + idx, cfg.PulseEquivalent, 70, "0", 0, 100000),

@@ -6,8 +6,13 @@
 //  项目：HandlerGuide（EXCEED9000 高速分选机控制软件复刻）
 //  职责：
 //    1. 管理控制卡连接：优先尝试雷赛 LTDMC.dll，失败则自动降级到内置仿真卡；
-//    2. 定义 31 根轴的拓扑（区域 / 软限位 / 垂直轴 / 共享导轨 / 安全间隙）；
-//    3. 定义具名 IO 表（32 入 / 32 出）并模拟输出→输入反馈；
+//    2. 轴表 = 交接资料实测的 45 根轴（HandoverTables.Axes：轴号 / 轴名 / 工站都是真机的），
+//       资料里没有软限位 / 回零位 / 速度，由 DefaultsFor(AxisRule 规则表) 按
+//       Kind + Power + 电机机座号 + 名称关键词推导，规则表在 AxisRules 里显式列出；
+//    3. 具名 IO 表 = 交接资料实测的 303 入 / 123 出（输入全局位号 = 块序×32 + 块内位号，
+//       输出 = (块序-20)×32 + 块内位号，正好 352 / 160 位地址空间），
+//       旧仿真表的 32+32 个名字：真表有同义点的直接命中真表，其余追加为兼容点
+//       （输入 352~383 / 输出 160~191），实测兼容点 17 入 + 19 出，合计 320 入 / 142 出；
 //    4. 作为「防撞裁决中心」：所有运动请求都必须先通过 SafetyCheck()，
 //       包含 急停 / 安全门 / 气压 / 伺服报警 / 软限位 / Z 轴未抬起 /
 //       共享导轨扫掠区间重叠 等互锁，任一不满足即拒绝并记入信息记录，
@@ -66,33 +71,85 @@ namespace HandlerGuide.Motion
     /// <summary>运动控制总控（单例）。</summary>
     public sealed class MotionManager
     {
+        /// <summary>
+        /// 单例（延迟创建）。
+        /// 关键：不能用 `public static readonly MotionManager Instance = new MotionManager();` 这种写法 ——
+        /// C# 的静态字段初始化按**文本顺序**执行，而这个类下面的静态表
+        /// （AxisRules / AxisFallback / AxisAlias / LegacyIn* / LegacyOut*）都声明在本行之后，
+        /// 直接在静态初始化里跑构造函数就会读到 null 表（实测 TypeInitializationException + NRE）。
+        /// 用 Lazy 之后，构造发生在「静态初始化全部跑完」之后的第一次访问。
+        /// </summary>
+        private static readonly Lazy<MotionManager> _instance = new Lazy<MotionManager>(() => new MotionManager());
+
         /// <summary>单例。</summary>
-        public static MotionManager Instance { get; } = new MotionManager();
+        public static MotionManager Instance => _instance.Value;
+
+        // ---------------- IO 地址空间（与交接资料一致） ----------------
+        /// <summary>输入真表地址空间：U0 ~ U10 共 11 块 × 32 位 = 352 位。</summary>
+        public const int RealInputBits = 352;
+        /// <summary>输出真表地址空间：U20 ~ U24 共 5 块 × 32 位 = 160 位。</summary>
+        public const int RealOutputBits = 160;
+        /// <summary>兼容段位宽：旧仿真表 32 个点里真表没有同名的，追加登记在这段里。</summary>
+        public const int LegacySpan = 32;
+        /// <summary>兼容点段基址（输入）：全局位号 = 352 + 老位号，一眼能看出是哪一路老信号。</summary>
+        public const int CompatInBase = RealInputBits;
+        /// <summary>兼容点段基址（输出）：全局位号 = 160 + 老位号。</summary>
+        public const int CompatOutBase = RealOutputBits;
+        /// <summary>控制卡输入容量 = 真表空间 + 兼容段 = 384。</summary>
+        public const int CardInputBits = RealInputBits + LegacySpan;
+        /// <summary>控制卡输出容量 = 真表空间 + 兼容段 = 192。</summary>
+        public const int CardOutputBits = RealOutputBits + LegacySpan;
 
         // ---------------- 关键输入 / 输出位定义 ----------------
-        /// <summary>输入：急停按钮（true = 已按下）。</summary>
-        public const int InEStop = 0;
-        /// <summary>输入：安全门关闭。</summary>
-        public const int InSafeDoor = 1;
-        /// <summary>输入：气压正常。</summary>
-        public const int InAirOk = 2;
-        /// <summary>输入：主电源正常。</summary>
-        public const int InPowerOk = 3;
-        /// <summary>输入：小车 A 到位。</summary>
-        public const int InShuttleA = 7;
-        /// <summary>输入：小车 B 到位。</summary>
-        public const int InShuttleB = 8;
-        /// <summary>输入：伺服总报警。</summary>
-        public const int InServoAlarm = 30;
+        // 这些位号是「全局位号」，BuildIo 末尾按点位语义解析出来（真表点直接命中，
+        // 真表没有的语义点命中兼容点），所以不再是编译期常量。
 
-        /// <summary>输出：红色指示灯。</summary>
-        public const int OutLampRed = 0;
-        /// <summary>输出：黄色指示灯。</summary>
-        public const int OutLampYellow = 1;
-        /// <summary>输出：绿色指示灯。</summary>
-        public const int OutLampGreen = 2;
-        /// <summary>输出：蜂鸣器。</summary>
-        public const int OutBuzzer = 3;
+        /// <summary>输入：急停按钮（真表 U0_X1.0，true = 已按下）。</summary>
+        public int InEStop { get; private set; }
+        /// <summary>输入：安全门关闭（真表里对应门禁到位类信号）。</summary>
+        public int InSafeDoor { get; private set; }
+        /// <summary>输入：气压正常（真表里对应进气正压表）。</summary>
+        public int InAirOk { get; private set; }
+        /// <summary>输入：主电源正常（兼容点）。</summary>
+        public int InPowerOk { get; private set; }
+        /// <summary>输入：前梭车到位（兼容点，由轴位置推导）。</summary>
+        public int InShuttleA { get; private set; }
+        /// <summary>输入：后梭车到位（兼容点，由轴位置推导）。</summary>
+        public int InShuttleB { get; private set; }
+        /// <summary>输入：测试座下压到位（兼容点，由压头 Z 位置推导）。</summary>
+        public int InPressDownOk { get; private set; }
+        /// <summary>输入：料盘传送臂原点（兼容点，由搬运 X 轴位置推导）。</summary>
+        public int InTrayArmHome { get; private set; }
+        /// <summary>输入：伺服总报警（兼容点，由轴报警汇总推导）。</summary>
+        public int InServoAlarm { get; private set; }
+
+        /// <summary>输出：红色指示灯（真表 U20_Y0.0 红灯）。</summary>
+        public int OutLampRed { get; private set; }
+        /// <summary>输出：黄色指示灯（真表 U20_Y0.1 黄灯）。</summary>
+        public int OutLampYellow { get; private set; }
+        /// <summary>输出：绿色指示灯（真表 U20_Y0.2 绿灯）。</summary>
+        public int OutLampGreen { get; private set; }
+        /// <summary>输出：蜂鸣器（真表 U20_Y0.3）。</summary>
+        public int OutBuzzer { get; private set; }
+
+        // ---------------- 轴 / 点查找表 ----------------
+        /// <summary>轴号 → 轴配置（真机轴号不连续：分支4 缺 17、分支2 缺 38，不能用列表下标当轴号）。</summary>
+        private readonly Dictionary<int, AxisConfig> _byIndex = new Dictionary<int, AxisConfig>();
+        /// <summary>轴名 → 轴配置。</summary>
+        private readonly Dictionary<string, AxisConfig> _byName = new Dictionary<string, AxisConfig>();
+        /// <summary>输入点名 → 点（含兼容点）。</summary>
+        private readonly Dictionary<string, IoPoint> _byInName = new Dictionary<string, IoPoint>();
+        /// <summary>输出点名 → 点（含兼容点）。</summary>
+        private readonly Dictionary<string, IoPoint> _byOutName = new Dictionary<string, IoPoint>();
+        /// <summary>老位号（0~31）→ 全局位号；真表已有同名的直接指向真表点。</summary>
+        private readonly int[] _legacyIn = new int[LegacySpan];
+        /// <summary>老位号（0~31）→ 全局位号（输出）。</summary>
+        private readonly int[] _legacyOut = new int[LegacySpan];
+
+        // 几根在节拍 / 状态推导里反复用到的轴号（BuildAxes 末尾按真名解析）
+        private int _axPressFZ = -1, _axPressBZ = -1;   // 前 / 后压头 Z
+        private int _axShuttleF = -1, _axShuttleB = -1; // 前 / 后梭车 X
+        private int _axTrayArm = -1;                    // 搬运 X（旧名：料盘传送臂）
 
         // ---------------- 状态 ----------------
 
@@ -160,6 +217,9 @@ namespace HandlerGuide.Motion
         /// <summary>节拍完成的循环数。</summary>
         public int DemoCycles { get; private set; }
 
+        /// <summary>演示节拍因轴名解析失败而没有建立（第一次 Tick 时提示一次）。</summary>
+        public bool DemoSkipped { get; private set; }
+
         /// <summary>
         /// 一个完整取放料循环结束。产量计数 / Bin 分类 / UPH 由订阅方（Ops）负责，
         /// 这样运控层不需要知道业务统计，避免 Motion ↔ ViewModels 互相引用。
@@ -180,134 +240,473 @@ namespace HandlerGuide.Motion
         //  轴拓扑
         // ==================================================================
 
-        /// <summary>按手册《诊断 / 电机状态》的 31 轴建立拓扑与软限位。</summary>
-        private void BuildAxes()
+        /// <summary>
+        /// 一条「名称关键词 → 运动参数」推导规则。
+        /// 交接资料只给了轴号 / 轴名 / 电机 / 驱动器，软限位、回零位、速度都是这里给的默认值；
+        /// 出厂调试以《运动参数设置 → 应用轴参数》实测填写为准（ApplyAxisParams 会覆盖本表）。
+        /// </summary>
+        private struct AxisRule
         {
-            // 测试区域：0 测试位移动Y1 / 1 Y2 / 2 下压Z1 / 3 Z2
-            Add(0, "测试位移动Y1", "测试区域", 0, 320, 160, 600, 4000, false, 0, "");
-            Add(1, "测试位移动Y2", "测试区域", 0, 320, 160, 600, 4000, false, 0, "");
-            Add(2, "测试位下压Z1", "测试区域", 0, 25, 25, 200, 3000, true, 24, "");
-            Add(3, "测试位下压Z2", "测试区域", 0, 25, 25, 200, 3000, true, 24, "");
-
-            // 上料取放臂：4 X / 5 Y / 6 PX / 7 PY / 8..15 Z1..Z8
-            Add(4, "上料取放臂X轴", "上料臂", 0, 900, 0, 1200, 6000, false, 0, "ARM_X");
-            Add(5, "上料取放臂Y轴", "上料臂", 0, 300, 0, 800, 4000, false, 0, "");
-            Add(6, "上料取放臂PX轴", "上料臂", -20, 20, 0, 50, 500, false, 0, "");
-            Add(7, "上料取放臂PY轴", "上料臂", -20, 20, 0, 50, 500, false, 0, "");
-            for (int i = 0; i < 8; i++)
-                Add(8 + i, "上料取放臂Z" + (i + 1) + "轴", "上料臂", 0, 30, 30, 300, 3000, true, 29, "");
-
-            // 下料取放臂：16 X / 17 Y / 18 PX / 19 PY / 20..27 Z1..Z8
-            Add(16, "下料取放臂X轴", "下料臂", 0, 900, 900, 1200, 6000, false, 0, "ARM_X");
-            Add(17, "下料取放臂Y轴", "下料臂", 0, 300, 0, 800, 4000, false, 0, "");
-            Add(18, "下料取放臂PX轴", "下料臂", -20, 20, 0, 50, 500, false, 0, "");
-            Add(19, "下料取放臂PY轴", "下料臂", -20, 20, 0, 50, 500, false, 0, "");
-            for (int i = 0; i < 8; i++)
-                Add(20 + i, "下料取放臂Z" + (i + 1) + "轴", "下料臂", 0, 30, 30, 300, 3000, true, 29, "");
-
-            // 小车与传送臂
-            Add(28, "测试运料小车A", "小车", 0, 1200, 0, 1500, 8000, false, 0, "SHUTTLE", 120);
-            Add(29, "测试运料小车B", "小车", 0, 1200, 1200, 1500, 8000, false, 0, "SHUTTLE", 120);
-            Add(30, "料盘传送臂", "传送臂", 0, 700, 0, 800, 4000, false, 0, "");
+            /// <summary>轴名包含该关键字即命中（规则表按顺序匹配，先具体后通用）。</summary>
+            public string Key;
+            /// <summary>负向软限位。</summary>
+            public double Min;
+            /// <summary>正向软限位。</summary>
+            public double Max;
+            /// <summary>回零位 = 停放位 = 上电初始位置（也是「安全位」）。</summary>
+            public double Home;
+            /// <summary>最大速度（单位/秒）。</summary>
+            public double Vel;
+            /// <summary>加速度（单位/秒²）。</summary>
+            public double Acc;
+            /// <summary>是否垂直轴。</summary>
+            public bool Vertical;
+            /// <summary>垂直轴抬起阈值（位置 ≥ 该值视为已抬起）。</summary>
+            public double ZUp;
+            /// <summary>共享导轨标识。</summary>
+            public string Rail;
+            /// <summary>共享导轨安全间隙。</summary>
+            public double Clearance;
+            /// <summary>工程单位（mm / deg）。</summary>
+            public string Unit;
         }
 
-        /// <summary>追加一根轴。</summary>
-        private void Add(int index, string name, string group, double min, double max, double home,
-                         double maxVel, double acc, bool vertical, double zUp, string rail,
-                         double clearance = 40)
+        /// <summary>按名称关键词推导运动参数的规则表（顺序 = 优先级，先具体后通用）。</summary>
+        private static readonly AxisRule[] AxisRules =
         {
-            Axes.Add(new AxisConfig
+            // ---- 压头测试工位：Y 走位 0~320，Z 下压 0~25（数值越大越靠上，回零位 = 完全抬起）----
+            new AxisRule { Key = "前压头Y轴", Min = 0, Max = 320, Home = 160, Vel = 600, Acc = 4000, Unit = "mm", Clearance = 40 },
+            new AxisRule { Key = "后压头Y轴", Min = 0, Max = 320, Home = 160, Vel = 600, Acc = 4000, Unit = "mm", Clearance = 40 },
+            new AxisRule { Key = "前压头Z轴", Min = 0, Max = 25, Home = 25, Vel = 200, Acc = 3000, Vertical = true, ZUp = 24, Unit = "mm", Clearance = 40 },
+            new AxisRule { Key = "后压头Z轴", Min = 0, Max = 25, Home = 25, Vel = 200, Acc = 3000, Vertical = true, ZUp = 24, Unit = "mm", Clearance = 40 },
+
+            // ---- 梭车：共享同一条导轨，安全间隙 120 ----
+            new AxisRule { Key = "前梭车X", Min = 0, Max = 1200, Home = 0, Vel = 1500, Acc = 8000, Rail = "SHUTTLE", Clearance = 120, Unit = "mm" },
+            new AxisRule { Key = "后梭车X", Min = 0, Max = 1200, Home = 1200, Vel = 1500, Acc = 8000, Rail = "SHUTTLE", Clearance = 120, Unit = "mm" },
+
+            // ---- 上 / 下料臂 X：共享 X 走廊（ARM_X），停放位一前一后 ----
+            new AxisRule { Key = "上料X轴", Min = 0, Max = 900, Home = 0, Vel = 1200, Acc = 6000, Rail = "ARM_X", Clearance = 40, Unit = "mm" },
+            new AxisRule { Key = "下料X轴", Min = 0, Max = 900, Home = 900, Vel = 1200, Acc = 6000, Rail = "ARM_X", Clearance = 40, Unit = "mm" },
+            new AxisRule { Key = "搬运X轴", Min = 0, Max = 700, Home = 0, Vel = 800, Acc = 4000, Clearance = 40, Unit = "mm" },
+            new AxisRule { Key = "上料Y轴", Min = 0, Max = 300, Home = 0, Vel = 800, Acc = 4000, Clearance = 40, Unit = "mm" },
+            new AxisRule { Key = "下料Y轴", Min = 0, Max = 300, Home = 0, Vel = 800, Acc = 4000, Clearance = 40, Unit = "mm" },
+
+            // ---- 变距轴：只走 ±20 ----
+            new AxisRule { Key = "变距X", Min = -20, Max = 20, Home = 0, Vel = 50, Acc = 500, Clearance = 40, Unit = "mm" },
+            new AxisRule { Key = "变距Y", Min = -20, Max = 20, Home = 0, Vel = 50, Acc = 500, Clearance = 40, Unit = "mm" },
+
+            // ---- 旋转 U：整圈旋转，单位是度 ----
+            new AxisRule { Key = "旋转U", Min = -180, Max = 180, Home = 0, Vel = 120, Acc = 600, Clearance = 40, Unit = "deg" },
+
+            // ---- 吸嘴 Z：1~8 根独立真空吸嘴的升降，行程 30，抬起阈值 29 ----
+            new AxisRule { Key = "吸嘴", Min = 0, Max = 30, Home = 30, Vel = 300, Acc = 3000, Vertical = true, ZUp = 29, Clearance = 40, Unit = "mm" },
+
+            // ---- 通用兜底：仓类升降 Z（进料仓 / 出盘仓 / 空盘仓 / Auto1~3）、分度 Y、走位 X ----
+            new AxisRule { Key = "Z轴", Min = 0, Max = 500, Home = 500, Vel = 150, Acc = 1500, Vertical = true, ZUp = 470, Clearance = 40, Unit = "mm" },
+            new AxisRule { Key = "Y轴", Min = 0, Max = 240, Home = 0, Vel = 120, Acc = 1200, Clearance = 40, Unit = "mm" },
+            new AxisRule { Key = "X轴", Min = 0, Max = 700, Home = 0, Vel = 800, Acc = 4000, Clearance = 40, Unit = "mm" },
+        };
+
+        /// <summary>规则表全落空时的最终兜底参数。</summary>
+        private static readonly AxisRule AxisFallback =
+            new AxisRule { Key = "", Min = 0, Max = 100, Home = 0, Vel = 100, Acc = 1000, Clearance = 40, Unit = "mm" };
+
+        /// <summary>旧仿真表里的 31 个轴名 → 真表轴名（界面 / 自检 / 工作基点都还在按老名字找轴）。</summary>
+        private static readonly Dictionary<string, string> AxisAlias = BuildAxisAlias();
+
+        private static Dictionary<string, string> BuildAxisAlias()
+        {
+            var d = new Dictionary<string, string>
             {
-                Index = index,
-                Name = name,
-                Group = group,
-                Unit = "mm",
-                PulseEquivalent = 1000,
-                MinMm = min,
-                MaxMm = max,
-                HomeMm = home,
-                MaxVel = maxVel,
-                Acc = acc,
-                Dec = acc,
-                IsVertical = vertical,
-                ZUpMm = zUp,
-                RailId = rail,
-                ClearanceMm = clearance
-            });
+                // 测试区域（真表工站名：压头测试工位）
+                { "测试位移动Y1", "前压头Y轴" },
+                { "测试位移动Y2", "后压头Y轴" },
+                { "测试位下压Z1", "前压头Z轴" },
+                { "测试位下压Z2", "后压头Z轴" },
+                // 上料取放臂
+                { "上料取放臂X轴", "上料X轴" },
+                { "上料取放臂Y轴", "上料Y轴" },
+                { "上料取放臂PX轴", "上料变距X" },
+                { "上料取放臂PY轴", "上料变距Y" },
+                // 下料取放臂
+                { "下料取放臂X轴", "下料X轴" },
+                { "下料取放臂Y轴", "下料Y轴" },
+                { "下料取放臂PX轴", "下料变距X轴" },
+                { "下料取放臂PY轴", "下料变距Y轴" },
+                // 运料小车 / 料盘传送臂
+                { "测试运料小车A", "前梭车X轴" },
+                { "测试运料小车B", "后梭车X轴" },
+                { "料盘传送臂", "搬运X轴" },
+            };
+            for (int i = 1; i <= 8; i++)
+            {
+                d["上料取放臂Z" + i + "轴"] = "上料吸嘴" + i + "Z轴";
+                d["下料取放臂Z" + i + "轴"] = "下料吸嘴" + i + "Z轴";
+            }
+            return d;
+        }
+
+        /// <summary>交接资料实测的 45 根轴：轴号 / 轴名 / 工站是真机的，运动参数按规则表推导。</summary>
+        private void BuildAxes()
+        {
+            foreach (var h in HandoverTables.Axes)
+            {
+                var r = DefaultsFor(h);
+                Axes.Add(new AxisConfig
+                {
+                    Index = h.Index,
+                    Name = h.Name,
+                    Group = string.IsNullOrEmpty(h.Station) ? h.Branch : h.Station,
+                    Unit = string.IsNullOrEmpty(r.Unit) ? "mm" : r.Unit,
+                    PulseEquivalent = 1000,
+                    MinMm = r.Min,
+                    MaxMm = r.Max,
+                    HomeMm = r.Home,
+                    MaxVel = r.Vel,
+                    Acc = r.Acc,
+                    Dec = r.Acc,
+                    IsVertical = r.Vertical,
+                    ZUpMm = r.ZUp,
+                    RailId = r.Rail ?? "",
+                    ClearanceMm = r.Clearance
+                });
+            }
+
+            foreach (var a in Axes)
+            {
+                _byIndex[a.Index] = a;
+                _byName[a.Name] = a;
+            }
+
+            // 几根反复用到的轴（按真名解析；解析不到保持 -1，调用方会跳过）
+            _axPressFZ = AxisIndex("前压头Z轴");
+            _axPressBZ = AxisIndex("后压头Z轴");
+            _axShuttleF = AxisIndex("前梭车X轴");
+            _axShuttleB = AxisIndex("后梭车X轴");
+            _axTrayArm = AxisIndex("搬运X轴");
+            BuildCorridor();
+        }
+
+        /// <summary>
+        /// 名称关键词命中规则，再按 Kind（伺服 / 步进）+ Power + 电机机座号兜底收紧速度 / 加速度。
+        /// 步进（雷赛 28 / 42 / 57 机座）绝不允许跑到伺服的速度档，避免仿真给出物理上不可能的节拍。
+        /// </summary>
+        private static AxisRule DefaultsFor(HandoverAxis h)
+        {
+            var r = AxisFallback;
+            foreach (var q in AxisRules)
+                if (q.Key.Length > 0 && h.Name.Contains(q.Key)) { r = q; break; }
+
+            double vCap = 1500, aCap = 8000;
+            if (h.Kind == "步进")
+            {
+                vCap = 300; aCap = 3000;
+                if (h.Motor.Contains("42CM")) { vCap = 200; aCap = 2000; }
+                if (h.Motor.Contains("57CM")) { vCap = 120; aCap = 1200; }
+            }
+            else if (h.Kind == "伺服")
+            {
+                if (h.Power.Contains("100W")) { vCap = 300; aCap = 3000; }
+                else if (h.Power.Contains("1000W")) { vCap = 1200; aCap = 6000; }
+            }
+            if (r.Vel > vCap) r.Vel = vCap;
+            if (r.Acc > aCap) r.Acc = aCap;
+            return r;
         }
 
         // ==================================================================
         //  IO 表
         // ==================================================================
 
-        /// <summary>建立具名 IO 表（与手册《面板IO / 测试系统IO》语义对齐）。</summary>
+        /// <summary>旧仿真表的 32 个输入点名（下标 = 老位号）。</summary>
+        private static readonly string[] LegacyInNames =
+        {
+            "急停按钮", "安全门关闭", "气压正常", "主电源正常", "上料盘到位", "下料盘到位", "空盘到位",
+            "小车A到位", "小车B到位", "料盘传送臂原点",
+            "真空反馈1", "真空反馈2", "真空反馈3", "真空反馈4",
+            "真空反馈5", "真空反馈6", "真空反馈7", "真空反馈8",
+            "测试座下压到位", "加热器就绪", "测试机 Ready", "测试机 Result OK",
+            "视觉相机就绪", "清洁盘在位", "上料臂原点", "下料臂原点",
+            "门锁反馈", "真空压力开关", "伺服使能反馈", "温度超限", "伺服总报警", "安全继电器 OK",
+        };
+
+        /// <summary>旧输入点的分组（兼容点沿用旧分组；真表命中时点在真表工站名下）。</summary>
+        private static readonly string[] LegacyInGroups =
+        {
+            "安全", "安全", "安全", "安全", "进出盘", "进出盘", "进出盘",
+            "测试区域", "测试区域", "传送臂",
+            "上料臂", "上料臂", "上料臂", "上料臂", "上料臂", "上料臂", "上料臂", "上料臂",
+            "测试区域", "温控", "测试系统", "测试系统", "视觉", "清洁盘", "上料臂", "下料臂",
+            "安全", "安全", "安全", "温控", "安全", "安全",
+        };
+
+        /// <summary>旧输入点 → 真表同义点名（空串 = 真表里没有，需要追加兼容点）。</summary>
+        private static readonly string[] LegacyInAlias =
+        {
+            "", "左门禁1", "进气正压表", "", "进料仓料盘有无感应", "出空盘仓料盘有无感应", "进空盘仓料盘有无感应",
+            "", "", "",
+            "左上料真空1", "左上料真空2", "左上料真空3", "左上料真空4",
+            "左上料真空5", "左上料真空6", "左上料真空7", "左上料真空8",
+            "", "", "", "", "", "", "", "",
+            "门禁气缸1+", "", "", "", "", "",
+        };
+
+        /// <summary>旧输入点是否低电平有效（急停 / 门禁类现场接常闭触点）。</summary>
+        private static readonly bool[] LegacyInActiveLow =
+        {
+            true, true, true, true, false, false, false,
+            false, false, false,
+            false, false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false, false,
+            true, false, false, false, false, true,
+        };
+
+        /// <summary>旧仿真表的 32 个输出点名（下标 = 老位号）。</summary>
+        private static readonly string[] LegacyOutNames =
+        {
+            "红色指示灯", "黄色指示灯", "绿色指示灯", "蜂鸣器",
+            "真空电磁阀1", "真空电磁阀2", "真空电磁阀3", "真空电磁阀4",
+            "真空电磁阀5", "真空电磁阀6", "真空电磁阀7", "真空电磁阀8",
+            "上料臂气缸", "下料臂气缸", "测试臂下压气缸", "加热使能",
+            "冷却风扇", "吹气", "料盘传送臂气缸", "小车夹紧", "真空破坏阀", "测试机启动",
+            "视觉触发", "清洁盘动作", "照明灯", "冷却水阀",
+            "备用输出1", "备用输出2", "备用输出3", "备用输出4", "备用输出5", "备用输出6",
+        };
+
+        /// <summary>旧输出点的分组。</summary>
+        private static readonly string[] LegacyOutGroups =
+        {
+            "信号灯", "信号灯", "信号灯", "信号灯",
+            "上料臂", "上料臂", "上料臂", "上料臂", "上料臂", "上料臂", "上料臂", "上料臂",
+            "上料臂", "下料臂", "测试区域", "温控", "温控", "上料臂", "传送臂", "测试区域",
+            "上料臂", "测试系统", "视觉", "清洁盘", "视觉", "温控",
+            "备用", "备用", "备用", "备用", "备用", "备用",
+        };
+
+        /// <summary>
+        /// 旧输出点 → 真表同义点名（下标必须与 LegacyOutNames 一一对应；
+        /// 空串 = 先按老名字本身去真表找，再找不到才追加兼容点）。
+        /// </summary>
+        private static readonly string[] LegacyOutAlias =
+        {
+            "红灯", "黄灯", "绿灯", "",                                    // 0~3  信号灯（真表 U20_Y0.0~0.3）
+            "左上料吸真空1", "左上料吸真空2", "左上料吸真空3", "左上料吸真空4",  // 4~7
+            "左上料吸真空5", "左上料吸真空6", "左上料吸真空7", "左上料吸真空8",  // 8~11
+            "", "", "", "", "", "",                                       // 12~17 气缸 / 加热 / 风扇 / 吹气
+            "", "", "", "", "", "",                                       // 18~23 传送臂 / 夹紧 / 破真空 / SOT / 视觉 / 清洁
+            "电箱照明", "",                                               // 24 照明灯 / 25 冷却水阀
+            "", "", "", "", "", "",                                       // 26~31 备用输出1~6
+        };
+
+        /// <summary>旧输出点联动的旧输入位号（-1 = 无反馈联动）。</summary>
+        private static readonly int[] LegacyOutFeedback =
+        {
+            -1, -1, -1, -1,                                   // 0~3  灯 / 蜂鸣
+            10, 11, 12, 13, 14, 15, 16, 17,                   // 4~11 真空电磁阀1~8 → 真空反馈1~8
+            -1, -1, 18, 19, -1, -1,                           // 12~17 气缸 / 下压到位 / 加热器就绪
+            -1, -1, -1, 20, 22, 23,                           // 18~23 …测试机Ready / 视觉相机就绪 / 清洁盘在位
+            -1, -1,                                           // 24~25
+            -1, -1, -1, -1, -1, -1,                           // 26~31 备用输出
+        };
+
+        /// <summary>建立具名 IO 表：真表 303 入 / 123 出 + 旧 32 点表的别名与兼容点。</summary>
         private void BuildIo()
         {
-            // ---- 输入 ----
-            In(0, "急停按钮", "安全", true);
-            In(1, "安全门关闭", "安全", true);
-            In(2, "气压正常", "安全", true);
-            In(3, "主电源正常", "安全", true);
-            In(4, "上料盘到位", "进出盘");
-            In(5, "下料盘到位", "进出盘");
-            In(6, "空盘到位", "进出盘");
-            In(7, "小车A到位", "测试区域");
-            In(8, "小车B到位", "测试区域");
-            In(9, "料盘传送臂原点", "传送臂");
-            for (int i = 0; i < 8; i++) In(10 + i, "真空反馈" + (i + 1), "上料臂");
-            In(18, "测试座下压到位", "测试区域");
-            In(19, "加热器就绪", "温控");
-            In(20, "测试机 Ready", "测试系统");
-            In(21, "测试机 Result OK", "测试系统");
-            In(22, "视觉相机就绪", "视觉");
-            In(23, "清洁盘在位", "清洁盘");
-            In(24, "上料臂原点", "上料臂");
-            In(25, "下料臂原点", "下料臂");
-            In(26, "门锁反馈", "安全");
-            In(27, "真空压力开关", "安全");
-            In(28, "伺服使能反馈", "安全");
-            In(29, "温度超限", "温控");
-            In(30, "伺服总报警", "安全");
-            In(31, "安全继电器 OK", "安全");
+            // ---- 输入：交接资料真表（全局位号 = 块序×32 + 块内位号）----
+            foreach (var h in HandoverTables.Inputs)
+            {
+                var p = new IoPoint
+                {
+                    Bit = GlobalInBit(h),
+                    Name = h.Name,
+                    Group = h.Station,
+                    IsOutput = false,
+                    ActiveLow = InputActiveLow(h.Name),
+                    Block = h.Block,
+                    Address = HandoverAddr.Address(h),
+                    Sensor = h.Sensor,
+                    FromHandover = true
+                };
+                Inputs.Add(p);
+                _byInName[h.Name] = p;
+            }
 
-            // ---- 输出 ----
-            Out(0, "红色指示灯", "信号灯");
-            Out(1, "黄色指示灯", "信号灯");
-            Out(2, "绿色指示灯", "信号灯");
-            Out(3, "蜂鸣器", "信号灯");
-            for (int i = 0; i < 8; i++) Out(4 + i, "真空电磁阀" + (i + 1), "上料臂", 10 + i, "真空反馈" + (i + 1));
-            Out(12, "上料臂气缸", "上料臂");
-            Out(13, "下料臂气缸", "下料臂");
-            Out(14, "测试臂下压气缸", "测试区域", 18, "测试座下压到位");
-            Out(15, "加热使能", "温控", 19, "加热器就绪");
-            Out(16, "冷却风扇", "温控");
-            Out(17, "吹气", "上料臂");
-            Out(18, "料盘传送臂气缸", "传送臂");
-            Out(19, "小车夹紧", "测试区域");
-            Out(20, "真空破坏阀", "上料臂");
-            Out(21, "测试机启动", "测试系统", 20, "测试机 Ready");
-            Out(22, "视觉触发", "视觉", 22, "视觉相机就绪");
-            Out(23, "清洁盘动作", "清洁盘", 23, "清洁盘在位");
-            Out(24, "照明灯", "视觉");
-            Out(25, "冷却水阀", "温控");
-            for (int i = 26; i < 32; i++) Out(i, "备用输出" + (i - 25), "备用");
+            // ---- 输出：交接资料真表（块序按 U20 起算，5 块正好落在 0~159）----
+            foreach (var h in HandoverTables.Outputs)
+            {
+                var p = new IoPoint
+                {
+                    Bit = GlobalOutBit(h),
+                    Name = h.Name,
+                    Group = h.Station,
+                    IsOutput = true,
+                    Block = h.Block,
+                    Address = HandoverAddr.Address(h),
+                    Sensor = h.Sensor,
+                    FromHandover = true
+                };
+                Outputs.Add(p);
+                _byOutName[h.Name] = p;
+            }
+
+            // ---- 旧 32 输入：真表有同义点的直接命中真表，没有的追加登记为兼容点 ----
+            for (int i = 0; i < LegacySpan; i++)
+            {
+                string name = LegacyInNames[i];
+                // 先按同义点名的真表点，其次按老名字本身在真表里找（急停按钮就是这样）
+                var real = FindInExact(LegacyInAlias[i]) ?? FindInExact(name);
+                if (real == null)
+                {
+                    var p = new IoPoint
+                    {
+                        Bit = CompatInBase + i,
+                        Name = name,
+                        Group = LegacyInGroups[i],
+                        IsOutput = false,
+                        ActiveLow = LegacyInActiveLow[i],
+                        Block = "兼容",
+                        Address = "IN" + i,
+                        Sensor = "兼容点（交接资料未列名，保留旧仿真语义）",
+                        LegacyBit = i
+                    };
+                    Inputs.Add(p);
+                    _byInName[name] = p;
+                    _legacyIn[i] = p.Bit;
+                }
+                else
+                {
+                    _byInName[name] = real;          // 老名字同样能查到这条真表点
+                    _legacyIn[i] = real.Bit;
+                }
+            }
+
+            // ---- 旧 32 输出：同上，并把「输出 → 反馈输入」的老联动关系搬到全局位号上 ----
+            for (int i = 0; i < LegacySpan; i++)
+            {
+                string name = LegacyOutNames[i];
+                IoPoint p;
+                // 同上：同义点名 → 老名字本身 → 都没有才建兼容点
+                var real = FindOutExact(LegacyOutAlias[i]) ?? FindOutExact(name);
+                if (real == null)
+                {
+                    p = new IoPoint
+                    {
+                        Bit = CompatOutBase + i,
+                        Name = name,
+                        Group = LegacyOutGroups[i],
+                        IsOutput = true,
+                        Block = "兼容",
+                        Address = "OUT" + i,
+                        Sensor = "兼容点（交接资料未列名，保留旧仿真语义）",
+                        LegacyBit = i
+                    };
+                    Outputs.Add(p);
+                    _byOutName[name] = p;
+                }
+                else
+                {
+                    p = real;
+                    _byOutName[name] = real;
+                    if (string.IsNullOrEmpty(real.Sensor)) real.Sensor = "旧仿真表：" + name;
+                }
+                _legacyOut[i] = p.Bit;
+
+                int fb = LegacyOutFeedback[i];
+                if (fb >= 0 && fb < LegacySpan)
+                {
+                    p.FeedbackInputBit = _legacyIn[fb];
+                    p.FeedbackInputName = LegacyInNames[fb];
+                }
+            }
+
+            // ---- 语义常量：SafetyCheck / 规则表 / 信号灯用的关键位号（都是全局位号）----
+            InEStop = _legacyIn[0];
+            InSafeDoor = _legacyIn[1];
+            InAirOk = _legacyIn[2];
+            InPowerOk = _legacyIn[3];
+            InShuttleA = _legacyIn[7];
+            InShuttleB = _legacyIn[8];
+            InPressDownOk = _legacyIn[18];
+            InTrayArmHome = _legacyIn[9];
+            InServoAlarm = _legacyIn[30];
+
+            OutLampRed = _legacyOut[0];
+            OutLampYellow = _legacyOut[1];
+            OutLampGreen = _legacyOut[2];
+            OutBuzzer = _legacyOut[3];
         }
 
-        /// <summary>加一个输入点。</summary>
-        private void In(int bit, string name, string group, bool activeLow = false)
-            => Inputs.Add(new IoPoint { Bit = bit, Name = name, Group = group, IsOutput = false, ActiveLow = activeLow });
+        /// <summary>资料块号（"U7"→7、"U23"→23）。</summary>
+        private static int BlockNo(string block)
+        {
+            int v = 0;
+            if (block != null)
+                foreach (var ch in block)
+                    if (ch >= '0' && ch <= '9') v = v * 10 + (ch - '0');
+            return v;
+        }
 
-        /// <summary>加一个输出点（可选联动输入）。</summary>
-        private void Out(int bit, string name, string group, int feedbackBit = -1, string feedbackName = "")
-            => Outputs.Add(new IoPoint
-            {
-                Bit = bit,
-                Name = name,
-                Group = group,
-                IsOutput = true,
-                FeedbackInputBit = feedbackBit,
-                FeedbackInputName = feedbackName
-            });
+        /// <summary>输入全局位号 = 块序（U0~U10）×32 + 块内位号 → 0~351。</summary>
+        private static int GlobalInBit(HandoverIo h) => BlockNo(h.Block) * 32 + h.Bit;
+
+        /// <summary>输出全局位号 = （块序 - 20）×32 + 块内位号 → 0~159（真表地址串仍保存在 Address 里）。</summary>
+        private static int GlobalOutBit(HandoverIo h)
+        {
+            int blk = BlockNo(h.Block);
+            return (blk >= 20 ? blk - 20 : blk) * 32 + h.Bit;
+        }
+
+        /// <summary>输入点是否低电平有效：急停类 / 门禁类（按钮除外）现场接常闭触点。</summary>
+        private static bool InputActiveLow(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return false;
+            if (name.Contains("急停")) return true;
+            if (name.Contains("按钮")) return false;
+            if (name.Contains("门禁")) return true;
+            return false;
+        }
+
+        /// <summary>按真表点名精确查输入点（找不到返回 null）。</summary>
+        private IoPoint FindInExact(string name)
+            => string.IsNullOrEmpty(name) ? null
+               : Inputs.FirstOrDefault(x => x.Name == name && x.FromHandover);
+
+        /// <summary>按真表点名精确查输出点（找不到返回 null）。</summary>
+        private IoPoint FindOutExact(string name)
+            => string.IsNullOrEmpty(name) ? null
+               : Outputs.FirstOrDefault(x => x.Name == name && x.FromHandover);
+
+        /// <summary>按点名查输入点：真名 → 旧名别名 → 「包含」模糊匹配。</summary>
+        public IoPoint FindInput(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+            IoPoint p;
+            if (_byInName.TryGetValue(name, out p)) return p;
+            return Inputs.FirstOrDefault(x => x.Name.Contains(name));
+        }
+
+        /// <summary>按点名查输出点：真名 → 旧名别名 → 「包含」模糊匹配。</summary>
+        public IoPoint FindOutput(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+            IoPoint p;
+            if (_byOutName.TryGetValue(name, out p)) return p;
+            return Outputs.FirstOrDefault(x => x.Name.Contains(name));
+        }
+
+        /// <summary>按点名取输入全局位号（找不到返回 -1）。</summary>
+        public int InBitOf(string name) { var p = FindInput(name); return p == null ? -1 : p.Bit; }
+
+        /// <summary>按点名取输出全局位号（找不到返回 -1）。</summary>
+        public int OutBitOf(string name) { var p = FindOutput(name); return p == null ? -1 : p.Bit; }
+
+        /// <summary>老位号（0~31）→ 输入全局位号；不在老表范围内的原样返回。</summary>
+        public int LegacyInBit(int legacyBit)
+            => legacyBit >= 0 && legacyBit < LegacySpan ? _legacyIn[legacyBit] : legacyBit;
+
+        /// <summary>老位号（0~31）→ 输出全局位号；不在老表范围内的原样返回。</summary>
+        public int LegacyOutBit(int legacyBit)
+            => legacyBit >= 0 && legacyBit < LegacySpan ? _legacyOut[legacyBit] : legacyBit;
 
         // ==================================================================
         //  安全互锁规则
@@ -318,17 +717,17 @@ namespace HandlerGuide.Motion
         {
             Rules.Add(new SafetyRule
             {
-                Id = "SR-01", Name = "急停按钮未按下", Detail = "急停输入 IN0 触发时禁止一切运动", Blocking = true,
+                Id = "SR-01", Name = "急停按钮未按下", Detail = "急停输入（真表 U0_X1.0）触发时禁止一切运动", Blocking = true,
                 Satisfied = () => !EStop && !ReadIn(InEStop)
             });
             Rules.Add(new SafetyRule
             {
-                Id = "SR-02", Name = "安全门已关闭", Detail = "安全门输入 IN1 闭合后才允许运动", Blocking = true,
+                Id = "SR-02", Name = "安全门已关闭", Detail = "门禁到位输入（真表 U0_X2.0 左门禁1）闭合后才允许运动", Blocking = true,
                 Satisfied = () => ReadIn(InSafeDoor)
             });
             Rules.Add(new SafetyRule
             {
-                Id = "SR-03", Name = "气压正常", Detail = "气压输入 IN2 正常后才允许运动", Blocking = true,
+                Id = "SR-03", Name = "气压正常", Detail = "气压输入（真表 U1_X4.4 进气正压表）正常后才允许运动", Blocking = true,
                 Satisfied = () => ReadIn(InAirOk)
             });
             Rules.Add(new SafetyRule
@@ -339,45 +738,48 @@ namespace HandlerGuide.Motion
             Rules.Add(new SafetyRule
             {
                 Id = "SR-05", Name = "上料臂 Z 轴全部抬起",
-                Detail = "上料取放臂 Z1~Z8 均在抬起位（≥" + ZUpOf("上料臂").ToString("0") + "mm）才允许水平运动",
+                Detail = "上料吸嘴 1~8 Z 均在抬起位（≥" + ZUpOf("上料臂").ToString("0") + "mm）才允许水平运动",
                 Blocking = true, Satisfied = () => AllVerticalUp("上料臂")
             });
             Rules.Add(new SafetyRule
             {
                 Id = "SR-06", Name = "下料臂 Z 轴全部抬起",
-                Detail = "下料取放臂 Z1~Z8 均在抬起位（≥" + ZUpOf("下料臂").ToString("0") + "mm）才允许水平运动",
+                Detail = "下料吸嘴 1~8 Z 均在抬起位（≥" + ZUpOf("下料臂").ToString("0") + "mm）才允许水平运动",
                 Blocking = true, Satisfied = () => AllVerticalUp("下料臂")
             });
             Rules.Add(new SafetyRule
             {
-                Id = "SR-07", Name = "测试位下压轴抬起",
-                Detail = "测试位下压 Z1/Z2 抬起后才允许测试位移移动", Blocking = true,
-                Satisfied = () => AllVerticalUp("测试区域")
+                Id = "SR-07", Name = "压头下压轴抬起",
+                Detail = "前 / 后压头 Z 抬起后才允许压头 Y 走位", Blocking = true,
+                Satisfied = () => AllVerticalUp("压头测试工位")
             });
             Rules.Add(new SafetyRule
             {
                 Id = "SR-08", Name = "双臂走廊互斥",
-                Detail = "上/下料取放臂 X 轴共享走廊，间距不得小于 " + RailClearance("ARM_X").ToString("0") + "mm",
+                Detail = "上料X轴 / 下料X轴 共享走廊，间距不得小于 " + RailClearance("ARM_X").ToString("0") + "mm",
                 Blocking = true,
                 Satisfied = () => RailClear("ARM_X")
             });
             Rules.Add(new SafetyRule
             {
                 Id = "SR-09", Name = "小车导轨互斥",
-                Detail = "运料小车 A/B 共享导轨，间距不得小于 " + RailClearance("SHUTTLE").ToString("0") + "mm",
+                Detail = "前 / 后梭车 X 共享导轨，间距不得小于 " + RailClearance("SHUTTLE").ToString("0") + "mm",
                 Blocking = true,
                 Satisfied = () => RailClear("SHUTTLE")
             });
             Rules.Add(new SafetyRule
             {
                 Id = "SR-11", Name = "X 走廊三臂分时互斥",
-                Detail = "上料取放臂X / 下料取放臂X / 料盘搬运臂 共享 X 走廊，同一时刻只允许一根离开停放位" + "（回停放位永远放行，否则会死锁）",
+                Detail = "上料X轴 / 下料X轴 / 搬运X轴 共享 X 走廊，同一时刻只允许一根离开停放位" + "（回停放位永远放行，否则会死锁）",
                 Blocking = true,
                 Satisfied = () =>
                 {
                     int off = 0;
                     foreach (var idx in CorridorX)
-                        if (Math.Abs(Position(idx) - Axes[idx].HomeMm) > Axes[idx].ClearanceMm) off++;
+                    {
+                        var o = Cfg(idx);
+                        if (Math.Abs(Position(idx) - o.HomeMm) > o.ClearanceMm) off++;
+                    }
                     return off <= 1;
                 }
             });
@@ -403,12 +805,13 @@ namespace HandlerGuide.Motion
             LastProbeInfo = desc;
             if (found)
             {
-                var real = new DmceCard(Axes.Count);
+                var real = new DmceCard(Axes.Count, CardInputBits, CardOutputBits);
                 if (real.Open())
                 {
                     _card = real;
                     ApplyAllConfig();
-                    mm.Log("信息", "已连接雷赛运动控制卡：" + real.CardName + " · " + desc + "（" + Axes.Count + " 轴）");
+                    mm.Log("信息", "已连接雷赛运动控制卡：" + real.CardName + " · " + desc + "（"
+                                   + Axes.Count + " 轴 / " + CardInputBits + " 入 / " + CardOutputBits + " 出）");
                     return true;
                 }
             }
@@ -423,12 +826,34 @@ namespace HandlerGuide.Motion
         public void UseSim()
         {
             if (_card is SimMotionCard s && s.IsConnected) return;
-            var sim = new SimMotionCard(Axes.Count);
+            var sim = new SimMotionCard(Axes.Count, CardInputBits, CardOutputBits);
             sim.Open();
             _card = sim;
             ApplyAllConfig();
             // 仿真卡上电位置 = 各自回零位置（Z 轴处于抬起位，天然安全）
-            for (int i = 0; i < Axes.Count; i++) sim.SetPosition(i, Axes[i].HomeMm);
+            // 注意：这里必须用轴号（真机轴号不连续，列表下标 ≠ 轴号）
+            foreach (var a in Axes) sim.SetPosition(a.Index, a.HomeMm);
+            SeedSimInputs(sim);
+        }
+
+        /// <summary>
+        /// 仿真卡上电后的 IO 默认值：安全链路按「可以动」初始化，其余全 0。
+        /// （老版本把这些硬编码在 SimMotionCard 里，现在拓扑知识只留在 MotionManager。）
+        /// </summary>
+        private void SeedSimInputs(SimMotionCard sim)
+        {
+            if (sim == null) return;
+            sim.SetInput(InEStop, false);
+            sim.SetInput(InSafeDoor, true);
+            sim.SetInput(InAirOk, true);
+            sim.SetInput(InPowerOk, true);
+            // 真表里的门禁 / 离子风类安全输入：仿真下默认「门已关、无异常」
+            foreach (var p in Inputs)
+            {
+                if (!p.FromHandover) continue;
+                if (p.Name.Contains("门禁") && !p.Name.Contains("按钮")) sim.SetInput(p.Bit, true);
+                else if (p.Name.Contains("离子风")) sim.SetInput(p.Bit, false);
+            }
         }
 
         /// <summary>断开控制卡。</summary>
@@ -449,22 +874,49 @@ namespace HandlerGuide.Motion
         //  位置 / 状态读取
         // ==================================================================
 
-        /// <summary>读当前位置。</summary>
-        public double Position(int axis) => _card?.GetPosition(axis) ?? 0;
+        /// <summary>读当前位置（轴号不存在返回 0，避免界面按老轴号取到幻影轴）。</summary>
+        public double Position(int axis)
+            => axis >= 0 && HasAxis(axis) && _card != null ? _card.GetPosition(axis) : 0;
 
-        /// <summary>读轴状态。</summary>
-        public AxisState State(int axis) => _card?.GetState(axis) ?? new AxisState();
+        /// <summary>读轴状态（轴号不存在返回空状态对象）。</summary>
+        public AxisState State(int axis)
+            => axis >= 0 && HasAxis(axis) && _card != null ? _card.GetState(axis) : new AxisState();
 
         /// <summary>读状态位。</summary>
         public AxisStatusBits Bits(int axis) => State(axis).Bits();
 
-        /// <summary>按名字取轴号（找不到返回 -1）。</summary>
+        /// <summary>按名字取轴号（真名 → 旧名别名 → 包含匹配；找不到返回 -1）。</summary>
         public int AxisIndex(string name)
         {
-            for (int i = 0; i < Axes.Count; i++)
-                if (Axes[i].Name == name) return Axes[i].Index;
-            return -1;
+            var a = FindByName(name);
+            return a == null ? -1 : a.Index;
         }
+
+        /// <summary>
+        /// 按轴名取轴配置：先查真表名，再查「旧名 → 真名」别名表，最后才做包含匹配。
+        /// 界面（DiagPages / maint_base 工作基点）、自检（App.xaml.cs）、Ops 的按名运动
+        /// 全都还写着旧名（测试位下压Z1 / 上料取放臂X轴 / 料盘传送臂 …），别名表就是为了让它们不改字面量也能命中真机轴。
+        /// </summary>
+        public AxisConfig FindByName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+            AxisConfig a;
+            if (_byName.TryGetValue(name, out a)) return a;
+            string real;
+            if (AxisAlias.TryGetValue(name, out real) && _byName.TryGetValue(real, out a)) return a;
+            return Axes.FirstOrDefault(x => x.Name.Contains(name));
+        }
+
+        /// <summary>按轴号取轴配置（真机轴号不连续，绝不能用 Axes 列表下标当代轴号）。</summary>
+        public AxisConfig Cfg(int axis)
+        {
+            AxisConfig a;
+            if (_byIndex.TryGetValue(axis, out a)) return a;
+            return new AxisConfig { Index = axis, Name = "轴" + axis };
+        }
+
+        /// <summary>轴号是否存在于本表。</summary>
+        public bool HasAxis(int axis) => axis >= 0 && _byIndex.ContainsKey(axis);
 
         /// <summary>取某区域的轴。</summary>
         public List<AxisConfig> GroupAxes(string group)
@@ -505,13 +957,27 @@ namespace HandlerGuide.Motion
         }
 
         /// <summary>
-        /// 需求 38：共享同一条 X 走廊的三根轴 —— 上料取放臂X(4) / 下料取放臂X(16) / 料盘搬运臂(30)。
+        /// 需求 38：共享同一条 X 走廊的三根轴 —— 上料X轴(26) / 下料X轴(10) / 搬运X轴(27)
+        /// （旧名：上料取放臂X / 下料取放臂X / 料盘传送臂，别名表仍在）。
         /// 用户：「搬运料盘手臂需要和上料下料手臂不能冲突了，怕撞击」
         /// ⇒ 三者**分时轮流**：同一时刻只允许一根轴离开停放位（HomeMm）。
-        /// 注意 30 号轴不挂 RailId —— 它与 4 号的停放位都是 0mm，若挂同一条导轨会被
+        /// 注意 搬运X轴 不挂 RailId —— 它与 上料X轴 的停放位都是 0mm，若挂同一条导轨会被
         /// RailClear 判成「间距 0 < 40」，规则表一开机就是红的；分时互斥才是正确的语义。
+        /// 轴号在 BuildAxes 末尾按真名解析（真机轴号不连续，不能再写死下标）。
         /// </summary>
-        private static readonly int[] CorridorX = { 4, 16, 30 };
+        private int[] CorridorX = new int[0];
+
+        /// <summary>填 X 走廊的三根轴号（BuildAxes 末尾调用）。</summary>
+        private void BuildCorridor()
+        {
+            var list = new List<int>();
+            foreach (var n in new[] { "上料X轴", "下料X轴", "搬运X轴" })
+            {
+                int ix = AxisIndex(n);
+                if (ix >= 0 && !list.Contains(ix)) list.Add(ix);
+            }
+            CorridorX = list.ToArray();
+        }
 
         /// <summary>
         /// 需求 38 判据：X 走廊上除 movingAxis 之外，是否已有别的轴离开停放位。
@@ -522,7 +988,7 @@ namespace HandlerGuide.Motion
             foreach (var idx in CorridorX)
             {
                 if (idx == movingAxis) continue;
-                var o = Axes[idx];
+                var o = Cfg(idx);
                 double op = Position(idx);
                 if (Math.Abs(op - o.HomeMm) > clearance)
                     return "互锁：X 走廊上 " + o.Name + " 已离开停放位（" + F(op) + "，停放 " + F(o.HomeMm)
@@ -560,8 +1026,8 @@ namespace HandlerGuide.Motion
         public MotionResult SafetyCheck(int axis, double target)
         {
             if (!Connected) return MotionResult.Reject("控制卡未连接");
-            if (axis < 0 || axis >= Axes.Count) return MotionResult.Reject("轴号 " + axis + " 越界");
-            var c = Axes[axis];
+            if (!HasAxis(axis)) return MotionResult.Reject("轴号 " + axis + " 不在轴表内（本表 0~46，缺 17 / 38）");
+            var c = _byIndex[axis];
 
             if (EStop) return MotionResult.Reject("急停已按下：所有运动被禁止");
             if (ReadIn(InEStop)) return MotionResult.Reject("急停按钮处于按下状态：所有运动被禁止");
@@ -669,7 +1135,7 @@ namespace HandlerGuide.Motion
         public void Stop(int axis)
         {
             _card?.Stop(axis, MotionStopMode.Deceleration);
-            MachineModel.Instance.Log("信息", Axes[axis].Name + " 已停止");
+            MachineModel.Instance.Log("信息", Cfg(axis).Name + " 已停止");
         }
 
         /// <summary>停止全部轴。</summary>
@@ -684,7 +1150,7 @@ namespace HandlerGuide.Motion
         /// <summary>单轴回零。</summary>
         public MotionResult Home(int axis)
         {
-            var c = Axes[axis];
+            var c = Cfg(axis);
             var chk = SafetyCheck(axis, c.HomeMm);
             if (!chk.Accepted) { NoteReject(chk.Reason); return chk; }
             var r = _card.Home(axis);
@@ -709,7 +1175,7 @@ namespace HandlerGuide.Motion
         public void SetServo(int axis, bool on)
         {
             _card?.SetServo(axis, on);
-            MachineModel.Instance.Log("信息", Axes[axis].Name + (on ? " 伺服使能" : " 伺服断使能"));
+            MachineModel.Instance.Log("信息", Cfg(axis).Name + (on ? " 伺服使能" : " 伺服断使能"));
         }
 
         /// <summary>全部伺服使能 / 断使能。</summary>
@@ -804,29 +1270,37 @@ namespace HandlerGuide.Motion
         /// </summary>
         private void BuildDemo()
         {
-            int LX = 4, LZ = 8;       // 上料臂 X / Z1
-            int UX = 16, UZ = 20;     // 下料臂 X / Z1
-            int SA = 28;              // 小车 A
+            // 全部按真机轴名解析（旧写法是硬编码轴号 4 / 8 / 16 / 20 / 28）
+            int LX = AxisIndex("上料X轴"), LZ = AxisIndex("上料吸嘴1Z轴");
+            int UX = AxisIndex("下料X轴"), UZ = AxisIndex("下料吸嘴1Z轴");
+            int SA = AxisIndex("前梭车X轴");
+            // 上料臂 1 号吸嘴的吸真空（真表 U21_Y2.0）
+            int VAC = OutBitOf("真空电磁阀1");
+            // 解析失败就整条节拍不建立（注意：构造函数链上不能碰 MachineModel.Instance，
+            // 否则 MachineModel.InitMotors → MotionManager 构造 → 这里再取 MachineModel 会自递归）。
+            if (LX < 0 || LZ < 0 || UX < 0 || UZ < 0 || SA < 0) { DemoSkipped = true; return; }
 
             _demo.Add(new DemoStep { Label = "上料臂 Z1 抬起", Act = () => MoveAbs(LZ, 30) });
             _demo.Add(new DemoStep { Label = "上料臂 X → 取料位 200mm", Act = () => MoveAbs(LX, 200) });
             _demo.Add(new DemoStep { Label = "上料臂 Z1 下降取料", Act = () => MoveAbs(LZ, 5), Dwell = 0.3 });
-            _demo.Add(new DemoStep { Label = "打开吸嘴真空（OUT4）", Act = () => WriteOut(4, true), Dwell = 0.4 });
+            _demo.Add(new DemoStep { Label = "打开吸嘴真空（左上料吸真空1）", Act = () => WriteOut(VAC, true), Dwell = 0.4 });
             _demo.Add(new DemoStep { Label = "上料臂 Z1 抬起", Act = () => MoveAbs(LZ, 30) });
             _demo.Add(new DemoStep { Label = "小车 A → 接料位 300mm", Act = () => MoveAbs(SA, 300) });
             _demo.Add(new DemoStep { Label = "上料臂 X → 放料位 620mm", Act = () => MoveAbs(LX, 620) });
             _demo.Add(new DemoStep { Label = "上料臂 Z1 下降放料", Act = () => MoveAbs(LZ, 5), Dwell = 0.3 });
-            _demo.Add(new DemoStep { Label = "关闭吸嘴真空", Act = () => WriteOut(4, false), Dwell = 0.3 });
+            _demo.Add(new DemoStep { Label = "关闭吸嘴真空", Act = () => WriteOut(VAC, false), Dwell = 0.3 });
             _demo.Add(new DemoStep { Label = "上料臂 Z1 抬起", Act = () => MoveAbs(LZ, 30) });
             _demo.Add(new DemoStep { Label = "上料臂 X → 停放位 0mm", Act = () => MoveAbs(LX, 0) });
             _demo.Add(new DemoStep { Label = "小车 A → 测试位 900mm", Act = () => MoveAbs(SA, 900) });
             _demo.Add(new DemoStep { Label = "下料臂 X → 取料位 620mm", Act = () => MoveAbs(UX, 620) });
             _demo.Add(new DemoStep { Label = "下料臂 Z1 下降取料", Act = () => MoveAbs(UZ, 5), Dwell = 0.3 });
-            _demo.Add(new DemoStep { Label = "下料臂真空开（OUT5）", Act = () => WriteOut(5, true), Dwell = 0.4 });
+            _demo.Add(new DemoStep { Label = "下料臂真空开（右下料吸真空1）",
+                                     Act = () => WriteOut(OutBitOf("右下料吸真空1"), true), Dwell = 0.4 });
             _demo.Add(new DemoStep { Label = "下料臂 Z1 抬起", Act = () => MoveAbs(UZ, 30) });
             _demo.Add(new DemoStep { Label = "下料臂 X → 出料位 880mm", Act = () => MoveAbs(UX, 880) });
             _demo.Add(new DemoStep { Label = "下料臂 Z1 下降放料", Act = () => MoveAbs(UZ, 5), Dwell = 0.3 });
-            _demo.Add(new DemoStep { Label = "下料臂真空关", Act = () => WriteOut(5, false), Dwell = 0.3 });
+            _demo.Add(new DemoStep { Label = "下料臂真空关",
+                                     Act = () => WriteOut(OutBitOf("右下料吸真空1"), false), Dwell = 0.3 });
             _demo.Add(new DemoStep { Label = "下料臂 Z1 抬起", Act = () => MoveAbs(UZ, 30) });
             _demo.Add(new DemoStep { Label = "下料臂 X → 停放位 900mm", Act = () => MoveAbs(UX, 900) });
             _demo.Add(new DemoStep { Label = "小车 A → 回位 0mm", Act = () => MoveAbs(SA, 0) });
@@ -937,6 +1411,11 @@ namespace HandlerGuide.Motion
         public void Tick(double dt)
         {
             if (_card == null) return;
+            if (DemoSkipped)
+            {
+                DemoSkipped = false;
+                MachineModel.Instance.Log("警告", "演示节拍未能解析到全部所需轴名，已跳过建立（检查轴表）");
+            }
 
             // 1) 仿真卡推进物理积分
             _card.Step(dt);
@@ -946,11 +1425,12 @@ namespace HandlerGuide.Motion
 
             // 3) 回写 MachineModel.Motors，供既有《诊断 / 电机状态》等页面复用
             var mm = MachineModel.Instance;
+            // Motors 由 InitMotors 按轴表顺序建立（顺序 = 轴号顺序），所以逐行对应 Axes
             int n = Math.Min(mm.Motors.Count, Axes.Count);
             for (int i = 0; i < n; i++)
             {
                 var mo = mm.Motors[i];
-                var s = State(i);
+                var s = State(Axes[i].Index);
                 mo.Position = Math.Round(s.PositionMm, 3);
                 mo.Torque = Math.Round(s.Torque / 20.0, 2);
                 mo.Busy = s.Busy;
@@ -973,15 +1453,26 @@ namespace HandlerGuide.Motion
             StepDemo(dt);
         }
 
-        /// <summary>把轴状态映射到相关输入点。</summary>
+        /// <summary>
+        /// 把轴状态映射到相关输入点（真表里没有「小车到位 / 下压到位」这类硬点，
+        /// 全部落在兼容点上，界面与自检仍按语义读）。
+        /// </summary>
         private void SyncDerivedInputs()
         {
             if (_card == null) return;
-            _card.SetInput(InShuttleA, Math.Abs(Position(28) - Axes[28].HomeMm) < 3);
-            _card.SetInput(InShuttleB, Math.Abs(Position(29) - Axes[29].HomeMm) < 3);
-            _card.SetInput(18, Position(2) < 1 && Position(3) < 1);   // 测试座下压到位
+            SetInputAt(InShuttleA, _axShuttleF, 3);
+            SetInputAt(InShuttleB, _axShuttleB, 3);
+            SetInputAt(InTrayArmHome, _axTrayArm, 3);
+            if (_card != null && InPressDownOk >= 0 && HasAxis(_axPressFZ) && HasAxis(_axPressBZ))
+                _card.SetInput(InPressDownOk, Position(_axPressFZ) < 1 && Position(_axPressBZ) < 1);
             _card.SetInput(InServoAlarm, AnyAlarm());
-            _card.SetInput(9, Math.Abs(Position(30) - Axes[30].HomeMm) < 3);
+        }
+
+        /// <summary>「轴在停放位附近」→ 兼容输入点（轴号无效时不动这一路）。</summary>
+        private void SetInputAt(int bit, int axis, double tol)
+        {
+            if (_card == null || bit < 0 || !HasAxis(axis)) return;
+            _card.SetInput(bit, Math.Abs(Position(axis) - Cfg(axis).HomeMm) < tol);
         }
 
         /// <summary>数字格式化（界面与日志统一）。</summary>

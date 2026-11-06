@@ -11,6 +11,7 @@
 //        由 MotionManager 决定是否降级到仿真卡（保证界面永不崩）。
 // ============================================================================
 using System;
+using System.Collections.Generic;
 
 namespace HandlerGuide.Motion
 {
@@ -33,29 +34,58 @@ namespace HandlerGuide.Motion
     /// <summary>雷赛 LTDMC.dll（DMC-E 总线卡 / DMC 脉冲卡）后端。</summary>
     public sealed class DmceCard : IMotionCard
     {
-        private const int IoBits = 64;
+        // 轴数组按「轴号」寻址，而真机轴号不连续（分支4 缺 17、分支2 缺 38，最大 46），
+        // 所以配置时按需要扩容，不能假设数组长度 == 轴数。
+        private AxisConfig[] _cfg;
+        private AxisState[] _st;
+        private bool[] _outCache;
+        private bool[] _inCache;
 
-        private readonly AxisConfig[] _cfg;
-        private readonly AxisState[] _st;
-        private readonly bool[] _outCache = new bool[IoBits];
-        private readonly bool[] _inCache = new bool[IoBits];
+        /// <summary>本卡实际配置过的轴号（升序）：StopAll / Snapshot 只碰这些轴。</summary>
+        private readonly List<int> _axisIdx = new List<int>();
+
         private bool _open;
         private bool _isBus;
         private ushort _cardId;
         private string _vendor = "";
         private string _lastError = "";
 
-        /// <summary>构造：按指定轴数准备（脉冲卡上限 32，总线卡上限依伺服节点）。</summary>
-        public DmceCard(int axisCount = 32)
+        /// <summary>
+        /// 构造：按指定轴数 + IO 位数准备（脉冲卡上限 32，总线卡上限依伺服节点）。
+        /// inputCount / outputCount 由 MotionManager 按交接资料地址空间给出
+        /// （真表 352 入 / 160 出，再加 32 位兼容段）。
+        /// </summary>
+        public DmceCard(int axisCount = 32, int inputCount = 352, int outputCount = 160)
         {
             if (axisCount < 1) axisCount = 1;
+            if (inputCount < 1) inputCount = 1;
+            if (outputCount < 1) outputCount = 1;
             _cfg = new AxisConfig[axisCount];
             _st = new AxisState[axisCount];
-            for (int i = 0; i < axisCount; i++)
+            _inCache = new bool[inputCount];
+            _outCache = new bool[outputCount];
+            FillSlots(0, axisCount - 1);
+        }
+
+        /// <summary>把 [from, to] 区间的槽位补成非空对象。</summary>
+        private void FillSlots(int from, int to)
+        {
+            for (int i = from; i <= to; i++)
             {
-                _cfg[i] = new AxisConfig { Index = i, Name = "Axis" + i };
-                _st[i] = new AxisState();
+                if (_cfg[i] == null) _cfg[i] = new AxisConfig { Index = i, Name = "Axis" + i };
+                if (_st[i] == null) _st[i] = new AxisState();
             }
+        }
+
+        /// <summary>按轴号扩容（真机轴号可以大于轴数）。</summary>
+        private void EnsureAxis(int axis)
+        {
+            if (axis < 0 || axis < _cfg.Length) return;
+            int old = _cfg.Length;
+            int n = axis + 1;
+            Array.Resize(ref _cfg, n);
+            Array.Resize(ref _st, n);
+            FillSlots(old, n - 1);
         }
 
         /// <inheritdoc />
@@ -73,10 +103,10 @@ namespace HandlerGuide.Motion
         public int AxisCount => _cfg.Length;
 
         /// <inheritdoc />
-        public int InputCount => 32;
+        public int InputCount => _inCache.Length;
 
         /// <inheritdoc />
-        public int OutputCount => 32;
+        public int OutputCount => _outCache.Length;
 
         /// <inheritdoc />
         public string Info => _open
@@ -109,8 +139,10 @@ namespace HandlerGuide.Motion
         /// <inheritdoc />
         public void Configure(AxisConfig cfg)
         {
-            if (cfg == null || cfg.Index < 0 || cfg.Index >= _cfg.Length) return;
+            if (cfg == null || cfg.Index < 0) return;
+            EnsureAxis(cfg.Index);
             _cfg[cfg.Index] = cfg;
+            if (!_axisIdx.Contains(cfg.Index)) { _axisIdx.Add(cfg.Index); _axisIdx.Sort(); }
             Guard(() =>
             {
                 if (_isBus)
@@ -223,7 +255,8 @@ namespace HandlerGuide.Motion
         /// <inheritdoc />
         public void StopAll(MotionStopMode mode)
         {
-            for (int i = 0; i < _cfg.Length; i++) Stop(i, mode);
+            // 只对真表里配置过的轴下停止指令，避免向不存在的轴号（17 / 38）发命令
+            foreach (var i in _axisIdx) Stop(i, mode);
         }
 
         /// <inheritdoc />
@@ -283,14 +316,18 @@ namespace HandlerGuide.Motion
         /// <inheritdoc />
         public AxisState[] Snapshot()
         {
-            for (int i = 0; i < _cfg.Length; i++) GetState(i);
-            return _st;
+            var arr = new AxisState[_axisIdx.Count];
+            for (int k = 0; k < _axisIdx.Count; k++)
+            {
+                arr[k] = GetState(_axisIdx[k]);
+            }
+            return arr;
         }
 
         /// <inheritdoc />
         public void WriteOut(int bit, bool on)
         {
-            if (bit < 0 || bit >= IoBits) return;
+            if (bit < 0 || bit >= _outCache.Length) return;
             _outCache[bit] = on;
             Guard(() => DmceApi.dmc_write_outbit(_cardId, (ushort)bit, (ushort)(on ? 1 : 0)));
         }
@@ -298,7 +335,7 @@ namespace HandlerGuide.Motion
         /// <inheritdoc />
         public bool ReadIn(int bit)
         {
-            if (bit < 0 || bit >= IoBits) return false;
+            if (bit < 0 || bit >= _inCache.Length) return false;
             ushort v = 0;
             // dmc_read_inbit 返回 short（0/1），但缓存里存的是 bool。统一映射。
             short raw = 0;
@@ -311,7 +348,7 @@ namespace HandlerGuide.Motion
         /// <inheritdoc />
         public bool ReadOut(int bit)
         {
-            if (bit < 0 || bit >= IoBits) return false;
+            if (bit < 0 || bit >= _outCache.Length) return false;
             if (_outCache[bit]) return true;
             short raw = 0;
             Guard(() => { raw = DmceApi.dmc_read_outbit(_cardId, (ushort)bit); });
@@ -321,23 +358,23 @@ namespace HandlerGuide.Motion
         /// <inheritdoc />
         public void SetInput(int bit, bool on)
         {
-            // 真卡的输入来自硬件，软件不可写；此处刻意留空。
-            if (bit >= 0 && bit < IoBits) _inCache[bit] = on;
+            // 真卡的输入来自硬件，软件不可写；这里只更新缓存（仿真 / 自检用）。
+            if (bit >= 0 && bit < _inCache.Length) _inCache[bit] = on;
         }
 
         /// <inheritdoc />
         public bool[] SnapshotInputs()
         {
-            var arr = new bool[IoBits];
-            for (int i = 0; i < 32; i++) arr[i] = ReadIn(i);
+            var arr = new bool[_inCache.Length];
+            for (int i = 0; i < arr.Length; i++) arr[i] = _inCache[i];
             return arr;
         }
 
         /// <inheritdoc />
         public bool[] SnapshotOutputs()
         {
-            var arr = new bool[IoBits];
-            for (int i = 0; i < 32; i++) arr[i] = ReadOut(i);
+            var arr = new bool[_outCache.Length];
+            for (int i = 0; i < arr.Length; i++) arr[i] = _outCache[i];
             return arr;
         }
 
@@ -362,17 +399,15 @@ namespace HandlerGuide.Motion
 
         private AxisConfig Cfg(int axis)
         {
-            if (axis < 0 || axis >= _cfg.Length) return new AxisConfig { Index = axis, Name = "Axis" + axis };
+            if (axis < 0) return new AxisConfig { Index = axis, Name = "Axis" + axis };
+            EnsureAxis(axis);
             return _cfg[axis];
         }
 
         private AxisState St(int axis)
         {
-            if (axis < 0 || axis >= _st.Length)
-            {
-                var s = new AxisState();
-                return s;
-            }
+            if (axis < 0) return new AxisState();
+            EnsureAxis(axis);
             return _st[axis];
         }
 

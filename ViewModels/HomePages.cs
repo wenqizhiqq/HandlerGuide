@@ -378,7 +378,7 @@ namespace HandlerGuide.ViewModels
                 ("测试",     () => Ops.ManualTestTrigger(), fen(() => Ops.TestArmCalibrating), mm => Ops.TestArmCalibrating, false, null, null,
                     "校准模式下触发测试", "测试臂「自动校准模式」下激活，手动触发测试信号"),
 
-                ("照明",     () => Mm.ToggleOut(24),      fen(null), mm => Mm.ReadOut(24), false, null, null,
+                ("照明",     () => Mm.ToggleOut(Mm.OutBitOf("照明灯")),  fen(null), mm => Mm.ReadOut(Mm.OutBitOf("照明灯")), false, null, null,
                     "开/关机内照明灯", "按下照明灯亮起，再次按下关闭；照明控制打开时指示灯亮"),
                 ("拆卸",     () => Ops.DisassembleArm(),  fen(() => !Ops.IsRunning), mm => false, false, null, null,
                     "测试臂抬起复位", "测试臂抬起：armA 移至小车上方，armB 移至测试区中间"),

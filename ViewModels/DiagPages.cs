@@ -221,10 +221,19 @@ namespace HandlerGuide.ViewModels
             xy.Add(E.T("目标值", 11.5, E.P, false, TextWrapping.NoWrap), 1, 0);
             for (int c = 0; c < 4; c++) xy.Add(E.Num(p + "_tgt" + c, 0, 68), 1, c + 1);
             xy.Add(E.T("当前值", 11.5, E.P, false, TextWrapping.NoWrap), 2, 0);
+            // 旧写法是写死行号 Motors[4+k]（那时列表就是那 31 根仿真轴，4~7 正好是上料臂 X/Y/PX/PY）。
+            // 现在电机表按交接资料的 45 根轴按轴号排列，所以改成按真名找到各自的行号，
+            // 顺带把「下料臂页显示上料臂数值」这个老问题一起修掉。
+            string[] armAxes = loader
+                ? new[] { "上料X轴", "上料Y轴", "上料变距X", "上料变距Y" }
+                : new[] { "下料X轴", "下料Y轴", "下料变距X轴", "下料变距Y轴" };
+            var armRows = new int[armAxes.Length];
+            for (int r = 0; r < armAxes.Length; r++) armRows[r] = Ops.MotorRow(armAxes[r]);
             for (int c = 0; c < 4; c++)
             {
                 int k = c;
-                xy.Add(E.Live(mm => mm.Motors[4 + k].Position, "0.000", 68, E.BandGrey, E.P, 11.5), 2, c + 1);
+                xy.Add(E.Live(mm => armRows[k] >= 0 && armRows[k] < mm.Motors.Count
+                                ? mm.Motors[armRows[k]].Position : 0.0, "0.000", 68, E.BandGrey, E.P, 11.5), 2, c + 1);
             }
             xy.Add(E.Btn("Go", () => Ops.ArmGo(loader,
                 E.M.GetChoice(p + "_head", 2),

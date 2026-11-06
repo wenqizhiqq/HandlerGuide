@@ -5,7 +5,7 @@
 //  Motion/SimMotionCard.cs — 内置运动控制卡仿真器
 //  项目：HandlerGuide（EXCEED9000 高速分选机控制软件复刻）
 //  职责：在没有雷赛硬件（LTDMC.dll / DMC 卡）的机器上，完整模拟
-//        「31 轴梯形速度曲线运动 + 软限位钳制 + 伺服/回零/报警 + 64 位 IO」。
+//        「45 轴梯形速度曲线运动 + 软限位钳制 + 伺服/回零/报警 + 384 入 / 192 出 IO」。
 //        物理积分每 tick 推进一次，位置用工程单位（mm）表示。
 //  安全：本类只负责「单轴物理 + 软限位」，多轴互锁/防撞由 MotionManager 统一裁决，
 //        避免把拓扑知识散落到驱动层。
@@ -34,35 +34,33 @@ namespace HandlerGuide.Motion
     /// <summary>内置仿真运动卡：无硬件依赖，行为与雷赛 DMC 卡保持一致的外部语义。</summary>
     public sealed class SimMotionCard : IMotionCard
     {
-        /// <summary>IO 点数（与 DMC2410 的 24 入 / 16 出取大者对齐为 64）。</summary>
-        private const int IoBits = 64;
-
         /// <summary>到位判定阈值（工程单位）。</summary>
         private const double InPosTol = 0.002;
 
         private readonly Dictionary<int, AxisConfig> _cfg = new Dictionary<int, AxisConfig>();
         private readonly Dictionary<int, AxisState> _st = new Dictionary<int, AxisState>();
-        private readonly bool[] _in = new bool[IoBits];
-        private readonly bool[] _out = new bool[IoBits];
+
+        /// <summary>本卡实际配置过的轴号（升序）。真机轴号不连续（缺 17 / 38），
+        /// 所以积分 / 停止 / 快照都只遍历这张表，不能按 0..轴数 硬走。</summary>
+        private readonly List<int> _axisIdx = new List<int>();
+
+        private readonly bool[] _in;
+        private readonly bool[] _out;
         private readonly Random _rnd = new Random(20240921);
 
         private int _axisCount;
         private bool _open;
 
-        /// <summary>构造。</summary>
-        public SimMotionCard(int axisCount = 32)
+        /// <summary>
+        /// 构造：axisCount = 轴数，inputCount / outputCount = 位地址空间大小
+        /// （交接资料真表 352 入 / 160 出 + 各 32 位兼容段）。
+        /// 上电默认不再硬编码「输入 0/1/2/3」，安全链路由 MotionManager.SeedSimInputs 按点名置位。
+        /// </summary>
+        public SimMotionCard(int axisCount = 32, int inputCount = 352, int outputCount = 160)
         {
-            _axisCount = axisCount;
-            for (int i = 0; i < _axisCount; i++)
-            {
-                _cfg[i] = new AxisConfig { Index = i, Name = "Axis" + i };
-                _st[i] = new AxisState();
-            }
-            // 上电默认：急停未按下（输入 0 常闭 → 仿真里用 false 表示「未触发」）
-            _in[0] = false;
-            _in[1] = true;   // 安全门关闭
-            _in[2] = true;   // 气压正常
-            _in[3] = true;   // 主电源正常
+            _axisCount = Math.Max(1, axisCount);
+            _in = new bool[Math.Max(1, inputCount)];
+            _out = new bool[Math.Max(1, outputCount)];
         }
 
         /// <inheritdoc />
@@ -78,10 +76,10 @@ namespace HandlerGuide.Motion
         public int AxisCount => _axisCount;
 
         /// <inheritdoc />
-        public int InputCount => 32;
+        public int InputCount => _in.Length;
 
         /// <inheritdoc />
-        public int OutputCount => 32;
+        public int OutputCount => _out.Length;
 
         /// <inheritdoc />
         public string Info => "仿真模式：DMC-E 语义 · 梯形速度曲线 + 软限位钳制 + IO 反馈联动";
@@ -103,8 +101,9 @@ namespace HandlerGuide.Motion
         /// <inheritdoc />
         public void Configure(AxisConfig cfg)
         {
-            if (cfg == null) return;
+            if (cfg == null || cfg.Index < 0) return;
             _cfg[cfg.Index] = cfg;
+            if (!_axisIdx.Contains(cfg.Index)) { _axisIdx.Add(cfg.Index); _axisIdx.Sort(); }
             if (!_st.TryGetValue(cfg.Index, out var st))
             {
                 st = new AxisState();
@@ -187,7 +186,7 @@ namespace HandlerGuide.Motion
         /// <inheritdoc />
         public void StopAll(MotionStopMode mode)
         {
-            for (int i = 0; i < _axisCount; i++) Stop(i, mode);
+            foreach (var i in _axisIdx) Stop(i, mode);
         }
 
         /// <inheritdoc />
@@ -228,28 +227,28 @@ namespace HandlerGuide.Motion
         /// <inheritdoc />
         public AxisState[] Snapshot()
         {
-            var arr = new AxisState[_axisCount];
-            for (int i = 0; i < _axisCount; i++) arr[i] = _st[i];
+            var arr = new AxisState[_axisIdx.Count];
+            for (int k = 0; k < _axisIdx.Count; k++) arr[k] = St(_axisIdx[k]);
             return arr;
         }
 
         /// <inheritdoc />
         public void WriteOut(int bit, bool on)
         {
-            if (bit < 0 || bit >= IoBits) return;
+            if (bit < 0 || bit >= _out.Length) return;   // 越界直接挡住
             _out[bit] = on;
         }
 
         /// <inheritdoc />
-        public bool ReadIn(int bit) => bit >= 0 && bit < IoBits && _in[bit];
+        public bool ReadIn(int bit) => bit >= 0 && bit < _in.Length && _in[bit];
 
         /// <inheritdoc />
-        public bool ReadOut(int bit) => bit >= 0 && bit < IoBits && _out[bit];
+        public bool ReadOut(int bit) => bit >= 0 && bit < _out.Length && _out[bit];
 
         /// <inheritdoc />
         public void SetInput(int bit, bool on)
         {
-            if (bit >= 0 && bit < IoBits) _in[bit] = on;
+            if (bit >= 0 && bit < _in.Length) _in[bit] = on;
         }
 
         /// <inheritdoc />
@@ -278,7 +277,7 @@ namespace HandlerGuide.Motion
             if (!_open || dt <= 0) return;
             if (dt > 0.2) dt = 0.2; // 防止界面卡顿后一次跳太远
 
-            for (int i = 0; i < _axisCount; i++)
+            foreach (var i in _axisIdx)
             {
                 var c = _cfg[i];
                 var st = _st[i];

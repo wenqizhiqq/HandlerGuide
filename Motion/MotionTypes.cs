@@ -223,6 +223,24 @@ namespace HandlerGuide.Motion
 
         /// <summary>低电平有效（如急停 / 报警输入常闭）。</summary>
         public bool ActiveLow { get; set; }
+
+        /// <summary>
+        /// 资料里的 IO 块名（U0 ~ U10 输入 / U20 ~ U24 输出）；
+        /// 兼容点（旧 32 点里真表没有的名字）填「兼容」。
+        /// </summary>
+        public string Block { get; set; } = "";
+
+        /// <summary>资料地址串，如 U7_X2.0（HandoverAddr.Address 生成）；兼容点为 IN0 / OUT0 形式。</summary>
+        public string Address { get; set; } = "";
+
+        /// <summary>元件型号（传感器 / 阀岛型号，来自交接资料，仅用于界面与排故显示）。</summary>
+        public string Sensor { get; set; } = "";
+
+        /// <summary>true = 由交接资料真表登记；false = 为兼容旧界面而追加登记的点。</summary>
+        public bool FromHandover { get; set; }
+
+        /// <summary>旧仿真表里的位号（0~31），仅兼容点使用；真表点为 -1。</summary>
+        public int LegacyBit { get; set; } = -1;
     }
 
     /// <summary>一次运动请求的判定结果（含被拒绝的原因）。</summary>
