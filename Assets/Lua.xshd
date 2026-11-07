@@ -1,34 +1,31 @@
 <?xml version="1.0"?>
 <SyntaxDefinition name="Lua" extensions=".lua" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
-  <!-- 温启志 18719361399 · Lua 编辑器语法高亮：注释 / 字符串 / 数字 / 关键字 / 宿主函数 / 标准库表 / 运算符
-       从 NoCodeMotion 的 Assets/Lua.xshd 移植，把「全局注册的硬件/运动 API 函数」
-       那一栏换成 HandlerGuide 流程宿主（Flow/LuaFlowHost.cs 的 Install()）真正注册的
-       25 个全局函数；「命名空间式 API 表名」那一栏换成 Lua 5.4 标准库表名。 -->
+  <!-- 温启志 18719361399 · Lua 语法高亮：苹果（Xcode 浅色系）配色
+       关键字紫 / 字符串红 / 数字靛蓝 / 常量橙红 / 宿主函数蓝 / 标准库紫 / 注释石墨灰。
+       改配色只改下面这几行 Color，规则不用动。 -->
 
-  <!-- 注释：柔和绿色 -->
-  <Color name="Comment" foreground="#6A9955" />
-  <!-- 字符串：深红 -->
-  <Color name="String" foreground="#A31515" />
-  <!-- 数字：teal -->
-  <Color name="Number" foreground="#098658" />
-  <!-- 关键字：紫色 -->
-  <Color name="Keyword" foreground="#AF00DB" />
-  <!-- 宿主注册的全局函数：棕色（与 LuaSemanticColorizer 的函数色一致） -->
-  <Color name="Function" foreground="#795E26" />
-  <!-- 标准库表名：青绿 -->
-  <Color name="StdLib" foreground="#1F7A8C" />
-  <!-- 运算符 / 括号：灰蓝 -->
-  <Color name="Operator" foreground="#5A6C7D" />
+  <Color name="Comment"  foreground="#7A8794" />
+  <Color name="String"   foreground="#C41A16" />
+  <Color name="Number"   foreground="#1C00CF" />
+  <Color name="Keyword"  foreground="#9B2393" />
+  <Color name="Const"    foreground="#D12F1B" />
+  <Color name="Function" foreground="#0B6FA4" />
+  <Color name="StdLib"   foreground="#5B3FA8" />
+  <Color name="Operator" foreground="#4B5563" />
 
   <RuleSet>
-    <!-- 单行注释：从两个减号开始直到行尾 -->
+    <!-- 长注释 双横线加双方括号 与长字符串 双方括号（Lua 的两种长括号） -->
+    <Span color="Comment" begin="--\[\[" end="\]\]" />
+    <Span color="String"  begin="\[\[" end="\]\]" />
+
+    <!-- 单行注释 -->
     <Span color="Comment" begin="--" />
 
-    <!-- 字符串：双引号 / 单引号 -->
+    <!-- 字符串（含转义） -->
     <Span color="String" begin="&quot;" end="&quot;" />
     <Span color="String" begin="'" end="'" />
 
-    <!-- Lua 关键字 -->
+    <!-- 关键字 -->
     <Keywords color="Keyword">
       <Word>and</Word>
       <Word>break</Word>
@@ -36,32 +33,37 @@
       <Word>else</Word>
       <Word>elseif</Word>
       <Word>end</Word>
-      <Word>false</Word>
       <Word>for</Word>
       <Word>function</Word>
       <Word>goto</Word>
       <Word>if</Word>
       <Word>in</Word>
       <Word>local</Word>
-      <Word>nil</Word>
       <Word>not</Word>
       <Word>or</Word>
       <Word>repeat</Word>
       <Word>return</Word>
       <Word>then</Word>
-      <Word>true</Word>
       <Word>until</Word>
       <Word>while</Word>
     </Keywords>
 
-    <!-- 宿主注册的全局函数（与 LuaApi.HostList / LuaFlowHost.Install 一一对应，共 25 个） -->
+    <!-- 常量单独一色，读代码时先看到 nil / true / false -->
+    <Keywords color="Const">
+      <Word>nil</Word>
+      <Word>true</Word>
+      <Word>false</Word>
+      <Word>self</Word>
+    </Keywords>
+
+    <!-- 流程宿主注册的 25 个全局函数 -->
     <Rule color="Function">
       \b(running|pause|step|log|alarm|ax|lasterr|moveabs|moverel|home|pos|inpos|axiscount|readin|writeout|outval|boxget|boxset|boxinc|boxwait|stable|take|give|held|point)\b
     </Rule>
 
     <!-- Lua 5.4 标准库表名 -->
     <Rule color="StdLib">
-      \b(string|table|math|os|io|coroutine)\b
+      \b(string|table|math|os|io|coroutine|utf8|debug)\b
     </Rule>
 
     <!-- 数字：整数 / 小数 / 十六进制 / 科学计数 -->
@@ -71,7 +73,7 @@
 
     <!-- 运算符与括号 -->
     <Rule color="Operator">
-      (\+\+|--|\+|-|\*|/|%|\^|==|~=|&lt;=|&gt;=|&lt;|&gt;|=|\(|\)|\[|\]|\{|\}|,|\.\.\.|\.\.|\.)
+      (\+\+|--|\+|-|\*|/|%|\^|==|~=|&lt;=|&gt;=|&lt;|&gt;|=|\(|\)|\[|\]|\{|\}|,|\.\.\.|\.\.|\.|:|;)
     </Rule>
   </RuleSet>
 </SyntaxDefinition>

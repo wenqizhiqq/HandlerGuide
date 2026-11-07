@@ -190,6 +190,9 @@ namespace HandlerGuide.ViewModels
         /// 等比缩放容器：把固定像素尺寸的画布整体缩进可用宽高（左上对齐）。
         /// 典型用法：左列放 1010×819 画布，窗口不够宽时整幅缩下来，不裁切、不出横向滚动条。
         /// </summary>
+        /// <summary>整行可点容器（列表行）：点一下执行 act，鼠标移上去有浅色高亮。</summary>
+        public static ClickRowElement ClickRow(Element child, Action act)
+            => new ClickRowElement { Child = child, Command = act == null ? null : new RelayCommand(act) };
         public static FitElement Fit(Element child)
         {
             return new FitElement

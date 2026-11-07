@@ -57,11 +57,11 @@ local function run_cycle()
 end
 
 while running() do
-    if boxget("SafeOk") == 1 then
+    if boxget("SafeOk") == 1 or boxget("仿真.演示") == 1 then
         run_cycle()
         boxinc("循环计数.21_Auto3仓", 1)
     else
-        step("让行：未安全（SafeOk=0）")
+        step("等待：未安全（等演示节拍或安全扫描）")
         pause(PERIOD)
     end
 end

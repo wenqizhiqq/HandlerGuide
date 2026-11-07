@@ -134,6 +134,30 @@
                       VerticalAlignment="{Binding VAlign}" />
     </DataTemplate>
 
+    <!-- ================= 整行可点容器 ================= -->
+    <DataTemplate DataType="{x:Type vm:ClickRowElement}">
+        <Button Command="{Binding Command}" Cursor="Hand" Focusable="False"
+                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Center"
+                Background="Transparent" BorderThickness="0" Padding="0">
+            <Button.Template>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd" CornerRadius="6" Background="Transparent" Padding="2,0">
+                        <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="#12007AFF" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="#22007AFF" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Button.Template>
+            <ContentControl Content="{Binding Child}" />
+        </Button>
+    </DataTemplate>
+
     <!-- ================= 分组 ================= -->
     <DataTemplate DataType="{x:Type vm:GroupElement}">
         <Border Background="{StaticResource CardBgBrush}"
@@ -545,13 +569,16 @@
     <!-- 槽本身是视图模型，真正的 AvalonEdit 控件由 Editing 层创建后挂到 Child 上；
          没有这段模板时 WPF 会退回默认模板，把控件显示成 “HandlerGuide.Editing.LuaEditor”。 -->
     <DataTemplate DataType="{x:Type ed:LuaEditorSlotElement}">
-        <Grid Margin="{Binding EffectiveMargin}">
-            <ContentControl Content="{Binding Child}" />
-            <TextBlock Text="先点左侧任意一行的〔编辑〕"
-                       FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
-                       HorizontalAlignment="Center" VerticalAlignment="Center"
-                       Visibility="{Binding ChildVis}" />
-        </Grid>
+        <Border Margin="{Binding EffectiveMargin}" CornerRadius="8" Background="White"
+                BorderBrush="#E5E5EA" BorderThickness="1">
+            <Grid>
+                <ContentControl Content="{Binding Child}" />
+                <TextBlock Text="点左侧任意一行，就在这儿打开它的脚本"
+                           FontSize="11.5" Foreground="{StaticResource TextSecondaryBrush}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Visibility="{Binding ChildVis}" />
+            </Grid>
+        </Border>
     </DataTemplate>
 
     <!-- ================= 标签页 ================= -->

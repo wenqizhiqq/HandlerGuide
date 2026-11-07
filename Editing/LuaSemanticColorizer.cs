@@ -31,8 +31,9 @@ namespace HandlerGuide.Editing
     public sealed class LuaSemanticColorizer : DocumentColorizingTransformer
     {
         // 用户自定义变量：蓝；用户自定义函数：棕（与 xshd 的 Function 色一致）
-        private static readonly Brush VarBrush = new SolidColorBrush(Color.FromRgb(0x0F, 0x6C, 0xBD));
-        private static readonly Brush FuncBrush = new SolidColorBrush(Color.FromRgb(0x79, 0x5E, 0x26));
+        // 苹果浅色系：变量深蓝、自定义函数青绿（关键字紫 #9B2393 / 宿主函数蓝 #0B6FA4 在 xshd 里）
+        private static readonly Brush VarBrush = new SolidColorBrush(Color.FromRgb(0x0B, 0x5F, 0xA5));
+        private static readonly Brush FuncBrush = new SolidColorBrush(Color.FromRgb(0x0B, 0x72, 0x85));
 
         private static readonly Regex Identifier = new Regex(@"\b[A-Za-z_][A-Za-z0-9_]*\b", RegexOptions.Compiled);
         private static readonly Regex CommentLine = new Regex(@"--[^\n]*", RegexOptions.Compiled);

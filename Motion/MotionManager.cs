@@ -1311,6 +1311,7 @@ namespace HandlerGuide.Motion
         {
             if (!Connected) { MachineModel.Instance.Log("警告", "控制卡未连接，无法启动演示"); return; }
             AutoCycle = true;
+            VarBox.SetD("仿真.演示", 1);   // 需求 55：Lua 流程与仿真联动（脚本的让行判据之一）
             Paused = false;
             _demoStep = 0;
             _demoDwell = 0;
@@ -1354,6 +1355,7 @@ namespace HandlerGuide.Motion
         public void StopDemo()
         {
             AutoCycle = false;
+            VarBox.SetD("仿真.演示", 0);
             Paused = false;
             DemoStepText = "已停止";
             StopAll();

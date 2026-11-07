@@ -181,6 +181,17 @@ namespace HandlerGuide.ViewModels
         public RelayCommand Command { get; set; }
     }
 
+    // 温启志 18719361399 · 类 public class ClickRowElement : Element
+    /// <summary>
+    /// 整行可点的容器（流程表行用）。用 Button 包一层拿到标准的点击/键盘语义，
+    /// 模板里把按钮外观全部抹掉，只留悬停的一层浅蓝底。
+    /// </summary>
+    public class ClickRowElement : Element
+    {
+        public Element Child { get; set; }
+        public RelayCommand Command { get; set; }
+    }
+
 [ContentProperty("Content")]
         public class ScrollElement : Element
     {

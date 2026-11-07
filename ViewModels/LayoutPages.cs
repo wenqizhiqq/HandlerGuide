@@ -37,6 +37,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using HandlerGuide.Flow;
 using HandlerGuide.Motion;
 
 namespace HandlerGuide.ViewModels
@@ -248,7 +249,7 @@ namespace HandlerGuide.ViewModels
                     // 需求 53：右栏改成 Grid（Auto/Auto/Auto/*），脚本面板吃剩余高度，
                     // 这样流程表和编辑器的高度会随窗口自适应，而不是写死 300。
                     .Add(
-                        E.Grid().Cols("*").Rows("Auto", "Auto", "Auto", "*")
+                        E.Grid().Cols("*").Rows("Auto", "Auto", "*")
                             .Add(E.V(
                                 E.T("温启志 18719361399", 9, E.Sec, false, TextWrapping.NoWrap,
                                     TextAlignment.Right, HorizontalAlignment.Right),
@@ -261,8 +262,10 @@ namespace HandlerGuide.ViewModels
                                 E.Band("仿真节拍控制", Palette.BandBlue,
                                     E.V(
                                         E.H(
-                                            E.Btn("启动演示节拍", () => MotionManager.Instance.StartDemo(), "PrimaryButton", 12),
-                                            E.Btn("停止演示", () => MotionManager.Instance.StopDemo(), "PrimaryButton", 12),
+                                            // 需求 55：脚本运行与仿真页面联动 —— 启动演示节拍 = 画布动 + 全部 Lua 流程起，
+                                            // 停止演示 = 两者一起停。
+                                            E.Btn("启动演示节拍", () => { MotionManager.Instance.StartDemo(); LuaFlowHost.StartAll(); }, "PrimaryButton", 12),
+                                            E.Btn("停止演示", () => { MotionManager.Instance.StopDemo(); LuaFlowHost.StopAll(); }, "PrimaryButton", 12),
                                             E.Btn("急停", () => MotionManager.Instance.TriggerEStop(), "DangerButton", 12),
                                             E.Btn("急停复位", () => MotionManager.Instance.ResetEStop(), "PrimaryButton", 12)),
                                         E.Spacer(6),
@@ -271,9 +274,10 @@ namespace HandlerGuide.ViewModels
                                             E.Btn("全部停止", () => MotionManager.Instance.StopAll(), "PrimaryButton", 12),
                                             E.Btn("清除报警", () => MotionManager.Instance.ClearAlarm(), "PrimaryButton", 12))))
                                 ).VTop(), 0, 0)
-                            .Add(HomePages.CommandCenter(), 1, 0)
-                            .Add(E.V(E.T("图例", 12, E.P, true), BuildLegend()).VTop(), 2, 0)
-                            .Add(FlowScriptPages.FlowScriptPanel(0), 3, 0)
+                            // 需求 55：命令中心（生产控制 + 批次管理）在这页不需要，整块删掉；
+                            // 它的位置让给脚本面板，列表和编辑器能多吃 300 多像素。
+                            .Add(E.V(E.T("图例", 12, E.P, true), BuildLegend()).VTop(), 1, 0)
+                            .Add(FlowScriptPages.FlowScriptPanel(0), 2, 0)
                             .Margin(12, 0, 0, 0),
                         0, 1);
         }

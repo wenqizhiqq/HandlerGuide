@@ -297,6 +297,18 @@ namespace HandlerGuide.Flow
             t.Start();
         }
 
+        /// <summary>把非 ASCII 字符转成 Lua 的 \u{XXXX} 转义（只影响送给 Lua 的那份文本）。</summary>
+        static string AsciiSafe(string src)
+        {
+            if (string.IsNullOrEmpty(src)) return src ?? "";
+            var sb = new StringBuilder(src.Length + 64);
+            foreach (char ch in src)
+            {
+                if (ch < 128) { sb.Append(ch); continue; }
+                sb.Append("\\u{").Append(((int)ch).ToString("X4")).Append('}');
+            }
+            return sb.ToString();
+        }
         static void Run(LuaFlow f)
         {
             try
@@ -306,7 +318,11 @@ namespace HandlerGuide.Flow
                 {
                     f.Env = e;
                     Install(f, e);
-                    e.DoString(File.ReadAllText(f.Path, Encoding.UTF8), f.Name);
+                    // NLua 把 C# 串塞进 Lua 时走的是系统 ANSI 编码，中文会变成 '?'
+                    // （界面上 step 显示成 ???????SafeOk=0 就是它）。
+                    // 这里先把源码里的非 ASCII 字符转成 Lua 5.3+ 的 \u{XXXX} 转义再送进去：
+                    // 转义本身是纯 ASCII，Lua 解析时自己还原成 UTF-8；盘上的脚本文件还是原样给人看。
+                    e.DoString(AsciiSafe(File.ReadAllText(f.Path, Encoding.UTF8)), f.Name);
                 }
             }
             catch (Exception ex) { f.Error = ex.Message; }

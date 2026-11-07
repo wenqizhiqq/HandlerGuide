@@ -72,15 +72,22 @@ namespace HandlerGuide.Editing
         {
             FlowName = flowName ?? "";
 
-            // ---- 外观：等宽 + 行号 ----
-            FontFamily = new FontFamily("Consolas, Cascadia Mono, Courier New");
+            // ---- 外观：等宽 + 行号（苹果浅色：近黑正文 / 石墨灰行号 / 圆角选区） ----
+            FontFamily = new FontFamily("Cascadia Mono, Consolas, Courier New");
             FontSize = 13;
             ShowLineNumbers = true;
-            LineNumbersForeground = new SolidColorBrush(Color.FromRgb(0x8E, 0x8E, 0x93));
+            LineNumbersForeground = new SolidColorBrush(Color.FromRgb(0xA1, 0xA1, 0xA6));
             HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
-            Padding = new Thickness(4, 6, 0, 6);
-            Background = Brushes.White;
+            Padding = new Thickness(6, 8, 0, 8);
+            Background = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF));
+            Foreground = new SolidColorBrush(Color.FromRgb(0x1D, 0x1D, 0x1F));
+            TextArea.SelectionBrush = new SolidColorBrush(Color.FromRgb(0xB3, 0xD7, 0xFF));
+            TextArea.SelectionBorder = new Pen(new SolidColorBrush(Color.FromRgb(0x9C, 0xC7, 0xF5)), 1);
+            TextArea.SelectionForeground = null;
+            TextArea.SelectionCornerRadius = 3;
+            TextArea.TextView.CurrentLineBackground = new SolidColorBrush(Color.FromRgb(0xF4, 0xF6, 0xF8));
+            TextArea.TextView.CurrentLineBorder = new Pen(new SolidColorBrush(Color.FromRgb(0xE5, 0xE9, 0xEE)), 1);
 
             Options.ConvertTabsToSpaces = true;
             Options.IndentationSize = 4;

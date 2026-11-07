@@ -105,6 +105,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Lua 语法高亮定义（AvalonEdit 的 xshd）：LuaEditorControl 是按“嵌入资源名以
+         Lua.xshd 结尾”去找的，csproj 里没嵌就永远找不到 —— 关键字/字符串/数字全都没颜色，
+         只剩语义着色器给的变量蓝。 -->
+    <EmbeddedResource Include="Assets\Lua.xshd" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- 工艺流程脚本（Lua）：LuaFlowHost.ScriptDir = <输出目录>/Scripts。
          原来只放在源码目录里、没拷到输出目录，仿真页的流程列表永远是 0 条。 -->
     <Content Include="Scripts\**\*.lua">

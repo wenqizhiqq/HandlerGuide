@@ -237,7 +237,7 @@ namespace HandlerGuide.ViewModels
         static Element FlowHead()
         {
             return E.H(
-                Col("", WMark), Col("流程名", WName), Col("状态", WState), Col("", 38))
+                Col("", WMark), Col("流程名", WName), Col("状态", WState))
                 .Marg(new Thickness(0, 0, 0, 2));
         }
 
@@ -246,12 +246,13 @@ namespace HandlerGuide.ViewModels
         /// <summary>一行流程：6 个具名信号格 + 一个〔编辑〕按钮。</summary>
         static Element FlowRow(int i)
         {
-            return E.H(
-                Sig("fs_mark_" + i, WMark, 10.5, E.Acc),
-                Sig("fs_name_" + i, WName, 10.5, E.P),
-                Sig("fs_state_" + i, WState, 10, E.Sec),
-                E.MiniBtn("编辑", () => Select(i), 38))
-                .Marg(new Thickness(0, 0, 0, 1));
+            // 需求 54：不要〔编辑〕按钮 —— 整行点一下就在右边打开这条流程
+            return E.ClickRow(
+                E.H(
+                    Sig("fs_mark_" + i, WMark, 10.5, E.Acc),
+                    Sig("fs_name_" + i, WName, 10.5, E.P),
+                    Sig("fs_state_" + i, WState, 10, E.Sec)),
+                () => Select(i)).Marg(new Thickness(0, 0, 0, 1));
         }
 
         /// <summary>一格具名信号读数（LiveElement，注册进 LiveRegistry 的 500ms 通道）。</summary>
@@ -338,9 +339,12 @@ namespace HandlerGuide.ViewModels
         public static void StartAll()
         {
             SaveIfDirtyAll();
+            // 需求 55：脚本与仿真页联动 —— 起脚本的同时把演示节拍也拉起来，
+            // 否则脚本会因为 SafeOk=0 一直「等待：未安全」。
+            if (!Motion.MotionManager.Instance.AutoCycle) Motion.MotionManager.Instance.StartDemo();
             int n = LuaFlowHost.StartAll();
             FlowScriptSession.SetReadOnlyAll(true);
-            E.M.Log("信息", "已启动全部流程：" + n + " 条");
+            E.M.Log("信息", "已启动全部流程：" + n + " 条（演示节拍已同步启动）");
         }
 
         /// <summary>全部停止。</summary>
@@ -348,7 +352,9 @@ namespace HandlerGuide.ViewModels
         {
             LuaFlowHost.StopAll();
             FlowScriptSession.SetReadOnlyAll(false);
-            E.M.Log("信息", "已请求停止全部流程");
+            // 需求 55：联动停止 —— 脚本全停，演示节拍也一起停
+            if (Motion.MotionManager.Instance.AutoCycle) Motion.MotionManager.Instance.StopDemo();
+            E.M.Log("信息", "已请求停止全部流程（演示节拍同步停止）");
         }
 
         /// <summary>启动选中的这一条。</summary>
