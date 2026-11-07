@@ -68,6 +68,24 @@ namespace HandlerGuide.Editing
         /// <summary>语法高亮是否已挂上（装载后给日志用）。</summary>
         public bool HighlightingLoaded { get; private set; }
 
+        LuaTraceLineColorizer _traceLine;
+        LuaLineTimingRenderer _timingMargin;
+        System.Windows.Threading.DispatcherTimer _traceTimer;
+
+        /// <summary>拉一次执行跟踪：更新黄底行号 + 右侧耗时标尺。</summary>
+        public void RefreshTrace()
+        {
+            if (_traceLine == null) return;
+            int ln; double ms; System.Collections.Generic.Dictionary<int, double> map;
+            Flow.LuaFlowHost.GetTrace(FlowName, out ln, out ms, out map);
+            if (ln != _traceLine.Line)
+            {
+                _traceLine.Line = ln;
+                TextArea.TextView.Redraw();      // 让着色器按新行号重跑
+            }
+            if (_timingMargin != null) TextArea.TextView.InvalidateVisual();
+        }
+
         public LuaEditorControl(string flowName)
         {
             FlowName = flowName ?? "";
@@ -100,6 +118,27 @@ namespace HandlerGuide.Editing
 
             // ---- 语义着色：在 xshd 语法高亮之上，给用户自定义变量 / 函数区别色 ----
             TextArea.TextView.LineTransformers.Add(new LuaSemanticColorizer());
+
+            // ---- 需求 58：执行跟踪 —— 当前行铺黄底 + 右边缘显示逐行耗时（ms）----
+            _traceLine = new LuaTraceLineColorizer();
+            TextArea.TextView.LineTransformers.Add(_traceLine);
+            _timingMargin = new LuaLineTimingRenderer
+            {
+                Source = () =>
+                {
+                    int ln; double ms; System.Collections.Generic.Dictionary<int, double> map;
+                    Flow.LuaFlowHost.GetTrace(FlowName, out ln, out ms, out map);
+                    return System.Tuple.Create(ln, map);
+                }
+            };
+            TextArea.TextView.BackgroundRenderers.Add(_timingMargin);
+            TextArea.TextView.VisualLinesChanged += (s, e) => TextArea.TextView.InvalidateVisual();
+            _traceTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(400)
+            };
+            _traceTimer.Tick += (s, e) => RefreshTrace();
+            _traceTimer.Start();
 
             LoadHighlighting();
 

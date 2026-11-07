@@ -259,20 +259,18 @@ namespace HandlerGuide.ViewModels
                                     E.SpacerW(14),
                                     E.T("（11 个模组 · 动作随运动控制卡实时变化）", 11, E.Sec)),
                                 E.Spacer(6),
+                                // 需求 56：7 个按钮改成一行（Wrap 在窄窗口会自动折行，宽了就只有一行）
                                 E.Band("仿真节拍控制", Palette.BandBlue,
-                                    E.V(
-                                        E.H(
+                                        E.Wrap(
                                             // 需求 55：脚本运行与仿真页面联动 —— 启动演示节拍 = 画布动 + 全部 Lua 流程起，
                                             // 停止演示 = 两者一起停。
                                             E.Btn("启动演示节拍", () => { MotionManager.Instance.StartDemo(); LuaFlowHost.StartAll(); }, "PrimaryButton", 12),
                                             E.Btn("停止演示", () => { MotionManager.Instance.StopDemo(); LuaFlowHost.StopAll(); }, "PrimaryButton", 12),
                                             E.Btn("急停", () => MotionManager.Instance.TriggerEStop(), "DangerButton", 12),
-                                            E.Btn("急停复位", () => MotionManager.Instance.ResetEStop(), "PrimaryButton", 12)),
-                                        E.Spacer(6),
-                                        E.H(
+                                            E.Btn("急停复位", () => MotionManager.Instance.ResetEStop(), "PrimaryButton", 12),
                                             E.Btn("全部回零", () => MotionManager.Instance.HomeAll(), "PrimaryButton", 12),
                                             E.Btn("全部停止", () => MotionManager.Instance.StopAll(), "PrimaryButton", 12),
-                                            E.Btn("清除报警", () => MotionManager.Instance.ClearAlarm(), "PrimaryButton", 12))))
+                                            E.Btn("清除报警", () => MotionManager.Instance.ClearAlarm(), "PrimaryButton", 12)))
                                 ).VTop(), 0, 0)
                             // 需求 55：命令中心（生产控制 + 批次管理）在这页不需要，整块删掉；
                             // 它的位置让给脚本面板，列表和编辑器能多吃 300 多像素。

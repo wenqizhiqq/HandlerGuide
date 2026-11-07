@@ -37,6 +37,13 @@ namespace HandlerGuide.Flow
         public long Loops;
         public string Step = "未装载";
         public string Error = "";
+        /// <summary>正在执行到哪一行（脚本里 step(...) 所在的行号，0 = 未知）。</summary>
+        public int CurLine;
+        /// <summary>当前这一段的耗时（ms，= 上一个标记行到这一行的间隔）。</summary>
+        public double StepMs;
+        /// <summary>逐行累计耗时（行号 → ms），执行过 step(...) 的行才有。</summary>
+        public readonly Dictionary<int, double> LineMs = new Dictionary<int, double>();
+        internal long LastTraceAt;
         internal Thread Thread;
         internal dynamic Env;
         internal readonly List<string> Held = new List<string>();
@@ -159,6 +166,25 @@ namespace HandlerGuide.Flow
             return r;
         }
 
+        /// <summary>取某条流程的逐行耗时快照（行号 → ms）与当前行；界面 500ms 拉一次。</summary>
+        public static void GetTrace(string name, out int curLine, out double stepMs, out Dictionary<int, double> lineMs)
+        {
+            curLine = 0; stepMs = 0; lineMs = new Dictionary<int, double>();
+            lock (gate)
+            {
+                foreach (var f in flows)
+                {
+                    if (f.Name != name) continue;
+                    lock (f)
+                    {
+                        curLine = f.CurLine; stepMs = f.StepMs;
+                        lineMs = new Dictionary<int, double>(f.LineMs);
+                    }
+                    return;
+                }
+            }
+        }
+
         public static string ReadScript(string name)
         {
             foreach (var f in flows) if (f.Name == name) return File.ReadAllText(f.Path, Encoding.UTF8);
@@ -277,6 +303,26 @@ namespace HandlerGuide.Flow
             });
             e["held"] = (Func<string[]>)(() => { lock (f) return f.Held.ToArray(); });
             e["point"] = (Func<string, double>)(k2 => VarBox.GetD("点位." + k2));
+
+            // 逐行跟踪：step() 在 Lua 侧包一层，先拿 debug.getinfo 的行号，再记时间。
+            // 耗时算在**上一行的标记**上（上一个 step → 这一个 step 之间的那段就是上一段的耗时）。
+            e["__line"] = (Action<int, string>)((line, text) =>
+            {
+                long now = Environment.TickCount64;
+                lock (f)
+                {
+                    if (f.LastTraceAt > 0 && f.CurLine > 0)
+                    {
+                        double dt = now - f.LastTraceAt;
+                        double old;
+                        f.LineMs.TryGetValue(f.CurLine, out old);
+                        f.LineMs[f.CurLine] = old + dt;
+                        f.StepMs = dt;
+                    }
+                    f.LastTraceAt = now;
+                    f.CurLine = line;
+                }
+            });
         }
 
         static bool readIn(string name)
@@ -318,6 +364,21 @@ namespace HandlerGuide.Flow
                 {
                     f.Env = e;
                     Install(f, e);
+                    // step(...) = 记录“我在第几行 + 上一段花了多久”再走原逻辑。
+                    // debug 库没开时 line 传 0，不影响脚本执行。
+                    // 用逐字字符串塞 Lua 源码，避免转义把换行写坏
+                    e.DoString(@"
+local __raw_step = step
+function step(s)
+  local line = 0
+  if debug and debug.getinfo then
+    local i = debug.getinfo(2, 'l')
+    if i then line = i.currentline or 0 end
+  end
+  __line(line, tostring(s))
+  __raw_step(s)
+end
+", "step-wrapper");
                     // NLua 把 C# 串塞进 Lua 时走的是系统 ANSI 编码，中文会变成 '?'
                     // （界面上 step 显示成 ???????SafeOk=0 就是它）。
                     // 这里先把源码里的非 ASCII 字符转成 Lua 5.3+ 的 \u{XXXX} 转义再送进去：

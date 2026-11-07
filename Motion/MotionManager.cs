@@ -352,6 +352,7 @@ namespace HandlerGuide.Motion
             foreach (var h in HandoverTables.Axes)
             {
                 var r = DefaultsFor(h);
+
                 Axes.Add(new AxisConfig
                 {
                     Index = h.Index,

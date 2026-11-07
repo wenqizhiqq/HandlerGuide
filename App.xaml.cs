@@ -175,6 +175,14 @@ namespace HandlerGuide
                 m.ResetEStop();
                 m.ClearAlarm();
 
+                // 自检可选用：HG_LUA=1 时连 Lua 流程一起跑，用来抓“执行到哪一行 / 行耗时”的截图
+                if (Environment.GetEnvironmentVariable("HG_LUA") == "1")
+                {
+                    try { int n0 = Flow.LuaFlowHost.Scan(); int n1 = Flow.LuaFlowHost.StartAll();
+                          Log("lua selftest: scan=" + n0 + " start=" + n1); }
+                    catch (Exception ex) { Log("lua selftest 失败: " + ex.Message); }
+                }
+
                 var win = new Views.MainWindow();
                 win.Show();
                 win.UpdateLayout();
