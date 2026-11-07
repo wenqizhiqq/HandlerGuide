@@ -42,6 +42,12 @@ namespace HandlerGuide.ViewModels
         /// <summary>固定屏页面（如主界面）：内容填满视口高度，底部条贴底。</summary>
         public bool Fill { get; set; }
 
+        /// <summary>
+        /// 单屏页面（如模块平面仿真）：外层不显示竖向滚动条。
+        /// 配合页面内的等比缩放容器，整页内容自动缩进一屏，不会出现滚动条。
+        /// </summary>
+        public bool NoScroll { get; set; }
+
         /// <summary>页面内容（首次访问时构建并缓存；优先加载 Views/Pages/{id}.xaml）。</summary>
         public Element Content
         {

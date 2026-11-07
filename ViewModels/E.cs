@@ -141,6 +141,8 @@ namespace HandlerGuide.ViewModels
         public static T Wd<T>(this T e, double w) where T : Element { e.Width = w; return e; }
         public static T Ht<T>(this T e, double h) where T : Element { e.Height = h; return e; }
         public static T Align<T>(this T e, HorizontalAlignment ha) where T : Element { e.HAlign = ha; return e; }
+        /// <summary>竖向靠上（不让内容在整行的剩余高度里垂直居中，避免上下都留白）。</summary>
+        public static T VTop<T>(this T e) where T : Element { e.VAlign = VerticalAlignment.Top; return e; }
 
         /// <summary>
         /// 把元素及其子树里的输入框切换为紧凑样式。
@@ -181,6 +183,20 @@ namespace HandlerGuide.ViewModels
                 Margin = margin,
                 Width = width > 0 ? width : double.NaN,
                 Height = height > 0 ? height : double.NaN
+            };
+        }
+
+        /// <summary>
+        /// 等比缩放容器：把固定像素尺寸的画布整体缩进可用宽高（左上对齐）。
+        /// 典型用法：左列放 1010×819 画布，窗口不够宽时整幅缩下来，不裁切、不出横向滚动条。
+        /// </summary>
+        public static FitElement Fit(Element child)
+        {
+            return new FitElement
+            {
+                Child = child,
+                HAlign = HorizontalAlignment.Left,
+                VAlign = VerticalAlignment.Top
             };
         }
 

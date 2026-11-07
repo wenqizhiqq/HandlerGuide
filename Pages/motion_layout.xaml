@@ -1,11 +1,18 @@
-<vm:StackElement xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                 xmlns:vm="clr-namespace:HandlerGuide.ViewModels;assembly=HandlerGuide"
-                 xmlns:vw="clr-namespace:HandlerGuide.Views;assembly=HandlerGuide">
+<vm:GridElement xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                xmlns:vm="clr-namespace:HandlerGuide.ViewModels;assembly=HandlerGuide"
+                xmlns:vw="clr-namespace:HandlerGuide.Views;assembly=HandlerGuide"
+                RowsSpec="*,Auto">
 
-    <!-- 温启志 18719361399 · motion_layout：复用 LayoutPage() 生成（保留实时表格 / IO 点位 / 命令接线） -->
-    <vw:D Method="LayoutPage" />
+    <!-- 温启志 18719361399 · motion_layout：复用 LayoutPage() 生成（保留实时表格 / IO 点位 / 命令接线）
+         根用 Grid 而不是原来的 Stack：本页禁用外层竖滚动条，只有根吃得满视口高度，
+         LayoutPage 里的行高 "*" 才是有限值，整机画布才会等比缩进一屏（不裁切、无滚动条）。 -->
+    <vm:GridChild Row="0">
+        <vw:D Method="LayoutPage" />
+    </vm:GridChild>
 
-    <vw:Watermark />
+    <vm:GridChild Row="1">
+        <vw:Watermark />
+    </vm:GridChild>
 <!-- 温启志 18719361399 · 本文件由温启志（18719361399）编写；界面与源码水印均指向该作者。 -->
-</vm:StackElement>
+</vm:GridElement>

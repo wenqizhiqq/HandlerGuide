@@ -110,6 +110,16 @@
         </Border>
     </DataTemplate>
 
+    <!-- 等比缩放容器：固定像素画布按可用宽高整体缩放（Stretch=Uniform，不裁切） -->
+    <DataTemplate DataType="{x:Type vm:FitElement}">
+        <Viewbox Stretch="Uniform"
+                 Margin="{Binding EffectiveMargin}"
+                 HorizontalAlignment="{Binding HAlign}"
+                 VerticalAlignment="{Binding VAlign}">
+            <ContentControl Content="{Binding Child}" />
+        </Viewbox>
+    </DataTemplate>
+
     <DataTemplate DataType="{x:Type vm:ScrollElement}">
         <ScrollViewer Content="{Binding Content}"
                       Height="{Binding ViewHeight}"

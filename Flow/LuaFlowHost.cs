@@ -98,6 +98,47 @@ namespace HandlerGuide.Flow
                 if (t != null && t != Thread.CurrentThread && !t.Join(3000)) t.Abort();
         }
 
+        // ------------------------------------------------------------ 单条流程控制
+        //  编辑器面板的 [启动此条] [停止此条] 按钮用（公开 API 只增不改）。
+        //  停止是协作式的：只把 Running 置假，脚本自己的 while running() 循环
+        //  和 pause()/boxwait()/stable() 的内层检查会在一个节拍内退出来；
+        //  绝不在 UI 线程 Join，免得卡界面。
+
+        /// <summary>启动单条流程（已在跑就原样返回真）。找不到流程返回假。</summary>
+        public static bool StartFlow(string name)
+        {
+            LuaFlow f = FindByName(name);
+            if (f == null) return false;
+            lock (gate) { stopAll = false; StartOne(f); }
+            return true;
+        }
+
+        /// <summary>请求停止单条流程：置假 Running，由脚本的 running() 循环自己退出。</summary>
+        public static bool StopFlow(string name)
+        {
+            LuaFlow f = FindByName(name);
+            if (f == null) return false;
+            f.Running = false;
+            return true;
+        }
+
+        /// <summary>某条流程此刻是否在跑（编辑器用它决定只读态）。</summary>
+        public static bool IsRunning(string name)
+        {
+            LuaFlow f = FindByName(name);
+            return f != null && f.Running && !stopAll;
+        }
+
+        /// <summary>按流程名找条目（区分大小写，与脚本文件名一致）。</summary>
+        static LuaFlow FindByName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+            lock (gate)
+                foreach (var f in flows)
+                    if (f.Name == name) return f;
+            return null;
+        }
+
         /// <summary>给界面用的行：名称 / 状态 / 循环数 / 当前步 / 持有令牌 / 错误。</summary>
         public static List<string[]> Rows()
         {

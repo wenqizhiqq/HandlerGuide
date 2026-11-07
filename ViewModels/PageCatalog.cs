@@ -31,8 +31,9 @@ namespace HandlerGuide.ViewModels
     /// </summary>
     public static class PageCatalog
     {
-        private static PageVm D(string id, string icon, string name, string desc, Func<Element> build)
-            => new PageVm { Id = id, Icon = icon, Name = name, Desc = desc, Build = build };
+        private static PageVm D(string id, string icon, string name, string desc, Func<Element> build,
+            bool noScroll = false)
+            => new PageVm { Id = id, Icon = icon, Name = name, Desc = desc, Build = build, NoScroll = noScroll };
 
         public static List<ToolGroupVm> Toolbar(MainViewModel main)
         {
@@ -117,7 +118,7 @@ namespace HandlerGuide.ViewModels
                 {
                     D("motion_layout", "🏭", "模块平面仿真",
                       "三温标准机 11 个模组的整机平面图，模组内零件随运动控制卡实时动作（料盘升降 / 流水走料 / 移盘穿梭 / 压测下压 / 料枪伸缩 / 加热盘通断），并内置安全演示节拍。",
-                      null),
+                      null, noScroll: true),
                     D("motion_sim", "🎛️", "运动仿真",
                       "轴点动 / 回零 / 停止、32 入 32 出 IO 监视与手动翻转、10 条安全互锁规则、共享走廊轨迹动画与安全演示节拍。",
                       null),

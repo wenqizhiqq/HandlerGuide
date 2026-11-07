@@ -229,17 +229,18 @@ namespace HandlerGuide.ViewModels
             // 要找回那份三维代码：git show 68ec276:ViewModels/Layout3D.cs
             var topCanvas = BuildLayoutCanvasTop();
 
-            return E.V(
-                // ---- 主画布 + 右侧说明栏 ----
+            // 根节点直接用网格（不再套 E.V）：本页外层 ScrollViewer 已禁用竖滚动，
+            // 只有根网格直接吃视口高度，行高 "*" 才是有限值，画布的 Viewbox 才会等比缩下来。
+            return E.Grid()
+                // ---- 主画布 + 右侧脚本栏 ----
                 // 两列网格：左列 * 吃满剩余宽度放整机俯视图画布，右列固定 490。
-                // 俯视图以 image\handler_top.jpg（空机台）为底图，按真机量测坐标
-                // 现画 14 个料盘（上排 6 深盘 / 中排 5 深盘 / 左下 3 绿盘）并做取放动画；
-                // 画布上还叠了上/下料两根 X 轴手臂（红色 2×4 吸嘴组 + XY 走位）。
-                // 右侧命令中心 / 图例 / 模组动作对照与画布并排。
-                E.Grid()
+                // 画布 1010×819 比列宽大（1360 窗口下列宽约 846），用 E.Fit 等比缩到列宽，
+                // 不裁切也不把整页顶出竖向滚动条（本页在 PageCatalog 标了 NoScroll）。
+                // 右列按用户要求删掉「模组动作对照（轴说明）」，只留节拍控制 + 命令中心
+                // + 图例 + 轴 IO 动作脚本，并整体压紧，一屏内放得下。
                     .Cols("*", "490")
-                    .Rows("Auto")
-                    .Add(topCanvas, 0, 0)
+                    .Rows("*")
+                    .Add(E.Fit(topCanvas), 0, 0)
                     .Add(
                         E.V(
                             // ---- 需求 47：页面右上角署名水印 ----
@@ -280,12 +281,8 @@ namespace HandlerGuide.ViewModels
                                     E.H(
                                         E.Btn("全部回零", () => MotionManager.Instance.HomeAll(), "PrimaryButton", 12),
                                         E.Btn("全部停止", () => MotionManager.Instance.StopAll(), "PrimaryButton", 12),
-                                        E.Btn("清除报警", () => MotionManager.Instance.ClearAlarm(), "PrimaryButton", 12))),
-                                E.Spacer(4),
-                                E.T("打开本页即自动演示节拍；点「停止演示」回到静态。"
-                                    + "所有动作经 SafetyCheck 互锁裁决，越界指令会被拒绝，不会撞机。",
-                                    10, E.Sec, false, TextWrapping.Wrap)),
-                            E.Spacer(8),
+                                        E.Btn("清除报警", () => MotionManager.Instance.ClearAlarm(), "PrimaryButton", 12)))),
+                            E.Spacer(6),
 
                             // ---- 命令中心（生产控制 + 批次管理）从主界面搬到本仿真页右侧 ----
                             HomePages.CommandCenter(),
@@ -293,11 +290,10 @@ namespace HandlerGuide.ViewModels
                             E.T("图例", 12, E.P, true),
                             BuildLegend(),
                             E.Spacer(6),
-                            E.T("模组动作对照（每个方框内都能看到动的零件）", 12, E.P, true),
-                            BuildModuleTable()).Margin(12, 0, 0, 0),
-                        0, 1),
 
-                E.T("温启志 18719361399 · 平面仿真页", 10.5, E.Sec));
+                            // ---- 轴 IO 动作脚本（右侧只保留这一块说明/脚本内容）----
+                            FlowScriptPages.FlowScriptPanel(300)).Margin(12, 0, 0, 0).VTop(),
+                        0, 1);
         }
 
         /// <summary>图例：颜色 → 含义（用 Box 画小色块，画布外也能显示）。</summary>
@@ -332,36 +328,7 @@ namespace HandlerGuide.ViewModels
                 Dot(legendLayerWarn, "层数不足 3 层：需增加料盘"));
         }
 
-        /// <summary>模组动作说明表。</summary>
-        private static Element BuildModuleTable()
-        {
-            var rows = new (string Mod, string Driver, string Motion)[]
-            {
-                ("下料模组",     "料盘传送臂（轴 30）",           "左立柱滑台在导轨上走位，到底后分盘气缸顶出（变红）"),
-                ("上料模组",     "料盘传送臂（轴 30）",           "右立柱滑台反向走位，到底后顶升气缸伸出（变红）"),
-                ("下料流水线",   "时间驱动（走料节拍）",           "黑盘沿导轨向下流出，格纹随之滚动"),
-                ("彩盘流水线",   "时间驱动（走料节拍）",           "彩盘沿导轨向下流动"),
-                ("黑盘流水线",   "时间驱动（走料节拍）",           "黑盘沿导轨向下流动"),
-                ("上料流水线",   "时间驱动（走料节拍）",           "黑盘沿导轨向上进料"),
-                ("移盘模组",     "小车 A / B（轴 28 / 29）",       "横梁上的移盘小车左右穿梭，到位后竖直下压机构伸出取放"),
-                ("料盘缓存",     "演示步骤联动",                   "中排 5 个料盘位按节拍逐个点亮，表示移盘取放位置"),
-                ("手工盘模组",   "时间驱动（扫描节拍）",           "3×3 手工盘格位逐格点亮，表示人工放料位置"),
-                ("压测模组",     "测试位下压 Z1（轴 2）",          "压头按真实 Z 位置下压 / 抬起，压到位后变红保持"),
-                ("料枪模组",     "上料取放臂 Y 轴（轴 5）",        "料枪滑座与枪管随轴位置伸缩，伸出量实时显示"),
-                ("加热盘模组",   "加热使能输出（OUT15）",          "5 层加热盘通电后变红并冒热流；未使能时为冷盘青色"),
-                ("下导轨搬送",   "时间驱动",                       "下排搬送小车沿导轨往返，到位后气缸动作")
-            };
-
-            var list = new List<object>();
-            foreach (var r in rows)
-            {
-                list.Add(E.H(
-                    E.T(r.Mod, 10.5, E.P, true).Wd(72),
-                    E.T(r.Driver, 10, E.Sec).Wd(146),
-                    E.T(r.Motion, 10, E.Sec, false, TextWrapping.Wrap).Wd(250)));
-            }
-            return E.V(list.ToArray());
-        }
+        // （原「模组动作对照」表 BuildModuleTable 已按用户要求整块删除：右侧只保留轴 IO 动作脚本。）
 
         // ==================================================================
         //  平面图画布（逐帧重绘）

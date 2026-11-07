@@ -185,6 +185,17 @@ namespace HandlerGuide.ViewModels
         public ScrollBarVisibility VScroll { get; set; } = ScrollBarVisibility.Auto;
     }
 
+    /// <summary>
+    /// 等比缩放容器：把固定像素尺寸的画布（如整机俯视图 1010×819）整体缩到
+    /// 可用宽高之内。用于「画布比列宽还宽」的页面 —— 不缩放就只能被外层裁掉，
+    /// 或者把整页顶出竖向滚动条。
+    /// </summary>
+[ContentProperty("Child")]
+        public class FitElement : Element
+    {
+        public Element Child { get; set; }
+    }
+
     // ---------------- 分组 ----------------
 
 [ContentProperty("Children")]

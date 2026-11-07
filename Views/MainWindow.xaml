@@ -263,8 +263,19 @@
                        Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap" />
             <TextBlock Grid.Row="1" Text="{Binding PageDesc}" FontSize="12.5" TextWrapping="Wrap"
                        Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,8" />
-            <ScrollViewer Grid.Row="2" x:Name="PageScroll" VerticalScrollBarVisibility="Auto"
+            <!-- 单屏页面（NoScroll，如模块平面仿真）→ 不显示竖向滚动条，内容随视口等比缩放 -->
+            <ScrollViewer Grid.Row="2" x:Name="PageScroll"
                           HorizontalScrollBarVisibility="Disabled" Padding="0,0,2,0">
+                <ScrollViewer.Style>
+                    <Style TargetType="ScrollViewer">
+                        <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding CurrentPage.NoScroll}" Value="True">
+                                <Setter Property="VerticalScrollBarVisibility" Value="Disabled" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ScrollViewer.Style>
                 <ContentControl Content="{Binding CurrentContent}">
                     <ContentControl.Style>
                         <Style TargetType="ContentControl">
