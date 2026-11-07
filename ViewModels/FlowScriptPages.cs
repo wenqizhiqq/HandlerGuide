@@ -43,7 +43,8 @@ namespace HandlerGuide.ViewModels
         const int MaxRows = 64;
 
         // 列宽：选中符 / 流程名 / 状态 / 循环数 / 当前步 / 持有令牌 / 错误
-        const double WMark = 20, WName = 126, WState = 46, WLoops = 54, WStep = 86, WTok = 70, WErr = 168;
+        // 需求 52：列表在左、编辑器在右 —— 列宽收窄（原 622 太宽，右栏 735 放不下编辑器）
+        const double WMark = 16, WName = 104, WState = 40, WLoops = 44, WStep = 66, WTok = 56, WErr = 64;
 
         /// <summary>当前选中的流程名（右侧编辑器显示的就是它）。</summary>
         public static string Selected { get; private set; } = "";
@@ -198,7 +199,7 @@ namespace HandlerGuide.ViewModels
         {
             return E.H(
                 Col("", WMark), Col("流程名", WName), Col("状态", WState), Col("循环数", WLoops),
-                Col("当前步", WStep), Col("持有令牌", WTok), Col("错误", WErr), Col("", 52))
+                Col("当前步", WStep), Col("令牌", WTok), Col("错误", WErr), Col("", 44))
                 .Marg(new Thickness(0, 0, 0, 2));
         }
 
@@ -215,8 +216,8 @@ namespace HandlerGuide.ViewModels
                 Sig("fs_step_" + i, WStep, 10.5, E.P),
                 Sig("fs_tok_" + i, WTok, 10.5, E.Sec),
                 Sig("fs_err_" + i, WErr, 10.5, E.OnRed),
-                E.MiniBtn("编辑", () => Select(i), 46))
-                .Marg(new Thickness(0, 0, 0, 2));
+                E.MiniBtn("编辑", () => Select(i), 44))
+                .Marg(new Thickness(0, 0, 0, 1));
         }
 
         /// <summary>一格具名信号读数（LiveElement，注册进 LiveRegistry 的 500ms 通道）。</summary>
@@ -225,6 +226,7 @@ namespace HandlerGuide.ViewModels
             var e = new LiveElement
             {
                 Width = w > 0 ? w : double.NaN,
+                Height = 21,                       // 需求 52：行高压到 21，30 条流程一屏能多看几条
                 Background = bg ?? E.BandGrey,
                 Foreground = fg ?? E.P,
                 FontSize = fs,
