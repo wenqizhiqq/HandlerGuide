@@ -234,3 +234,10 @@
   四个参数全写字面量才走 `byte` 重载；一旦 alpha 是变量必须显式 `(byte)a`，否则 CS1503。
 - 逐帧改颜色做脉冲：`RectItem` 没有 Opacity，用「持有一个 `SolidColorBrush`，每帧改 `.Color` 的 alpha」即可，
   比每帧 new 刷子省（画布图元多，逐帧 new 会卡）。
+
+## 需求 51：流程脚本列表为什么是 0 条（2026-10-22-b）
+- `LuaFlowHost.ScriptDir` 读的是 **输出目录** 的 `Scripts`，源码目录里有脚本也必须加
+  csproj `<Content Include="Scripts\**\*.lua">`，否则列表永远「0 条」。
+- 面板首次进入要自动 `Select(NameOf(0))`，否则右侧编辑器是一块白板；
+  列表标题飘到中间是 `ScrollViewer` 没设 `VerticalContentAlignment=Top`。
+- .NET Core 下 `Thread.Abort()` 会抛 `PlatformNotSupportedException`，停机只能靠 `running()` 协作退出。

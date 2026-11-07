@@ -240,7 +240,9 @@ namespace HandlerGuide.ViewModels
                 // + 图例 + 轴 IO 动作脚本，并整体压紧，一屏内放得下。
                     .Cols("*", "490")
                     .Rows("*")
-                    .Add(E.Fit(topCanvas), 0, 0)
+                    // 窄窗口兜底：列宽被右栏挤到很小时，画布至少留 240×200，
+                    // 不再缩成看不见的一条（最小尺寸挂在 Element.MinW / MinH 上）。
+                    .Add(FitCanvasTop(topCanvas), 0, 0)
                     .Add(
                         E.V(
                             // ---- 需求 47：页面右上角署名水印 ----
@@ -1011,6 +1013,14 @@ namespace HandlerGuide.ViewModels
         /// 画布 1010×819：与底图 1696:1376 ≈ 1.233 的宽高比一致，高度与 3D 画布相同（819），
         /// 刚好嵌进左侧「标签页」区域，不会把页面顶出竖向滚动条。
         /// </summary>
+        /// <summary>俯视图的等比缩放容器：给最小尺寸，窄窗口下画布不会缩成 0。</summary>
+        private static FitElement FitCanvasTop(CanvasElement cv)
+        {
+            var f = E.Fit(cv);
+            f.MinW = 240; f.MinH = 200;
+            return f;
+        }
+
         private static CanvasElement BuildLayoutCanvasTop()
         {
             // 1010×819 —— 与底图 1696×1376（≈1.233）等比，且与 3D 画布同高。

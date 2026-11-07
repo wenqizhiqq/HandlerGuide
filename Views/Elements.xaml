@@ -114,6 +114,7 @@
     <DataTemplate DataType="{x:Type vm:FitElement}">
         <Viewbox Stretch="Uniform"
                  Margin="{Binding EffectiveMargin}"
+                 MinWidth="{Binding MinW}" MinHeight="{Binding MinH}"
                  HorizontalAlignment="{Binding HAlign}"
                  VerticalAlignment="{Binding VAlign}">
             <ContentControl Content="{Binding Child}" />
@@ -124,6 +125,7 @@
         <ScrollViewer Content="{Binding Content}"
                       Height="{Binding ViewHeight}"
                       Margin="{Binding EffectiveMargin}"
+                      VerticalContentAlignment="Top"
                       Width="{Binding Width}"
                       HorizontalScrollBarVisibility="{Binding HScroll}"
                       VerticalScrollBarVisibility="{Binding VScroll}"

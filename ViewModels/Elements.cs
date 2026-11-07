@@ -43,6 +43,8 @@ namespace HandlerGuide.ViewModels
         private Thickness _margin;
         private double _width = double.NaN;
         private double _height = double.NaN;
+        private double _minW;
+        private double _minH;
         private HorizontalAlignment _hAlign = HorizontalAlignment.Stretch;
         private VerticalAlignment _vAlign = VerticalAlignment.Center;
         private string _toolTip;
@@ -57,6 +59,9 @@ namespace HandlerGuide.ViewModels
         /// <summary>宽度 / 高度；0 会被当作“零宽”，需要自适应请用 double.NaN。</summary>
         public double Width { get => _width; set => Set(ref _width, value); }
         public double Height { get => _height; set => Set(ref _height, value); }
+        /// <summary>最小宽 / 高（只在等比缩放容器上用：窄窗口下别让画布缩成 0）。</summary>
+        public double MinW { get => _minW; set => Set(ref _minW, value); }
+        public double MinH { get => _minH; set => Set(ref _minH, value); }
         public HorizontalAlignment HAlign { get => _hAlign; set => Set(ref _hAlign, value); }
         public VerticalAlignment VAlign { get => _vAlign; set => Set(ref _vAlign, value); }
         public string ToolTip { get => _toolTip; set => Set(ref _toolTip, value); }

@@ -150,6 +150,9 @@ namespace HandlerGuide.ViewModels
                 Invalidate();
             }
 
+            // 首次进面板就选中第一条：右侧编辑器不会是空白一块，列表也立刻有内容
+            if (RowCount > 0 && string.IsNullOrEmpty(Selected)) Select(NameOf(0));
+
             // ---------------- 左侧流程表 ----------------
             var rows = E.V();
             for (int i = 0; i < MaxRows; i++)

@@ -8,16 +8,67 @@
 --  脚本只能被拒绝（moveabs 返回 false，原因看 lasterr()），不能绕过。
 -- ============================================================================
 
-local OWNER  = 23   -- 本流程的令牌持有人编号，全流程唯一
-local PERIOD = 80  -- 扫描周期 ms
+local OWNER  = 23
+local PERIOD = 100
+
+-- 点位一律走 point("名字")，现场改点位表即可，脚本不写死数字
+local function pt(name, def)
+    local v = point(name)
+    if v == 0 then return def end
+    return v
+end
+
+-- 走一根轴并等它停稳；轴表里没有就跳过（不算错），被安全层拒绝要报出来
+local function go(axis, v, ms)
+    if ax(axis) < 0 then return false end
+    if not moveabs(axis, v) then
+        alarm(axis .. " 被安全层拒绝：" .. lasterr())
+        return false
+    end
+    pause(40)
+    local t = 0
+    while running() and t < (ms or 4000) do
+        if inpos(axis) then return true end
+        pause(20)
+        t = t + 20
+    end
+    return inpos(axis)
+end
+
+local function outp(name, on)
+    if not writeout(name, on) then alarm("输出点不存在：" .. name) end
+end
+
+-- Fix2：固定盘位，没有伺服轴 —— 由「料盘搬运夹爪 + 顶升气缸」代走，
+-- 这里只维护盘位状态并驱动气缸，位置量全部记在 VarBox 里。
+local function run_cycle()
+    if not take("Fix2盘位", OWNER) then
+        step("让行：Fix2盘位被占用"); pause(PERIOD); return
+    end
+    if boxget("Fix2.层数") < 1 then
+        step("Fix2 缺盘：等搬运臂送盘")
+        boxset("Fix2.缺盘", 1)
+        pause(500)
+        give("Fix2盘位", OWNER)
+        return
+    end
+    step("Fix2 夹爪夹紧")
+    outp("料盘搬运夹爪松", false)
+    outp("料盘搬运夹爪夹", true)
+    pause(400)
+    step("Fix2 夹爪松开")
+    outp("料盘搬运夹爪夹", false)
+    outp("料盘搬运夹爪松", true)
+    pause(300)
+    give("Fix2盘位", OWNER)
+end
 
 while running() do
-    if boxwait("SafeOk", 1) == 1 then
-        step("工作中")
-        -- TODO 运动：在此动 无真实 Y/Z 轴（点位用 point("名字") 取，别写死数字）
-        pause(PERIOD)
+    if boxget("SafeOk") == 1 then
+        run_cycle()
+        boxinc("循环计数.23_Fix2仓", 1)
     else
-        pause(PERIOD)              -- 未安全：原地让行，不下任何指令
+        step("让行：未安全（SafeOk=0）")
+        pause(PERIOD)
     end
-    boxinc("循环计数.23_Fix2仓", 1)
 end

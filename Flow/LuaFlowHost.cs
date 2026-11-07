@@ -79,6 +79,11 @@ namespace HandlerGuide.Flow
         {
             lock (gate)
             {
+                // SafeOk 由 Motion/FlowEngine 的安全扫描线程发布；它没起来时运动类流程
+                // 会一直『让行：未安全』—— 这里先把原因说清楚，免得看着像脚本没跑。
+                if (!VarBox.GetFlag("SafeOk"))
+                    MachineModel.Instance.Log("警告",
+                        "SafeOk=0：运动类流程会原地让行。先到「运动仿真」页点〔流程启动〕拉起安全扫描线程。");
                 stopAll = false;
                 foreach (var f in flows) StartOne(f);
                 return flows.Count;
@@ -95,7 +100,10 @@ namespace HandlerGuide.Flow
                 for (int i = 0; i < flows.Count; i++) ts[i] = flows[i].Thread;
             }
             foreach (var t in ts)
-                if (t != null && t != Thread.CurrentThread && !t.Join(3000)) t.Abort();
+                if (t != null && t != Thread.CurrentThread && !t.Join(3000))
+                    // .NET Core 起 Thread.Abort 直接抛 PlatformNotSupportedException；
+                    // 脚本只能靠 running() 协作退出，这里只记一条日志（不抛、也不假装成功）。
+                    MachineModel.Instance.Log("警告", "Lua 流程线程 3s 未退出：" + (t.Name ?? "?"));
         }
 
         // ------------------------------------------------------------ 单条流程控制

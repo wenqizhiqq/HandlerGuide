@@ -8,21 +8,62 @@
 --  脚本只能被拒绝（moveabs 返回 false，原因看 lasterr()），不能绕过。
 -- ============================================================================
 
-local OWNER  = 1   -- 本流程的令牌持有人编号，全流程唯一
-local PERIOD = 50  -- 扫描周期 ms
+local OWNER  = 1
+local PERIOD = 50
+
+-- 点位一律走 point("名字")，现场改点位表即可，脚本不写死数字
+local function pt(name, def)
+    local v = point(name)
+    if v == 0 then return def end
+    return v
+end
+
+-- 走一根轴并等它停稳；轴表里没有就跳过（不算错），被安全层拒绝要报出来
+local function go(axis, v, ms)
+    if ax(axis) < 0 then return false end
+    if not moveabs(axis, v) then
+        alarm(axis .. " 被安全层拒绝：" .. lasterr())
+        return false
+    end
+    pause(40)
+    local t = 0
+    while running() and t < (ms or 4000) do
+        if inpos(axis) then return true end
+        pause(20)
+        t = t + 20
+    end
+    return inpos(axis)
+end
+
+local function outp(name, on)
+    if not writeout(name, on) then alarm("输出点不存在：" .. name) end
+end
+
+local function run_cycle()
+    if not take("ARM_X", OWNER) then
+        step("让行：ARM_X 被占用")
+        pause(PERIOD)
+        return
+    end
+    step("上料臂 → 取料位")
+    go("上料X轴", pt("上料.取料X", 200))
+    go("上料Y轴", pt("上料.取料Y", 0))
+    pause(200)
+    step("上料臂 → 放料位")
+    go("上料X轴", pt("上料.放料X", 620))
+    go("上料Y轴", pt("上料.放料Y", 0))
+    pause(200)
+    step("上料臂回停放位")
+    go("上料X轴", pt("上料.停放X", 0))
+    give("ARM_X", OWNER)
+end
 
 while running() do
-    if boxwait("SafeOk", 1) == 1 then
-        if take("ARM_X", OWNER) then
-            step("工作中")
-            -- TODO 运动：在此动 上料X轴, 上料Y轴，每步先 home/inpos 再 moveabs
-            pause(PERIOD)
-            give("ARM_X", OWNER)     -- 必须归还；异常时宿主 finally 会兜底清
-        else
-            pause(PERIOD)         -- 令牌被别的流程持有：让行，绝不阻塞
-        end
+    if boxget("SafeOk") == 1 then
+        run_cycle()
+        boxinc("循环计数.01_上料XY", 1)
     else
-        pause(PERIOD)              -- 未安全：原地让行，不下任何指令
+        step("让行：未安全（SafeOk=0）")
+        pause(PERIOD)
     end
-    boxinc("循环计数.01_上料XY", 1)
 end
