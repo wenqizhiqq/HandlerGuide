@@ -27,15 +27,18 @@ namespace HandlerGuide.Editing
     public sealed class LuaTraceLineColorizer : DocumentColorizingTransformer
     {
         static readonly Brush Bg = new SolidColorBrush(Color.FromRgb(0xFF, 0xF3, 0xC4));
+        static readonly Brush BgPaused = new SolidColorBrush(Color.FromRgb(0xFF, 0xD9, 0xA8));
 
         /// <summary>当前执行行（0 = 没在跑）。</summary>
         public int Line { get; set; }
+        /// <summary>这一行是不是断点停住的（停住时换橙色）。</summary>
+        public bool Paused { get; set; }
 
         protected override void ColorizeLine(DocumentLine line)
         {
             if (Line <= 0 || line.LineNumber != Line) return;
             ChangeLinePart(line.Offset, line.EndOffset,
-                v => v.TextRunProperties.SetBackgroundBrush(Bg));
+                v => v.TextRunProperties.SetBackgroundBrush(Paused ? BgPaused : Bg));
         }
     }
 
@@ -83,6 +86,52 @@ namespace HandlerGuide.Editing
                     FlowDirection.LeftToRight, _tf, 10.5, n == cur ? InkHot : Ink, dpi);
                 dc.DrawText(ft, new Point(textView.ActualWidth - 8 - ft.Width,
                                           vl.VisualTop - textView.VerticalOffset + 2));
+            }
+        }
+    }
+
+    /// <summary>行号左边那一列断点：红点 = 已下断点，点一下切换。</summary>
+    public sealed class LuaBreakpointMargin : AbstractMargin
+    {
+        /// <summary>取当前流程的断点行集合。</summary>
+        public Func<HashSet<int>> Source;
+        /// <summary>点一下切换断点；由编辑器注入。</summary>
+        public Action<int> Toggle;
+
+        public double MarginWidth { get; set; } = 18;
+
+        static readonly Brush Dot = new SolidColorBrush(Color.FromRgb(0xE5, 0x3E, 0x3E));
+
+        protected override Size MeasureOverride(Size availableSize) => new Size(MarginWidth, 0);
+
+        protected override void OnRender(DrawingContext dc)
+        {
+            var tv = TextView;
+            if (tv == null || !tv.VisualLinesValid) return;
+            var src = Source;
+            var set = src != null ? src() : null;
+            if (set == null || set.Count == 0) return;
+            foreach (var vl in tv.VisualLines)
+            {
+                if (!set.Contains(vl.FirstDocumentLine.LineNumber)) continue;
+                double y = vl.VisualTop - tv.VerticalOffset + vl.Height / 2;
+                dc.DrawEllipse(Dot, null, new Point(MarginWidth / 2, y), 4.6, 4.6);
+            }
+        }
+
+        protected override void OnMouseLeftButtonDown(System.Windows.Input.MouseButtonEventArgs e)
+        {
+            var tv = TextView;
+            if (tv == null || !tv.VisualLinesValid) return;
+            var p = e.GetPosition(this);
+            foreach (var vl in tv.VisualLines)
+            {
+                double top = vl.VisualTop - tv.VerticalOffset;
+                if (p.Y < top || p.Y > top + vl.Height) continue;
+                Toggle?.Invoke(vl.FirstDocumentLine.LineNumber);
+                InvalidateVisual();
+                e.Handled = true;
+                return;
             }
         }
     }

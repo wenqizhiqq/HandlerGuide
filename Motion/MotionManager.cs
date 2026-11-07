@@ -208,6 +208,12 @@ namespace HandlerGuide.Motion
         /// <summary>自演示节拍是否运行中。</summary>
         public bool AutoCycle { get; private set; }
 
+        /// <summary>
+        /// true = 轴交给 Lua 流程驱动：22 步自演示节拍让位（AutoCycle 仍为真，
+        /// 只当画布的动画时钟用）。需求 60：脚本要影响仿真，仿真不再自己跑一套。
+        /// </summary>
+        public bool ScriptDriven { get; set; }
+
         /// <summary>节拍是否处于「暂停」（保持 AutoCycle，但不推进步骤）。</summary>
         public bool Paused { get; private set; }
 
@@ -1356,6 +1362,7 @@ namespace HandlerGuide.Motion
         public void StopDemo()
         {
             AutoCycle = false;
+            ScriptDriven = false;
             VarBox.SetD("仿真.演示", 0);
             Paused = false;
             DemoStepText = "已停止";
@@ -1365,7 +1372,7 @@ namespace HandlerGuide.Motion
         /// <summary>推进演示节拍：仅在所有轴静止且驻留结束时进入下一步。</summary>
         private void StepDemo(double dt)
         {
-            if (!AutoCycle || Paused) return;
+            if (!AutoCycle || Paused || ScriptDriven) return;
 
             _demoDwell -= dt;
             if (AnyBusy() || _demoDwell > 0)

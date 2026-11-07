@@ -70,6 +70,10 @@ namespace HandlerGuide.Editing
 
         LuaTraceLineColorizer _traceLine;
         LuaLineTimingRenderer _timingMargin;
+        LuaBreakpointMargin _bpMargin;
+        Popup _valueTip;
+        TextBlock _valueText;
+        System.Windows.Threading.DispatcherTimer _valueTimer;
         System.Windows.Threading.DispatcherTimer _traceTimer;
 
         /// <summary>拉一次执行跟踪：更新黄底行号 + 右侧耗时标尺。</summary>
@@ -84,6 +88,15 @@ namespace HandlerGuide.Editing
                 TextArea.TextView.Redraw();      // 让着色器按新行号重跑
             }
             if (_timingMargin != null) TextArea.TextView.InvalidateVisual();
+
+            // 断点停住 → 该行换橙色，断点列也跟着刷
+            int pl; bool paused = Flow.LuaFlowHost.IsPaused(FlowName, out pl);
+            if (paused != _traceLine.Paused)
+            {
+                _traceLine.Paused = paused;
+                TextArea.TextView.Redraw();
+            }
+            if (_bpMargin != null) _bpMargin.InvalidateVisual();
         }
 
         public LuaEditorControl(string flowName)
@@ -132,6 +145,19 @@ namespace HandlerGuide.Editing
                 }
             };
             TextArea.TextView.BackgroundRenderers.Add(_timingMargin);
+
+            // 需求 59：行号左边的断点列 + 点变量看值
+            _bpMargin = new LuaBreakpointMargin
+            {
+                Source = () => Flow.LuaFlowHost.BreakpointsOf(FlowName),
+                Toggle = ln =>
+                {
+                    Flow.LuaFlowHost.ToggleBreakpoint(FlowName, ln);
+                    TextArea.TextView.InvalidateVisual();
+                }
+            };
+            TextArea.LeftMargins.Add(_bpMargin);
+            TextArea.PreviewMouseLeftButtonUp += TextArea_PreviewMouseLeftButtonUp;
             TextArea.TextView.VisualLinesChanged += (s, e) => TextArea.TextView.InvalidateVisual();
             _traceTimer = new System.Windows.Threading.DispatcherTimer
             {
@@ -169,6 +195,70 @@ namespace HandlerGuide.Editing
             };
             TextArea.TextView.MouseHover += TextView_MouseHover;
             TextArea.TextView.MouseHoverStopped += (s, e) => { _hoverTip.IsOpen = false; };
+        }
+
+        // ==================================================================
+        //  需求 59：点变量看“名称 = 值”
+        // ==================================================================
+        void TextArea_PreviewMouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            try
+            {
+                int off = TextArea.Caret.Offset;
+                string word = WordAt(Document, off);
+                if (string.IsNullOrEmpty(word)) return;
+                char c0 = word[0];
+                if (!char.IsLetter(c0) && c0 != '_') return;
+
+                string val = Flow.LuaFlowHost.Inspect(FlowName, word);
+                ShowValueTip(word, val, e.GetPosition(this));
+            }
+            catch { /* 取不到就算了，不影响编辑 */ }
+        }
+
+        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_';
+
+        /// <summary>取光标所在的那个标识符（AvalonEdit 6.x 没有现成的 GetWordAt，自己扫）。</summary>
+        static string WordAt(ICSharpCode.AvalonEdit.Document.TextDocument doc, int off)
+        {
+            if (doc == null || doc.TextLength == 0) return "";
+            int s = Math.Min(Math.Max(off, 0), doc.TextLength);
+            int e = s;
+            while (s > 0 && IsWordChar(doc.GetCharAt(s - 1))) s--;
+            while (e < doc.TextLength && IsWordChar(doc.GetCharAt(e))) e++;
+            return e > s ? doc.GetText(s, e - s) : "";
+        }
+
+        void ShowValueTip(string name, string value, Point at)
+        {
+            if (_valueTip == null)
+            {
+                _valueText = new TextBlock { FontSize = 12.5, FontFamily = FontFamily };
+                _valueTip = new Popup
+                {
+                    AllowsTransparency = true,
+                    StaysOpen = false,
+                    Placement = PlacementMode.Relative,
+                    PlacementTarget = this,
+                    Child = new Border
+                    {
+                        Background = Brushes.White,
+                        BorderBrush = new SolidColorBrush(Color.FromRgb(0xE1, 0xE3, 0xE8)),
+                        BorderThickness = new Thickness(1),
+                        CornerRadius = new CornerRadius(7),
+                        Padding = new Thickness(9, 5, 9, 5),
+                        Child = _valueText
+                    }
+                };
+                _valueTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2600) };
+                _valueTimer.Tick += (s, e2) => { _valueTip.IsOpen = false; _valueTimer.Stop(); };
+            }
+            _valueText.Text = name + " = " + (string.IsNullOrEmpty(value) ? "nil" : value);
+            _valueTip.HorizontalOffset = at.X + 14;
+            _valueTip.VerticalOffset = at.Y + 18;
+            _valueTip.IsOpen = true;
+            _valueTimer.Stop();
+            _valueTimer.Start();
         }
 
         // ==================================================================

@@ -129,6 +129,7 @@ namespace HandlerGuide.ViewModels
 
             LiveValues.Register("fs_caption", _ => Caption());
             LiveValues.Register("fs_running", _ => RunningCount());
+            LiveValues.Register("fs_runstat", _ => RunningCount() + " / " + RowCount + " 条");
             LiveValues.Register("fs_rows", _ => RowCount);
             LiveValues.Register("fs_editors", _ => FlowScriptSession.BuiltCount);
         }
@@ -157,6 +158,9 @@ namespace HandlerGuide.ViewModels
                 int ln; double ms; Dictionary<int, double> map;
                 LuaFlowHost.GetTrace(Selected, out ln, out ms, out map);
                 if (ln > 0) info += " · 行 " + ln + " · " + ms.ToString("0") + "ms";
+                int pauseLine;
+                if (LuaFlowHost.IsPaused(Selected, out pauseLine))
+                    info += " · 断点停住（第 " + pauseLine + " 行）";
             }
             return "正在编辑：" + Selected + ".lua　[" + mark + "]" + run + info;
         }
@@ -213,7 +217,10 @@ namespace HandlerGuide.ViewModels
             // ---------------- 右：编辑器（70%）----------------
             // 说明条 Auto + 编辑器占满剩余高度（E.V 是 StackPanel，子项拿不到 *）
             var editorArea = E.Grid().Cols("*").Rows("Auto", "*");
-            editorArea.Add(E.H(Sig("fs_caption", 0, 11.5, E.P, E.BandBlue)), 0, 0);
+            // 需求 59：说明条右边挂一个〔继续〕—— 断点停住时点它放行
+            editorArea.Add(E.H(
+                Sig("fs_caption", 0, 11.5, E.P, E.BandBlue),
+                E.MiniBtn("继续", () => { if (!string.IsNullOrEmpty(Selected)) LuaFlowHost.Resume(Selected); }, 52)), 0, 0);
             editorArea.Add(Slot(), 1, 0);
             editorArea.HAlign = HorizontalAlignment.Stretch;
             editorArea.VAlign = VerticalAlignment.Stretch;
@@ -230,8 +237,7 @@ namespace HandlerGuide.ViewModels
             var title = E.Wrap(
                 E.T("工艺流程脚本（Lua · NLua：一条流程 = 一条线程 = 一个独立 Lua 状态）", 12, E.P, true),
                 E.SpacerW(12),
-                E.T("运行", 11, E.Sec), Sig("fs_running", 28, 11, E.P),
-                E.T("/", 11, E.Sec), Sig("fs_rows", 28, 11, E.Sec), E.T("条", 11, E.Sec),
+                E.T("运行", 11, E.Sec), Sig("fs_runstat", 84, 11, E.P),
                 E.SpacerW(12),
                 E.T("点左侧任意一行看脚本 · Ctrl+S 保存 · 启停跟随仿真页〔启动演示节拍〕", 10.5, E.Sec))
                 .Marg(new Thickness(0, 0, 0, 5));
@@ -356,6 +362,7 @@ namespace HandlerGuide.ViewModels
             SaveIfDirtyAll();
             // 需求 55：脚本与仿真页联动 —— 起脚本的同时把演示节拍也拉起来，
             // 否则脚本会因为 SafeOk=0 一直「等待：未安全」。
+            Motion.MotionManager.Instance.ScriptDriven = true;
             if (!Motion.MotionManager.Instance.AutoCycle) Motion.MotionManager.Instance.StartDemo();
             int n = LuaFlowHost.StartAll();
             FlowScriptSession.SetReadOnlyAll(true);

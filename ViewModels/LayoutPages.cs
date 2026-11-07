@@ -264,7 +264,7 @@ namespace HandlerGuide.ViewModels
                                         E.Wrap(
                                             // 需求 55：脚本运行与仿真页面联动 —— 启动演示节拍 = 画布动 + 全部 Lua 流程起，
                                             // 停止演示 = 两者一起停。
-                                            E.Btn("启动演示节拍", () => { MotionManager.Instance.StartDemo(); LuaFlowHost.StartAll(); }, "PrimaryButton", 12),
+                                            E.Btn("启动演示节拍", () => { MotionManager.Instance.ScriptDriven = true; MotionManager.Instance.StartDemo(); LuaFlowHost.StartAll(); }, "PrimaryButton", 12),
                                             E.Btn("停止演示", () => { MotionManager.Instance.StopDemo(); LuaFlowHost.StopAll(); }, "PrimaryButton", 12),
                                             E.Btn("急停", () => MotionManager.Instance.TriggerEStop(), "DangerButton", 12),
                                             E.Btn("急停复位", () => MotionManager.Instance.ResetEStop(), "PrimaryButton", 12),
@@ -1003,6 +1003,23 @@ namespace HandlerGuide.ViewModels
             return f;
         }
 
+        /// <summary>
+        /// 真实轴位置 → 画布坐标：按该轴自己的软限位做线性映射，越界钳到两端。
+        /// 轴表里没有就退回范围起点（画布停在原位，不会乱跳）。
+        /// </summary>
+        private static double AxisToCanvas(string axisName, double out0, double out1)
+        {
+            var m = MotionManager.Instance;
+            int i = m.AxisIndex(axisName);
+            if (i < 0) return out0;
+            var c = m.Cfg(i);
+            double lo = Math.Min(c.MinMm, c.MaxMm);
+            double hi = Math.Max(c.MinMm, c.MaxMm);
+            if (hi - lo < 1e-6) return out0;
+            double f = (m.Position(i) - lo) / (hi - lo);
+            if (f < 0) f = 0; else if (f > 1) f = 1;
+            return out0 + (out1 - out0) * f;
+        }
         private static CanvasElement BuildLayoutCanvasTop()
         {
             // 1010×819 —— 与底图 1696×1376（≈1.233）等比，且与 3D 画布同高。
@@ -1911,6 +1928,8 @@ namespace HandlerGuide.ViewModels
                 // 每组只在自己的时隙里从初值走一个完整来回（+1.0 相位，三角波周期 1），
                 // 时隙结束精确回到停放位，其余时间停在停放位。
                 bool running = MotionManager.Instance.AutoCycle;
+                // 需求 60：脚本驱动时，手臂/搬运臂的位置改读真实轴位置（不再按演示相位走）
+                bool scriptDriven = MotionManager.Instance.ScriptDriven;
                 if (running) t += dt;
                 double cyc = Mod(t, 3.0 * SLOT_SEC);
                 int slot = (int)(cyc / SLOT_SEC);
@@ -1940,7 +1959,9 @@ namespace HandlerGuide.ViewModels
                 // 抠图只改 X；Y 跟着横梁一起升降（红滑座坐在梁上，梁升它就升）。
                 // 相位 0.2188 ⇒ t = 0 时 tri = 0.4376，落在行程 72..362 的比例 0.4376 上，
                 // 正好是照片原位 198.9，静态首屏与真机照片逐像素重合。
-                double uaX = UA_X0 + Triangle(phDown) * (UA_X1 - UA_X0);
+                double uaX = scriptDriven
+                    ? AxisToCanvas("下料X轴", UA_X0, UA_X1)
+                    : UA_X0 + Triangle(phDown) * (UA_X1 - UA_X0);
                 uaArm.X = uaX;
                 uaArm.Y = UA_Y + beamLiftD;
 
@@ -1967,7 +1988,9 @@ namespace HandlerGuide.ViewModels
                 // （行程 674.1..845.6 的比例 0.521），首屏与照片重合。
                 // 需求 39：上料组只在上料时隙里走一个完整来回（+1.0 相位），
                 // 时隙结束回到停放位 763.5，把走廊让给搬运臂。
-                double u2X = U2_X0 + Triangle(phUp) * (U2_X1 - U2_X0);
+                double u2X = scriptDriven
+                    ? AxisToCanvas("上料X轴", U2_X0, U2_X1)
+                    : U2_X0 + Triangle(phUp) * (U2_X1 - U2_X0);
                 u2Arm.X = u2X;
                 u2Arm.Y = U2_Y + beamLiftU;
 
@@ -2145,6 +2168,7 @@ namespace HandlerGuide.ViewModels
                     didPick = false;             // 需求 44：吸取锁存一并复位
                     didDropU = didGrabD = didDropD = false;   // 需求 48：取放锁存一并复位
                 }
+                if (scriptDriven) trayX = AxisToCanvas("搬运X轴", armX0, armX1 - armW);
                 trayArm.X = trayX;
                 // 需求 43：抓着的空盘贴在臂头下方（抓起后显示，放盘后隐藏）
                 grabTray.Fill = holdingTray ? layerPlate : null;

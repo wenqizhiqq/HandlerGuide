@@ -44,6 +44,16 @@ namespace HandlerGuide.Flow
         /// <summary>逐行累计耗时（行号 → ms），执行过 step(...) 的行才有。</summary>
         public readonly Dictionary<int, double> LineMs = new Dictionary<int, double>();
         internal long LastTraceAt;
+
+        /// <summary>断点行号集合（点行号左侧的红点切换）。</summary>
+        public readonly HashSet<int> Breakpoints = new HashSet<int>();
+        /// <summary>是否正断在某一行（true 时 Lua 线程停在 hook 里，等 Resume）。</summary>
+        public volatile bool Paused;
+        public int PauseLine;
+        /// <summary>变量查看请求 / 结果（界面点标识符 → 暂停中由 Lua 线程自己取值）。</summary>
+        public string InspectRequest;
+        public string InspectName = "";
+        public string InspectResult = "";
         internal Thread Thread;
         internal dynamic Env;
         internal readonly List<string> Held = new List<string>();
@@ -164,6 +174,70 @@ namespace HandlerGuide.Flow
                         r.Add(new[] { f.Name, f.Running ? "运行" : (f.Started ? "已停" : "未启动"),
                             f.Loops.ToString(), f.Step, string.Join(",", f.Held.ToArray()), f.Error });
             return r;
+        }
+
+        /// <summary>切换某一条流程的断点行。</summary>
+        public static void ToggleBreakpoint(string name, int line)
+        {
+            if (line <= 0) return;
+            lock (gate) foreach (var f in flows)
+            {
+                if (f.Name != name) continue;
+                lock (f) { if (!f.Breakpoints.Remove(line)) f.Breakpoints.Add(line); }
+                return;
+            }
+        }
+
+        /// <summary>某条流程当前的断点行快照。</summary>
+        public static HashSet<int> BreakpointsOf(string name)
+        {
+            lock (gate) foreach (var f in flows)
+            {
+                if (f.Name != name) continue;
+                lock (f) return new HashSet<int>(f.Breakpoints);
+            }
+            return new HashSet<int>();
+        }
+
+        /// <summary>是否正断住 + 断在哪一行。</summary>
+        public static bool IsPaused(string name, out int line)
+        {
+            line = 0;
+            lock (gate) foreach (var f in flows)
+            {
+                if (f.Name != name) continue;
+                lock (f) { line = f.PauseLine; return f.Paused; }
+            }
+            return false;
+        }
+
+        /// <summary>继续（把停住的 Lua 线程放行）。</summary>
+        public static void Resume(string name)
+        {
+            lock (gate) foreach (var f in flows)
+            {
+                if (f.Name != name) continue;
+                lock (f) { f.Paused = false; f.Step = "运行中"; }
+                return;
+            }
+        }
+
+        /// <summary>点变量取值：暂停时交给 Lua 线程自己算（最多等 400ms）。</summary>
+        public static string Inspect(string name, string ident)
+        {
+            if (string.IsNullOrEmpty(ident)) return "";
+            LuaFlow hit = null;
+            lock (gate) foreach (var f in flows) if (f.Name == name) { hit = f; break; }
+            if (hit == null) return "";
+            bool paused; lock (hit) paused = hit.Paused;
+            if (!paused) return "（运行中取不到局部变量，断住再点）";
+            lock (hit) { hit.InspectRequest = ident; hit.InspectResult = ""; }
+            for (int i = 0; i < 20; i++)
+            {
+                Thread.Sleep(20);
+                lock (hit) if (hit.InspectRequest == null && hit.InspectResult.Length > 0) return hit.InspectResult;
+            }
+            return "（超时：没取到）";
         }
 
         /// <summary>取某条流程的逐行耗时快照（行号 → ms）与当前行；界面 500ms 拉一次。</summary>
@@ -306,6 +380,16 @@ namespace HandlerGuide.Flow
 
             // 逐行跟踪：step() 在 Lua 侧包一层，先拿 debug.getinfo 的行号，再记时间。
             // 耗时算在**上一行的标记**上（上一个 step → 这一个 step 之间的那段就是上一段的耗时）。
+            // 断点：Lua 的 line hook 每执行一行回调一次；命中就把这条线程停在 hook 里等 Resume。
+            e["__isbp"] = (Func<int, bool>)(ln => { lock (f) return f.Breakpoints.Count > 0 && f.Breakpoints.Contains(ln); });
+            e["__on_break"] = (Action<int>)(ln =>
+            {
+                lock (f) { f.Paused = true; f.PauseLine = ln; f.Step = "断点：第 " + ln + " 行"; }
+            });
+            e["__paused"] = (Func<bool>)(() => f.Paused && f.Running && !stopAll);
+            e["__sleep"] = (Action<int>)(ms => { if (ms > 0) Thread.Sleep(ms); });
+            e["__service"] = (Action)(() => ServiceInspect(f, e));
+
             e["__line"] = (Action<int, string>)((line, text) =>
             {
                 long now = Environment.TickCount64;
@@ -338,6 +422,7 @@ namespace HandlerGuide.Flow
             f.Running = true;
             f.Started = true;
             f.Error = "";
+            f.Paused = false;
             var t = new Thread(() => Run(f)) { IsBackground = true, Name = "Lua:" + f.Name };
             f.Thread = t;
             t.Start();
@@ -355,6 +440,30 @@ namespace HandlerGuide.Flow
             }
             return sb.ToString();
         }
+        /// <summary>暂停期间由 Lua 线程自己取一个变量的值（只有它拥有这个 Lua 状态）。</summary>
+        static void ServiceInspect(LuaFlow f, dynamic e)
+        {
+            string name;
+            lock (f) { name = f.InspectRequest; if (name == null) return; f.InspectRequest = null; }
+            string res;
+            try
+            {
+                var r = e.DoString("return __lookup(" + QuoteLua(name) + ")");
+                res = (r != null && r.Length > 0 && r[0] != null) ? Convert.ToString(r[0]) : "nil";
+            }
+            catch (Exception ex) { res = "取不到：" + ex.Message; }
+            lock (f) { f.InspectName = name; f.InspectResult = res; }
+        }
+
+        /// <summary>拼一个 Lua 字符串字面量（只用于变量名）。</summary>
+        static string QuoteLua(string s)
+        {
+            string q = ((char)34).ToString();
+            string bs = ((char)92).ToString();
+            string body = (s ?? "").Replace(bs, bs + bs).Replace(q, bs + q);
+            return q + body + q;
+        }
+
         static void Run(LuaFlow f)
         {
             try
@@ -377,6 +486,37 @@ function step(s)
   end
   __line(line, tostring(s))
   __raw_step(s)
+end
+
+-- 变量查看：先按名字找局部变量（从调用栈逐层找），找不到再看全局
+function __lookup(n)
+  if debug and debug.getlocal then
+    for lvl = 2, 14 do
+      local i = 1
+      while true do
+        local nm, val = debug.getlocal(lvl, i)
+        if not nm then break end
+        if nm == n then return tostring(val) end
+        i = i + 1
+      end
+    end
+  end
+  local g = _G[n]
+  if g == nil then return 'nil（局部变量已出作用域或未定义）' end
+  return tostring(g)
+end
+
+-- 断点：line hook，命中就原地等 __paused() 变假
+if debug and debug.sethook then
+  debug.sethook(function(ev, line)
+    if line and __isbp(line) then
+      __on_break(line)
+      while __paused() do
+        __service()
+        __sleep(40)
+      end
+    end
+  end, 'l')
 end
 ", "step-wrapper");
                     // NLua 把 C# 串塞进 Lua 时走的是系统 ANSI 编码，中文会变成 '?'
