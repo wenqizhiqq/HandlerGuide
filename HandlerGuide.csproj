@@ -115,6 +115,8 @@
 
   <ItemGroup>
     <!-- SECS/GEM（HSMS-SS）通讯：免费开源库，MIT 许可 -->
+    <PackageReference Include="AvalonEdit" Version="6.3.1.120" />
+    <PackageReference Include="NLua" Version="1.7.9" />
     <PackageReference Include="Secs4Net" Version="3.1.0" />
     <!-- 测试机通讯（测试接口）：RS232 串口，.NET 8 起 SerialPort 需显式引用此包 -->
     <PackageReference Include="System.IO.Ports" Version="8.0.0" />
