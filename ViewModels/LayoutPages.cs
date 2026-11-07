@@ -245,58 +245,36 @@ namespace HandlerGuide.ViewModels
                     // 窄窗口兜底：列宽被右栏挤到很小时，画布至少留 240×200，
                     // 不再缩成看不见的一条（最小尺寸挂在 Element.MinW / MinH 上）。
                     .Add(FitCanvasTop(topCanvas), 0, 0)
+                    // 需求 53：右栏改成 Grid（Auto/Auto/Auto/*），脚本面板吃剩余高度，
+                    // 这样流程表和编辑器的高度会随窗口自适应，而不是写死 300。
                     .Add(
-                        E.V(
-                            // ---- 需求 47：页面右上角署名水印 ----
-                            // 温启志 18719361399 · 用户：「仿真页面右上角需要带我的名字温启志
-                            // 水印和电话18719361399，小字写」。右栏顶 = 页面右上角，右对齐小字。
-                            E.T("温启志 18719361399", 9, E.Sec, false, TextWrapping.NoWrap,
-                                TextAlignment.Right, HorizontalAlignment.Right),
-                            E.Spacer(2),
-
-                            // ---- 本页标题行 ----
-                            // 原来这行在页顶左侧，和外壳的「页面名 + 页面描述」重复了一遍。
-                            // 按用户要求挪到「最右边」= 右栏（固定 490）顶部，排在仿真节拍控制之上。
-                            // 用 Wrap 而不是 H：右栏可用宽 = 490 − 栏左边距 12 = 478，
-                            // 标题 14.5px + 间距 14 + 副标题 11px 约 451px，一行放得下；
-                            // 万一字体度量比估算宽，Wrap 会自己折到第二行，不会像 H 那样被裁掉。
-                            E.Wrap(
-                                E.T("三温标准机 · 模块平面仿真", 14.5, E.P, true),
-                                E.SpacerW(14),
-                                E.T("（11 个模组 · 动作随运动控制卡实时变化）", 11, E.Sec)),
-                            E.Spacer(6),
-
-                            // ---- 仿真节拍控制 ----
-                            // 原来这条是页顶的**通栏**操作条（7 个按钮一行排开）。按用户要求
-                            // 挪到「仿真图最右侧」= 右栏顶部，并**分 2 行**显示：
-                            // 本栏固定 490 宽，减去栏左边距 12 和 Band 内边距 14×2 只剩约 450，
-                            // 7 个按钮一行要 ~570px 塞不下，所以按语义拆成
-                            //   第 1 行 = 节拍控制（启动 / 停止）+ 急停 / 急停复位
-                            //   第 2 行 = 整机动作（全部回零 / 全部停止 / 清除报警）
-                            // 两行实测各约 336px / 252px，都在 450 之内。
-                            E.Band("仿真节拍控制", Palette.BandBlue,
-                                E.V(
-                                    E.H(
-                                        E.Btn("启动演示节拍", () => MotionManager.Instance.StartDemo(), "PrimaryButton", 12),
-                                        E.Btn("停止演示", () => MotionManager.Instance.StopDemo(), "PrimaryButton", 12),
-                                        E.Btn("急停", () => MotionManager.Instance.TriggerEStop(), "DangerButton", 12),
-                                        E.Btn("急停复位", () => MotionManager.Instance.ResetEStop(), "PrimaryButton", 12)),
-                                    E.Spacer(6),
-                                    E.H(
-                                        E.Btn("全部回零", () => MotionManager.Instance.HomeAll(), "PrimaryButton", 12),
-                                        E.Btn("全部停止", () => MotionManager.Instance.StopAll(), "PrimaryButton", 12),
-                                        E.Btn("清除报警", () => MotionManager.Instance.ClearAlarm(), "PrimaryButton", 12)))),
-                            E.Spacer(6),
-
-                            // ---- 命令中心（生产控制 + 批次管理）从主界面搬到本仿真页右侧 ----
-                            HomePages.CommandCenter(),
-                            E.Spacer(6),
-                            E.T("图例", 12, E.P, true),
-                            BuildLegend(),
-                            E.Spacer(6),
-
-                            // ---- 轴 IO 动作脚本（右侧只保留这一块说明/脚本内容）----
-                            FlowScriptPages.FlowScriptPanel(300)).Margin(12, 0, 0, 0).VTop(),
+                        E.Grid().Cols("*").Rows("Auto", "Auto", "Auto", "*")
+                            .Add(E.V(
+                                E.T("温启志 18719361399", 9, E.Sec, false, TextWrapping.NoWrap,
+                                    TextAlignment.Right, HorizontalAlignment.Right),
+                                E.Spacer(2),
+                                E.Wrap(
+                                    E.T("三温标准机 · 模块平面仿真", 14.5, E.P, true),
+                                    E.SpacerW(14),
+                                    E.T("（11 个模组 · 动作随运动控制卡实时变化）", 11, E.Sec)),
+                                E.Spacer(6),
+                                E.Band("仿真节拍控制", Palette.BandBlue,
+                                    E.V(
+                                        E.H(
+                                            E.Btn("启动演示节拍", () => MotionManager.Instance.StartDemo(), "PrimaryButton", 12),
+                                            E.Btn("停止演示", () => MotionManager.Instance.StopDemo(), "PrimaryButton", 12),
+                                            E.Btn("急停", () => MotionManager.Instance.TriggerEStop(), "DangerButton", 12),
+                                            E.Btn("急停复位", () => MotionManager.Instance.ResetEStop(), "PrimaryButton", 12)),
+                                        E.Spacer(6),
+                                        E.H(
+                                            E.Btn("全部回零", () => MotionManager.Instance.HomeAll(), "PrimaryButton", 12),
+                                            E.Btn("全部停止", () => MotionManager.Instance.StopAll(), "PrimaryButton", 12),
+                                            E.Btn("清除报警", () => MotionManager.Instance.ClearAlarm(), "PrimaryButton", 12))))
+                                ).VTop(), 0, 0)
+                            .Add(HomePages.CommandCenter(), 1, 0)
+                            .Add(E.V(E.T("图例", 12, E.P, true), BuildLegend()).VTop(), 2, 0)
+                            .Add(FlowScriptPages.FlowScriptPanel(0), 3, 0)
+                            .Margin(12, 0, 0, 0),
                         0, 1);
         }
 

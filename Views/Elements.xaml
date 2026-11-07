@@ -1,7 +1,8 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:vm="clr-namespace:HandlerGuide.ViewModels"
-                    xmlns:vw="clr-namespace:HandlerGuide.Views">
+                    xmlns:vw="clr-namespace:HandlerGuide.Views"
+                    xmlns:ed="clr-namespace:HandlerGuide.Editing">
 
     <vw:StyleKeyConverter x:Key="StyleKey" />
     <vw:UnsetIfNullConverter x:Key="UnsetIfNull" />
@@ -538,6 +539,19 @@
                 </Style>
             </ItemsControl.ItemContainerStyle>
         </ItemsControl>
+    </DataTemplate>
+
+    <!-- ================= Lua 脚本编辑器槽 ================= -->
+    <!-- 槽本身是视图模型，真正的 AvalonEdit 控件由 Editing 层创建后挂到 Child 上；
+         没有这段模板时 WPF 会退回默认模板，把控件显示成 “HandlerGuide.Editing.LuaEditor”。 -->
+    <DataTemplate DataType="{x:Type ed:LuaEditorSlotElement}">
+        <Grid Margin="{Binding EffectiveMargin}">
+            <ContentControl Content="{Binding Child}" />
+            <TextBlock Text="先点左侧任意一行的〔编辑〕"
+                       FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Visibility="{Binding ChildVis}" />
+        </Grid>
     </DataTemplate>
 
     <!-- ================= 标签页 ================= -->

@@ -44,7 +44,9 @@ namespace HandlerGuide.ViewModels
 
         // 列宽：选中符 / 流程名 / 状态 / 循环数 / 当前步 / 持有令牌 / 错误
         // 需求 52：列表在左、编辑器在右 —— 列宽收窄（原 622 太宽，右栏 735 放不下编辑器）
-        const double WMark = 16, WName = 104, WState = 40, WLoops = 44, WStep = 66, WTok = 56, WErr = 64;
+        // 需求 53：列表只占 30%，只留「流程名 / 状态 / 编辑」三列；
+        // 循环数 / 当前步 / 令牌 / 错误 移到编辑器顶部那行说明里（见 Caption）。
+        const double WMark = 12, WName = 96, WState = 36;
 
         /// <summary>当前选中的流程名（右侧编辑器显示的就是它）。</summary>
         public static string Selected { get; private set; } = "";
@@ -125,8 +127,20 @@ namespace HandlerGuide.ViewModels
         {
             if (string.IsNullOrEmpty(Selected)) return "还没选中流程：点左侧任意一行的〔编辑〕";
             string mark = FlowScriptSession.IsDirty(Selected) ? "● 未保存" : "已保存";
-            string run = LuaFlowHost.IsRunning(Selected) ? " · 正在运行，编辑器只读" : "";
-            return "正在编辑：" + Selected + ".lua　[" + mark + "]" + run;
+            string run = LuaFlowHost.IsRunning(Selected) ? " · 运行中（只读）" : "";
+            // 需求 53：列表只留三列，循环数 / 当前步 / 令牌 / 错误 都并到这一行
+            string info = "";
+            var rows = Snapshot();
+            for (int i = 0; i < rows.Count; i++)
+            {
+                if (rows[i] == null || rows[i].Length == 0 || rows[i][0] != Selected) continue;
+                info = " · " + Cell(i, 1) + " · 循环 " + Cell(i, 2) + " · " + Cell(i, 3);
+                string tok = Cell(i, 4), err = Cell(i, 5);
+                if (!string.IsNullOrEmpty(tok)) info += " · 持 " + tok;
+                if (!string.IsNullOrEmpty(err)) info += " · 错误：" + err;
+                break;
+            }
+            return "正在编辑：" + Selected + ".lua　[" + mark + "]" + run + info;
         }
 
         // ==================================================================
@@ -134,15 +148,19 @@ namespace HandlerGuide.ViewModels
         // ==================================================================
 
         /// <summary>工艺流程脚本面板（Pages/motion_sim.xaml 用 vw:D Method="FlowScriptPanel" 调）。</summary>
-        public static Element FlowScriptPanel() => FlowScriptPanel(430);
+        public static Element FlowScriptPanel() => FlowScriptPanel(0);
 
-        /// <summary>同上；listHeight 供紧凑页面（如模块平面仿真右栏）压缩流程表高度。</summary>
+        /// <summary>
+        /// 同上。listHeight ≤ 0 = 高度自适应（撑满父容器给的那一行）；&gt; 0 = 固定高度。
+        /// 布局（需求 53）：左 30% 流程表 / 右 70% 脚本编辑器，两边同高、随页面一起收放。
+        /// </summary>
         public static Element FlowScriptPanel(double listHeight)
         {
             EnsureRegistered();
 
-            // 编辑器槽是单例：高度跟着流程表一起收（紧凑页面传更小的 listHeight）
-            Slot().Height = listHeight;
+            // 高度自适应：不再写死 424，交给父容器那一行
+            Slot().Height = listHeight > 0 ? listHeight : double.NaN;
+            Slot().VAlign = VerticalAlignment.Stretch;
 
             // 第一次进页面先把脚本目录扫一遍，否则 Rows() 是空的，左边一张白表
             if (RowCount == 0)
@@ -154,7 +172,7 @@ namespace HandlerGuide.ViewModels
             // 首次进面板就选中第一条：右侧编辑器不会是空白一块，列表也立刻有内容
             if (RowCount > 0 && string.IsNullOrEmpty(Selected)) Select(NameOf(0));
 
-            // ---------------- 左侧流程表 ----------------
+            // ---------------- 左：流程表（30%）----------------
             var rows = E.V();
             for (int i = 0; i < MaxRows; i++)
             {
@@ -162,44 +180,64 @@ namespace HandlerGuide.ViewModels
                 rows.Children.Add(E.ShowIf(_ => row < RowCount, FlowRow(row)));
             }
 
-            var list = E.Group("流程列表（" + RowCount + " 条，绑 LuaFlowHost.Rows()，500ms 刷新）",
-                E.Scroll(E.V(FlowHead(), rows), listHeight,
-                         ScrollBarVisibility.Disabled, ScrollBarVisibility.Auto));
+            var listScroll = E.Scroll(E.V(FlowHead(), rows),
+                                      listHeight > 0 ? listHeight : 0,
+                                      ScrollBarVisibility.Disabled, ScrollBarVisibility.Auto);
+            listScroll.VAlign = VerticalAlignment.Stretch;
 
-            // ---------------- 右侧编辑器 ----------------
-            var editorArea = E.V(
-                E.H(Sig("fs_caption", 0, 11.5, E.P, E.BandBlue)),
-                Slot());
+            var listArea = E.Grid().Cols("*").Rows("Auto", "*");
+            listArea.Add(E.H(E.T("流程列表", 11, E.Sec, true), E.SpacerW(6),
+                             Sig("fs_rows", 32, 11, E.P), E.T("条", 11, E.Sec)), 0, 0);
+            listArea.Add(listScroll, 1, 0);
+            listArea.HAlign = HorizontalAlignment.Stretch;
+            listArea.VAlign = VerticalAlignment.Stretch;
+
+            // ---------------- 右：编辑器（70%）----------------
+            // 说明条 Auto + 编辑器占满剩余高度（E.V 是 StackPanel，子项拿不到 *）
+            var editorArea = E.Grid().Cols("*").Rows("Auto", "*");
+            editorArea.Add(E.H(Sig("fs_caption", 0, 11.5, E.P, E.BandBlue)), 0, 0);
+            editorArea.Add(Slot(), 1, 0);
             editorArea.HAlign = HorizontalAlignment.Stretch;
+            editorArea.VAlign = VerticalAlignment.Stretch;
 
-            var body = E.Grid().Cols("Auto", "*").Rows("Auto");
-            body.Add(list, 0, 0);
+            var body = E.Grid().Cols("3*", "7*").Rows("*");
+            body.Add(listArea, 0, 0);
             body.Add(editorArea, 0, 1);
+            body.HAlign = HorizontalAlignment.Stretch;
+            body.VAlign = VerticalAlignment.Stretch;
 
-            return E.Band("工艺流程脚本（Lua · NLua：一条流程 = 一条线程 = 一个独立 Lua 状态）", E.BandGreen,
-                body,
-                E.H(
-                    E.Btn("装载", Load, "PrimaryButton", 12),
-                    E.Btn("全部启动", StartAll, "PrimaryButton", 12),
-                    E.Btn("全部停止", StopAll, "DangerButton", 12),
-                    E.SpacerW(10),
-                    E.Btn("启动此条", StartSelected, "PrimaryButton", 12),
-                    E.Btn("停止此条", StopSelected, "DangerButton", 12),
-                    E.Btn("保存", SaveSelected, "PrimaryButton", 12),
-                    E.SpacerW(12),
-                    E.T("流程数", 11.5, E.Sec).Wd(48), Sig("fs_rows", 44, 11.5, E.P),
-                    E.T("编辑器实例", 11.5, E.Sec).Wd(62).Marg(new Thickness(8, 0, 0, 0)),
-                    Sig("fs_editors", 40, 11.5, E.P),
-                    E.T("　Ctrl+S = 保存当前脚本 · 打字弹补全 · 点 . 弹成员 · 点 ( 弹签名 · 鼠标停在函数上看宿主说明",
-                        10.5, E.Sec)));
+            // ---------------- 标题 + 按钮 ----------------
+            var buttons = E.H(
+                E.Btn("装载", Load, "PrimaryButton", 12),
+                E.Btn("全部启动", StartAll, "PrimaryButton", 12),
+                E.Btn("全部停止", StopAll, "DangerButton", 12),
+                E.SpacerW(10),
+                E.Btn("启动此条", StartSelected, "PrimaryButton", 12),
+                E.Btn("停止此条", StopSelected, "DangerButton", 12),
+                E.Btn("保存", SaveSelected, "PrimaryButton", 12),
+                E.SpacerW(12),
+                E.T("编辑器实例", 11.5, E.Sec).Wd(62), Sig("fs_editors", 40, 11.5, E.P),
+                E.T("　Ctrl+S 保存当前脚本 · 打字弹补全 · 点 . 弹成员 · 点 ( 弹签名 · 悬停看宿主说明",
+                    10.5, E.Sec));
+
+            // 不用 E.Band：Band 的模板是 StackPanel，子项拿不到剩余高度；
+            // 这里用 Box + Grid（Auto / * / Auto），中间那行才能真正「高度自适应」。
+            var inner = E.Grid().Cols("*").Rows("Auto", "*", "Auto");
+            inner.Add(E.T("工艺流程脚本（Lua · NLua：一条流程 = 一条线程 = 一个独立 Lua 状态）",
+                          12, E.P, true).Marg(new Thickness(0, 0, 0, 5)), 0, 0);
+            inner.Add(body, 1, 0);
+            inner.Add(buttons.Marg(new Thickness(0, 5, 0, 0)), 2, 0);
+            inner.HAlign = HorizontalAlignment.Stretch;
+            inner.VAlign = VerticalAlignment.Stretch;
+
+            return E.Box(inner, E.BandGreen, null, 0, 10, new Thickness(14, 5, 14, 5));
         }
 
         /// <summary>表头一行。</summary>
         static Element FlowHead()
         {
             return E.H(
-                Col("", WMark), Col("流程名", WName), Col("状态", WState), Col("循环数", WLoops),
-                Col("当前步", WStep), Col("令牌", WTok), Col("错误", WErr), Col("", 44))
+                Col("", WMark), Col("流程名", WName), Col("状态", WState), Col("", 38))
                 .Marg(new Thickness(0, 0, 0, 2));
         }
 
@@ -209,14 +247,10 @@ namespace HandlerGuide.ViewModels
         static Element FlowRow(int i)
         {
             return E.H(
-                Sig("fs_mark_" + i, WMark, 11, E.Acc),
-                Sig("fs_name_" + i, WName, 11, E.P),
-                Sig("fs_state_" + i, WState, 10.5, E.Sec),
-                Sig("fs_loops_" + i, WLoops, 10.5, E.Sec),
-                Sig("fs_step_" + i, WStep, 10.5, E.P),
-                Sig("fs_tok_" + i, WTok, 10.5, E.Sec),
-                Sig("fs_err_" + i, WErr, 10.5, E.OnRed),
-                E.MiniBtn("编辑", () => Select(i), 44))
+                Sig("fs_mark_" + i, WMark, 10.5, E.Acc),
+                Sig("fs_name_" + i, WName, 10.5, E.P),
+                Sig("fs_state_" + i, WState, 10, E.Sec),
+                E.MiniBtn("编辑", () => Select(i), 38))
                 .Marg(new Thickness(0, 0, 0, 1));
         }
 
@@ -246,9 +280,8 @@ namespace HandlerGuide.ViewModels
             if (_slot != null) return _slot;
             _slot = new LuaEditorSlotElement
             {
-                Height = 424,
                 HAlign = HorizontalAlignment.Stretch,
-                VAlign = VerticalAlignment.Stretch,
+                VAlign = VerticalAlignment.Stretch,     // 需求 53：高度自适应，撑满右列
                 Margin = new Thickness(6, 0, 0, 0)
             };
             return _slot;
