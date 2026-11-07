@@ -496,14 +496,17 @@ namespace HandlerGuide.ViewModels
         /// <summary>
         /// 启动工位流程线程：每工位一条 while 线程（安全扫描 / IO 镜像 / 轴镜像 /
         /// 三个料盘仓 / 搬运 / 上下料臂 / 前后梭车 / 前后压头 / Auto1~3 / OK-NG / 视觉飞拍 / 守恒自检）。
-        /// 本版只跑握手与计数、不动轴；MotionManager 的 _demo 22 步节拍照旧继续给界面动画与自检供数。
+        /// 16 条工艺线程全部下发真实运动（点位表 Motion/FlowPoints.cs），
+        /// 每一根轴每一次都先过 MotionManager.SafetyCheck；_demo 22 步节拍照旧继续给界面动画与自检供数。
         /// 注意：App 启动时**不会**自动调用这里，必须由界面 / 自检显式拉起。
         /// </summary>
         public static void FlowStart()
         {
             var fe = Motion.FlowEngine.Instance;
+            if (!MotionManager.Instance.Connected) MotionManager.Instance.Connect();
             fe.Start();
-            Info("工位流程线程已启动：" + fe.Threads.Count + " 条（只握手与计数，未下发运动指令）");
+            Info("工位流程线程已启动：" + fe.Threads.Count
+                 + " 条（运动已接，全部经安全互锁裁决；点位表 Motion/FlowPoints.cs）");
             RaiseStatus();
         }
 
@@ -528,6 +531,49 @@ namespace HandlerGuide.ViewModels
 
         /// <summary>变量黑板快照（按 key 排序），界面「变量」页与信息记录导出共用。</summary>
         public static List<string> VarBoxSnapshot() => Motion.VarBox.Snapshot().ToList();
+
+        /// <summary>流程线程清单文本（线程名 / 周期 / 循环数 / 异常 / 最近状态），诊断页一行一条。</summary>
+        public static List<string> FlowThreadList()
+        {
+            var list = new List<string>();
+            foreach (var t in Motion.FlowEngine.Instance.Threads)
+                list.Add(t.Name + "\t" + t.PeriodMs + "ms\t循环 " + t.Loops
+                         + "\t异常 " + t.Errors + "\t" + (t.IsRunning ? "运行中" : "未启动") + "\t" + t.Step);
+            return list;
+        }
+
+        /// <summary>流程运行计数一行文本（口径全写在 Motion.FlowEngine.StatText 里）。</summary>
+        public static string FlowStat => Motion.FlowEngine.Instance.StatText();
+
+        /// <summary>Stop 之后仍被占着的令牌数（自检项：必须是 0）。</summary>
+        public static int FlowLeakedTokens => Motion.FlowEngine.Instance.LeakedTokens();
+
+        /// <summary>守恒等式一行文本（与流程线程 24s 打的那一行完全同一口径）。</summary>
+        public static string FlowConservation => Motion.FlowEngine.ConservationText();
+
+        /// <summary>流程线程下发的运动指令条数（口径：过了 SafetyCheck 并已进卡的）。</summary>
+        public static long FlowMoveIssued => Motion.FlowEngine.Instance.MoveIssued;
+
+        /// <summary>流程线程被安全层拒绝的次数。</summary>
+        public static long FlowMoveRejected => Motion.FlowEngine.Instance.MoveRejectedByFlow;
+
+        /// <summary>流程线程等到位超时次数。</summary>
+        public static long FlowMoveTimeouts => Motion.FlowEngine.Instance.MoveTimeouts;
+
+        /// <summary>流程线程预检让行次数（没下发指令）。</summary>
+        public static long FlowGuardYields => Motion.FlowEngine.Instance.GuardYields;
+
+        /// <summary>越软限位次数（轴镜像每 10ms 扫一遍 45 根轴）。</summary>
+        public static long FlowSoftLimitBreaches => Motion.FlowEngine.Instance.SoftLimitBreaches;
+
+        /// <summary>流程线程异常次数。</summary>
+        public static long FlowErrors => Motion.FlowEngine.Instance.TotalErrors;
+
+        /// <summary>某根轴被流程下发过多少次运动。</summary>
+        public static long FlowAxisMoves(int axis) => Motion.FlowEngine.Instance.AxisMoves(axis);
+
+        /// <summary>某根轴被安全层拦下过多少次。</summary>
+        public static long FlowAxisRejects(int axis) => Motion.FlowEngine.Instance.AxisRejects(axis);
 
         // ==================================================================
         //  温控（一阶热模型，加热输出自动闭环）

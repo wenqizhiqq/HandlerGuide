@@ -380,6 +380,22 @@ namespace HandlerGuide
                 }
             }
 
+            // 流程线程是后台线程，它们按墙钟 Sleep(20ms) 轮询，而仿真位置只有 Tick 才推进 ——
+            // 所以自检里给流程计时必须「边泵边等」：每轮泵 5 帧再让出 5ms 墙钟。
+            // 返回值 = 累计仿真秒数（与墙钟秒分开报，两个口径都给）。
+            double PumpWall(double wallSec, double dt = 0.02, int frames = 5)
+            {
+                double sim = 0;
+                var w = System.Diagnostics.Stopwatch.StartNew();
+                while (w.Elapsed.TotalSeconds < wallSec)
+                {
+                    Pump(frames, dt);
+                    sim += frames * dt;
+                    System.Threading.Thread.Sleep(5);
+                }
+                return sim;
+            }
+
             try
             {
                 var mm = Motion.MotionManager.Instance;
@@ -847,6 +863,98 @@ namespace HandlerGuide
                     Ops.SyncRecipeListFromDisk();
                 }, () => !MachineModel.Instance.Recipes.Any(r => r.StartsWith("SELFTEST")
                                                                 || r.StartsWith("hg_ops_selftest")));
+
+                // ---------- 21. 工位流程线程（Motion/FlowEngine.cs：一工位一条 while 线程，运动已接） ----------
+                var fe = Motion.FlowEngine.Instance;
+                double simSec = 0;
+
+                Chk("流程线程数 = 19", () => { },
+                    () => fe.Threads.Count == 19);
+                Chk("FlowStart 拉起全部线程", () => Ops.FlowStart(), () => Ops.FlowRunning);
+                Chk("安全扫描线程发布 SafeOk", () => { simSec += PumpWall(2); },
+                    () => Motion.VarBox.GetFlag("SafeOk"));
+                Chk("19 条线程循环数全部 > 0", () => { simSec += PumpWall(25); },
+                    () => fe.Threads.Count(t2 => t2.Loops > 0) == 19);
+                Chk("流程已下发真实运动指令（不再是空转）", () => { },
+                    () => Ops.FlowMoveIssued > 0);
+                Chk("投料颗数 > 0（守恒行不再恒显示尚未投料）", () => { },
+                    () => Motion.VarBox.GetD("LotIn") > 0);
+                Chk("守恒等式差值为 0（投料 = ΣBin + 在制 + 报废）", () => { },
+                    () => Math.Abs(Motion.VarBox.GetD("LotIn")
+                                   - (Motion.FlowEngine.BinSum() + Motion.FlowEngine.Wip()
+                                      + Motion.VarBox.GetD("报废"))) < 0.001);
+                Chk("守恒自检行已按真实计数出文本", () => { },
+                    () => Ops.FlowConservation.Contains("投料") && Ops.FlowConservation.Contains("ΣBin")
+                       && Ops.FlowConservation.Contains("在制") && Ops.FlowConservation.Contains("报废")
+                       && Ops.FlowConservation.Contains("口径"));
+                Chk("逐轴合计 = 引擎总下发（每根轴的动作都有归属，没有漏记）", () => { },
+                    () =>
+                    {
+                        long sum = 0;
+                        foreach (var a in mm.Axes) sum += Ops.FlowAxisMoves(a.Index);
+                        return sum == Ops.FlowMoveIssued;
+                    });
+                Chk("被流程动过的轴全部过了安全层（放过或拦下）", () => { },
+                    () =>
+                    {
+                        foreach (var a in mm.Axes)
+                            if (Ops.FlowAxisMoves(a.Index) > 0 && !fe.AxisGuarded(a.Index)) return false;
+                        return true;
+                    });
+                Chk("越软限位次数 = 0", () => { }, () => Ops.FlowSoftLimitBreaches == 0);
+                Chk("流程线程异常次数 = 0", () => { }, () => Ops.FlowErrors == 0);
+                Chk("输入等待超时次数 = 0", () => { }, () => fe.WaitTimeouts == 0);
+                Chk("变量黑板快照非空（含相位键与在制键）", () => { },
+                    () =>
+                    {
+                        var s = Ops.VarBoxSnapshot();
+                        return s.Count > 40 && s.Any(x => x.Contains("相位·"))
+                            && s.Any(x => x.Contains("在制_上料吸嘴")) && s.Any(x => x.Contains("LotIn"));
+                    });
+                Chk("FlowStop 停机", () => Ops.FlowStop(), () => !Ops.FlowRunning);
+                Chk("Stop 后泄漏令牌数 == 0", () => { }, () => Ops.FlowLeakedTokens == 0);
+
+                // 收尾把 45 根轴全部归回停放位：后面两条「逐根过安全层」的判据要的是确定状态，
+                // 不能因为流程停在半途（某根 Z 还在下位）就让判据变成随机结果。
+                Chk("流程收尾：垂直轴全部先抬回抬起位", () =>
+                {
+                    foreach (var a in mm.Axes.Where(x => x.IsVertical)) mm.MoveAbs(a.Index, a.HomeMm);
+                    simSec += PumpWall(5);
+                }, () => mm.Axes.Where(x => x.IsVertical).All(x => Math.Abs(mm.Position(x.Index) - x.HomeMm) < 1.0));
+                Chk("流程收尾：水平轴全部回停放位", () =>
+                {
+                    foreach (var a in mm.Axes.Where(x => !x.IsVertical)) mm.MoveAbs(a.Index, a.HomeMm);
+                    simSec += PumpWall(8);
+                }, () => mm.Axes.Where(x => !x.IsVertical).All(x => Math.Abs(mm.Position(x.Index) - x.HomeMm) < 1.0));
+
+                // 互锁没有被流程改出新后门：越界目标照旧被拒、急停照旧全拦
+                Chk("互锁仍在：越界目标被 SafetyCheck 拒绝", () => { },
+                    () => !mm.SafetyCheck(0, 5000).Accepted);
+                Chk("互锁仍在：45 根轴逐根「回零位放行 + 越界拒绝」（旧口径 31 根）", () => { },
+                    () =>
+                    {
+                        int pass = 0, reject = 0;
+                        foreach (var a in mm.Axes)
+                        {
+                            if (mm.SafetyCheck(a.Index, a.HomeMm).Accepted) pass++;
+                            if (!mm.SafetyCheck(a.Index, Math.Max(a.MinMm, a.MaxMm) + 1000).Accepted) reject++;
+                        }
+                        Log("flow guard axes: total=" + mm.Axes.Count + " 放行=" + pass + " 拒绝=" + reject
+                            + "（旧口径 31 根，现按交接资料真表 45 根）");
+                        return mm.Axes.Count == 45 && pass == 45 && reject == 45;
+                    });
+                Chk("互锁仍在：急停中所有轴一律拒绝", () =>
+                {
+                    Ops.EmergencyStop();
+                }, () => mm.Axes.All(a => !mm.SafetyCheck(a.Index, mm.Cfg(a.Index).HomeMm).Accepted));
+                Chk("急停复位", () => Ops.ResetEmergency(), () => !mm.EStop);
+
+                Log("flow selftest: 墙钟 30s ≈ 仿真 " + simSec.ToString("0.0") + "s　"
+                    + "下发=" + Ops.FlowMoveIssued + " 被拒=" + Ops.FlowMoveRejected
+                    + " 让行=" + Ops.FlowGuardYields + " 异常=" + Ops.FlowErrors);
+                Log("flow conservation: " + Ops.FlowConservation);
+                Log("flow stat: " + Ops.FlowStat);
+                Log("flow yields top: " + fe.YieldTop(6));
 
                 Log("ops selftest: ok=" + ok + " bad=" + bad);
                 foreach (var f in fails) Log("OPS FAIL " + f);

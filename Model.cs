@@ -463,6 +463,16 @@ namespace HandlerGuide
 
         public void Log(string level, string msg)
         {
+            // 流程线程 / 运控线程都会写信息记录：ObservableCollection 绑到界面之后，
+            // 从别的线程 Insert 会直接抛「集合已修改」。这里统一过 Dispatcher，
+            // 界面线程调用时行为不变（没有 Application / 没有调度线程时按原样直接写）。
+            var d = System.Windows.Application.Current?.Dispatcher;
+            if (d != null && !d.CheckAccess())
+            {
+                try { d.BeginInvoke(new System.Action(() => Log(level, msg))); }
+                catch { /* 调度已经停了（关窗 / 退出中），丢掉这一行就好 */ }
+                return;
+            }
             Logs.Insert(0, new LogEntry { Time = DateTime.Now, Level = level, Message = msg });
             if (Logs.Count > 500) Logs.RemoveAt(Logs.Count - 1);
         }

@@ -193,6 +193,43 @@ namespace HandlerGuide.Motion
             lock (_lk) return _tok.Keys.ToList();
         }
 
+        /// <summary>键是否已登记（流程线程第一次用到时给它初值，之后不覆盖运行中的数据）。</summary>
+        public static bool Has(string key)
+        {
+            if (string.IsNullOrEmpty(key)) return false;
+            lock (_lk) return _d.ContainsKey(key) || _c.ContainsKey(key) || _tok.ContainsKey(key);
+        }
+
+        /// <summary>
+        /// 多键原子增减：同一把锁里把 keys[i] 加上 deltas[i]。
+        /// 总量守恒靠它 —— 一颗芯片从「吸嘴」转到「梭车」时，
+        /// 任何一瞬间读到的总和都不会多一颗、也不会少一颗。
+        /// </summary>
+        public static void Adds(string[] keys, double[] deltas)
+        {
+            if (keys == null || deltas == null) return;
+            int n = Math.Min(keys.Length, deltas.Length);
+            lock (_lk)
+                for (int i = 0; i < n; i++)
+                {
+                    if (string.IsNullOrEmpty(keys[i])) continue;
+                    _d[keys[i]] = (_d.TryGetValue(keys[i], out var cur) ? cur : 0) + deltas[i];
+                }
+        }
+
+        /// <summary>原子转移：from 减 n、to 加 n（一次锁内）。返回转移后 to 的值。</summary>
+        public static double Transfer(string from, double n, string to)
+        {
+            lock (_lk)
+            {
+                double a = (_d.TryGetValue(from, out var x) ? x : 0) - n;
+                double b = (_d.TryGetValue(to, out var y) ? y : 0) + n;
+                _d[from] = a;
+                _d[to] = b;
+                return b;
+            }
+        }
+
         // ================== 运维辅助 ==================
 
         /// <summary>全部变量 / 令牌的排序快照（界面「变量黑板」与日志用）。</summary>

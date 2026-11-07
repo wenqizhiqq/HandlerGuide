@@ -140,6 +140,16 @@ namespace HandlerGuide.ViewModels
             LiveValues.Register("demo_cycles", _ => MotionManager.Instance.DemoCycles);
             LiveValues.Register("estop_text", _ => MotionManager.Instance.EStop ? "急停中" : "正常");
 
+            // ---- 工位流程线程（Motion/FlowEngine.cs）----
+            LiveValues.Register("flow_status", _ => Ops.FlowStatus);
+            LiveValues.Register("flow_step", _ => Ops.FlowStepText);
+            LiveValues.Register("flow_stat", _ => Ops.FlowStat);
+            LiveValues.Register("flow_conservation", _ => Ops.FlowConservation);
+            LiveValues.Register("flow_moves", _ => Ops.FlowMoveIssued);
+            LiveValues.Register("flow_rejects", _ => Ops.FlowMoveRejected);
+            LiveValues.Register("flow_yields", _ => Ops.FlowGuardYields);
+            LiveSignals.Register("flow_running", _ => Ops.FlowRunning);
+
             LiveSignals.Register("card_connected", _ => MotionManager.Instance.Connected);
             LiveSignals.Register("card_sim", _ => MotionManager.Instance.IsSim);
             LiveSignals.Register("estop", _ => MotionManager.Instance.EStop);
@@ -305,6 +315,30 @@ namespace HandlerGuide.ViewModels
                 E.H(
                     E.T("最近一次安全裁决：", 11.5, E.Sec, true).Wd(124),
                     Live("last_reject", null, 700, Palette.WarningBg, E.P, 11.5))));
+
+            // ---------------- 工位流程线程（一工位一条 while 线程） ----------------
+            root.Children.Add(E.Band("工位流程线程（19 条：安全扫描 / IO镜像 / 轴镜像 / 三料盘仓 / 搬运 / "
+                                     + "上下料臂 / 前后梭车 / 前后压头 / Auto1~3 / OK-NG / 视觉飞拍 / 守恒自检）",
+                E.BandGreen,
+                E.H(
+                    E.Btn("流程启动", Ops.FlowStart, "PrimaryButton", 12),
+                    E.Btn("流程停止", Ops.FlowStop, "DangerButton", 12),
+                    E.SpacerW(12),
+                    E.T("线程状态", 11.5, E.Sec).Wd(60), Live("flow_status", null, 150),
+                    E.LiveLamp(_ => Ops.FlowRunning, false, false, 13),
+                    E.SpacerW(10),
+                    E.T("流程下发", 11.5, E.Sec).Wd(56), Live("flow_moves", null, 64),
+                    E.T("被互锁拒绝", 11.5, E.Sec).Wd(72), Live("flow_rejects", null, 64),
+                    E.T("预检让行", 11.5, E.Sec).Wd(56), Live("flow_yields", null, 72)),
+                E.H(
+                    E.T("最近动作：", 11.5, E.Sec, true).Wd(76),
+                    Live("flow_step", null, 700, Palette.WarningBg, E.P, 11.5)),
+                E.H(
+                    E.T("统计：", 11.5, E.Sec, true).Wd(46),
+                    Live("flow_stat", null, 940, E.BandGrey, E.P, 11)),
+                E.H(
+                    E.T("总量守恒：", 11.5, E.Sec, true).Wd(76),
+                    Live("flow_conservation", null, 940, E.BandGrey, E.P, 10.5))));
 
             // ---------------- 四个标签页 ----------------
             root.Children.Add(E.Tabs(

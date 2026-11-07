@@ -45,7 +45,8 @@ namespace HandlerGuide.ViewModels
                 ("测试区域", AreaBody),
                 ("料盘进出", TrayIoBody),
                 ("面板IO", PanelIoBody),
-                ("测试系统IO", TestIoBody));
+                ("测试系统IO", TestIoBody),
+                ("流程变量", FlowVarsBody));
             if (index > 0 && index < t.Tabs.Count) E.SelectTab(t, t.Tabs[index]);
             return t;
         }
@@ -57,6 +58,49 @@ namespace HandlerGuide.ViewModels
         public static Element DiagTrayIO() => Shell(4);
         public static Element DiagPanelIO() => Shell(5);
         public static Element DiagTestIO() => Shell(6);
+
+        // ---------------- 流程变量黑板（Motion/FlowEngine.cs 的运行时数据） ----------------
+
+        /// <summary>
+        /// 流程线程清单 + VarBox 变量黑板快照。
+        /// 一工位一条 while 线程，线程之间只靠这张具名变量黑板握手（令牌 / D 值 / C 值），
+        /// 所以看流程卡在哪一步就是看这一页：相位键叫「相位·线程名」，令牌行直接写持有人编号。
+        /// </summary>
+        private static Element FlowVarsBody()
+        {
+            var threadEl = E.Live(_ => string.Join(Environment.NewLine, Ops.FlowThreadList()),
+                                  null, 900, E.CardBg, E.P, 11);
+            threadEl.Align = TextAlignment.Left;
+            threadEl.TextHAlign = HorizontalAlignment.Left;
+
+            var varEl = E.Live(_ => string.Join(Environment.NewLine, Ops.VarBoxSnapshot()),
+                               null, 900, E.CardBg, E.P, 11);
+            varEl.Align = TextAlignment.Left;
+            varEl.TextHAlign = HorizontalAlignment.Left;
+
+            var statEl = E.Live(_ => Ops.FlowStat, null, 900, E.BandGrey, E.P, 11.5);
+            statEl.Align = TextAlignment.Left;
+            statEl.TextHAlign = HorizontalAlignment.Left;
+
+            var consEl = E.Live(_ => Ops.FlowConservation, null, 900, E.BandGrey, E.P, 11);
+            consEl.Align = TextAlignment.Left;
+            consEl.TextHAlign = HorizontalAlignment.Left;
+            consEl.Wrap = TextWrapping.Wrap;
+
+            return E.V(
+                E.T("线程按各自周期独立跑；「循环」是该线程跑完的循环数，「状态」是最近一次结果"
+                    + "（不安全已保持 / 运行中 / 异常文本）。运动指令全部经 MotionManager.SafetyCheck。",
+                    11.5, E.Sec, false, TextWrapping.Wrap),
+                E.Group("工位流程线程（名称 / 周期 / 循环数 / 异常数 / 状态）",
+                        E.Scroll(threadEl, 210, System.Windows.Controls.ScrollBarVisibility.Disabled, System.Windows.Controls.ScrollBarVisibility.Auto)),
+                E.Group("运行统计与总量守恒（口径写在文本里）",
+                        E.Scroll(statEl, 46, System.Windows.Controls.ScrollBarVisibility.Disabled, System.Windows.Controls.ScrollBarVisibility.Disabled),
+                        E.Scroll(consEl, 54, System.Windows.Controls.ScrollBarVisibility.Disabled, System.Windows.Controls.ScrollBarVisibility.Auto)),
+                E.Group("变量黑板 VarBox（C 值 / D 值 / 令牌持有人，按名排序）",
+                        E.Scroll(varEl, 300, System.Windows.Controls.ScrollBarVisibility.Disabled, System.Windows.Controls.ScrollBarVisibility.Auto)),
+                E.H(E.T("相位键：相位·线程名　在制键：在制_上料吸嘴 / 在制_前梭车 / 在制_缓存台 / 在制_后梭车 / 在制_下料吸嘴"
+                        + "　落盘键：BinCount_1..16　投料键：LotIn", 10.5, E.Sec, false, TextWrapping.Wrap)));
+        }
 
         // ---------------- 单元格助手 ----------------
 
