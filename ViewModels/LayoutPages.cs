@@ -1020,6 +1020,24 @@ namespace HandlerGuide.ViewModels
             if (f < 0) f = 0; else if (f > 1) f = 1;
             return out0 + (out1 - out0) * f;
         }
+        /// <summary>
+        /// 真实轴位置 → 归一化值 [0,1]（按该轴软限位线性映射，越界钳到 0..1）。
+        /// 轴表里没有就返回 0。需求 60 用：脚本驱动时把上/下料 Y 轴映射到横梁升降。
+        /// </summary>
+        private static double AxisPos01(string axisName)
+        {
+            var m = MotionManager.Instance;
+            int i = m.AxisIndex(axisName);
+            if (i < 0) return 0;
+            var c = m.Cfg(i);
+            double lo = Math.Min(c.MinMm, c.MaxMm);
+            double hi = Math.Max(c.MinMm, c.MaxMm);
+            if (hi - lo < 1e-6) return 0;
+            double f = (m.Position(i) - lo) / (hi - lo);
+            if (f < 0) f = 0; else if (f > 1) f = 1;
+            return f;
+        }
+
         private static CanvasElement BuildLayoutCanvasTop()
         {
             // 1010×819 —— 与底图 1696×1376（≈1.233）等比，且与 3D 画布同高。
@@ -1102,6 +1120,20 @@ namespace HandlerGuide.ViewModels
             var layerWarnInk = new SolidColorBrush(Color.FromRgb(0xFF, 0xC0, 0x00));   // 报警文字（黄）
             var layerWarnWash = new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xC0, 0x00));
             var layerClear = new SolidColorBrush(Colors.Transparent);
+
+            // ---- 机构说明小字（需求 61：料盘 / 皮带 / 加热盘这些都要小字说明）----
+            // 底图是整机照片，明暗杂乱，纯文字压上去读不出来 ⇒ 统一用「半透明深色底条 + 浅色字」。
+            // 与轴名标注（搬运X轴 / 下料X轴·下料Y轴 / 上料X轴·上料Y轴）同一套样式，
+            // Z = 20 保证不被照片抠图（手臂、横梁、滑座）压住。
+            var tagInk = new SolidColorBrush(Color.FromRgb(0xE8, 0xEC, 0xF2));   // 字色
+            var tagBand = new SolidColorBrush(Color.FromArgb(190, 0x1A, 0x22, 0x30));  // 底条
+            void Tag(string text, double tx, double ty, double tw, double th = 14, double sz = 9)
+                => cv.Items.Add(new RectItem
+                {
+                    Text = text, X = tx, Y = ty, W = tw, H = th, Radius = 3,
+                    Fill = tagBand, Stroke = null, StrokeThickness = 0,
+                    TextSize = sz, TextColor = tagInk, TextWeight = FontWeights.Normal, Z = 20,
+                });
 
             // 每个料盘的「取放高亮」底板（平时全透明，轮到它被取放时点亮）
             var trayHilite = new List<RectItem>();
@@ -1271,6 +1303,13 @@ namespace HandlerGuide.ViewModels
                     }
                 }
                 trayDevices.Add(devs);
+
+                // 说明小字（需求 61）：中排 5 个 = 缓存盘，左下 3 个绿盘 = 出料盘。
+                // 写在盘顶外侧 17px 处（上排叠层盘的盘名已经在盘内，这里不重复）。
+                if (i >= 6 && i <= 10)
+                    Tag("缓存盘" + (i - 5), x + (w - 48) / 2, y - 17, 48);
+                else if (tp.Green)
+                    Tag("出料盘" + (i - 10), x + (w - 48) / 2, y - 17, 48);
             }
 
             // ---- 加热盘（真机俯视图右侧那两块点阵加热盘）----
@@ -1339,6 +1378,13 @@ namespace HandlerGuide.ViewModels
                 heatChips.Add(chips);
             }
 
+            // ---- 说明小字（需求 61）：上排叠层盘整组说明 + 两块加热盘 ----
+            // 上排 6 个盘各自的盘名（自动盘3…进料盘）已经写在盘内，这里只补一句「这组是什么」。
+            Tag("上排料盘（叠层）", TrayPlan[0].U * CW, TrayPlan[0].V * CH - 17, 96);
+            // 加热盘 = 测试工位：上料臂把料放到点阵盘上加热/压测，测完由下料臂取走。
+            Tag("加热盘1 · 测试位", 883, 330, 96);
+            Tag("加热盘2 · 测试位", 883, 515, 96);
+
             // ---- 分组标注：已按用户要求整组删除 ----
             // 原来这里有四条压在照片上的文字：「上排料盘 ×6（深盘）」「中排料盘 ×5（深盘 · 缓存位）」
             // 「左下绿色料盘 ×3（出料）」「加热盘 ×2（8×11 点位 · 芯片刷新）」。
@@ -1358,6 +1404,11 @@ namespace HandlerGuide.ViewModels
                 X = armX0, Y = armY - 4, W = armX1 - armX0, H = 8, Radius = 4,
                 Fill = new SolidColorBrush(Color.FromRgb(0x2B, 0x4C, 0x8A)),
             });
+
+            // ---- 轴名小字标注（需求 60：左侧仿真页面的轴需要小字写出来）----
+            // 三根手臂 + 两根横梁对应的轴名，用小字写在各自机构旁边，方便对照脚本里的轴名。
+            // 样式与料盘 / 皮带 / 加热盘说明同一套（tagInk / tagBand / Tag，见上方）。
+            Tag("搬运X轴", armX0, armY - 20, 66, 15, 9.5);
 
             // 抠图手臂的画布几何：照片框 (1166,424)-(1342,810) × (0.59552, 0.59520)
             const double armW = 104.8;      // 手臂宽（照片 176 px）
@@ -1420,6 +1471,11 @@ namespace HandlerGuide.ViewModels
                 cv.Items.Add(dot);
                 beltDots.Add(dot);
             }
+            // 皮带说明小字（需求 61）：中排料盘下方那条就是料盘输送带，
+            // 走向「进料盘 / 上料位 → 缓存盘 → 出空盘」。
+            // 位置必须避开左侧的「下料X轴 · 下料Y轴」标注（两者原本都在 y≈466~489，
+            // 会叠在一起），所以落在下料横梁右端之外（梁 x 84..474）的带面上。
+            Tag("皮带传输线", 552, beltY + 7, 62);
 
             // ==============================================================
             //  需求 44：上料位料盘（进料盘正下方、皮带延长段上）
@@ -1444,6 +1500,8 @@ namespace HandlerGuide.ViewModels
                 X = feedX, Y = feedY, W = feedW, H = feedH, Radius = 3,
                 Fill = darkBody, Stroke = darkEdge, StrokeThickness = 1.2,
             });
+            // 说明小字（需求 61）：进料盘下来的料盘停在这个工位，上料吸嘴从这里 2×4 吸料。
+            Tag("上料位料盘", feedX + (feedW - 58) / 2, feedY - 17, 58);
             double feedCw = feedW / FEED_COLS, feedCh = feedH / FEED_GRID_ROWS;   // 单格 = 中排缓存盘同款
             cv.Items.Add(new RectItem
             {
@@ -1592,6 +1650,9 @@ namespace HandlerGuide.ViewModels
             };
             cv.Items.Add(uaArm);
 
+            // ---- 轴名小字标注：下料臂 = 下料X轴（沿梁）+ 下料Y轴（梁升降）----
+            Tag("下料X轴 · 下料Y轴", 84.56, BD_Y - 22, 140, 15, 9.5);
+
             // 横梁的 Y 行程不再另画标尺：梁本身就是真机照片，行程靠画面直接看，
             // 再叠一条「能走到哪」的 Y 包络反而会把照片覆盖掉（用户要求画布上不放标注）。
             // 温启志 18719361399
@@ -1720,6 +1781,9 @@ namespace HandlerGuide.ViewModels
             };
             cv.Items.Add(u2Arm);
 
+            // ---- 轴名小字标注：上料臂 = 上料X轴（沿梁）+ 上料Y轴（梁升降）----
+            Tag("上料X轴 · 上料Y轴", 679.49, BU_Y - 22, 140, 15, 9.5);
+
             // ---- 需求 48：吸在吸嘴阵列上的 2×4 = 8 颗芯片（随手臂移动，空手隐藏）----
             // 平移分选机的取料是整排真空吸附：吸起后芯片贴在吸嘴底面走、放到目标盘才消失。
             var carryUItems = new List<RectItem>();   // 上料吸嘴挂料
@@ -1793,7 +1857,10 @@ namespace HandlerGuide.ViewModels
             // 不会再像 30.95 那版一样「一动就露出没补过的底板」。
             const double BEAM_STROKE = 398.79;              // 两根梁 / 两个滑座共用的 Y 行程
             const double BD_UP = 236.89;                    // 下料：静止位 → 行程上端（向上）
-            const double BD_PHASE = 0.29701;                // = (BD_UP / BEAM_STROKE) / 2，使 t = 0 落在静止位
+            // 需求 64：相位从三角波换成梯形波后，静止位对应的相位要重算 ——
+            // Trap(p) 在上升段 = p / 0.35，要保持 t = 0 时 lift = 0（Trap = 0.59402），
+            // 相位取 0.35 × 0.59402 = 0.20791。
+            const double BD_PHASE = 0.20791;                // Trap(0.20791) = 0.59402 ⇒ t = 0 落在静止位
 
             // ==============================================================
             //  需求 38 · 三臂分时轮流 + 硬避让（温启志 18719361399）
@@ -1835,10 +1902,18 @@ namespace HandlerGuide.ViewModels
             // slot 1 让上料）；slot 2 里两组都在停放位 = 走廊已让出，不再钳位，搬运臂按
             // 需求 43 的「抓放剧本」走位（进空盘抓空盘 → 送自动盘；停放的下料臂头与搬运臂
             // 包络还剩 ~36px 名义相交，真机上两臂不同高度 —— 与 SR-11「停放位不占走廊」一致）。
-            // 搬运臂实际位置 trayX 对目标做**限速跟随**（上限 ≈ 三角波最大扫速）：
-            // 让位钳位释放时从让位点平滑滑回停放位，不会瞬移。
+            // 搬运臂实际位置 trayX 由伺服跟随（需求 64 起改为按 搬运X轴 真实 v/a 积分，
+            // 原来是一个固定 176px/s 的限速）：让位钳位释放时从让位点平滑滑回停放位，不会瞬移。
             const double ARM_CLR = 34.0;                    // 安全间隙（画布 px，≈40mm）
-            const double SLOT_SEC = 8.0;                    // 每个时隙秒数（一轮 = 3 × 8 = 24s）
+            // 需求 64：时隙长度按轴表反算（≈2.7s，见 SlotSeconds 的推导），一轮 ≈ 8.2s。
+            double SLOT_SEC = SlotSeconds();
+            // 五条「画布轴」的伺服跟随器：X 三条（上料/下料/搬运）+ Y 两条（两根横梁）。
+            // px 端点按各机构自己的画布几何给，内部再折算成 mm —— 见 CanvasServo。
+            var servoDown = new CanvasServo("下料X轴", UA_X0, UA_X1);
+            var servoUp = new CanvasServo("上料X轴", U2_X0, U2_X1);
+            var servoTray = new CanvasServo("搬运X轴", armX0, armX1 - armW);
+            var servoBeamD = new CanvasServo("下料Y轴", BEAM_STROKE - BD_UP, -BD_UP);
+            var servoBeamU = new CanvasServo("上料Y轴", 0, -BEAM_STROKE);
             long last = Environment.TickCount64;
             double t = 0;
             double trayX = armRestX;                        // 搬运臂实际渲染位置（限速跟随目标）
@@ -1938,8 +2013,10 @@ namespace HandlerGuide.ViewModels
                 // 需求 38 时隙归属：0 = 下料组 / 1 = 上料组 / 2 = 搬运臂。
                 double phBeamD = BD_PHASE + (slot == 0 ? u : 0.0);  // 下料横梁/滑座（t = 0 → lift 0）
                 double phBeamU = (slot == 1 ? u : 0.0);             // 上料横梁/滑座（t = 0 → lift 0）
-                double phDown = 0.2188 + (slot == 0 ? u : 0.0);     // 下料臂（初值 = 照片原位 198.9）
-                double phUp = 0.2605 + (slot == 1 ? u : 0.0);       // 上料臂（初值 = 照片原位 763.5）
+                // 需求 64：梯形相位下静止位对应的初值 = 0.35 × 原三角波值
+                //（下料臂 0.2188 → 0.4376 → 0.15316；上料臂 0.2605 → 0.521 → 0.18235）
+                double phDown = 0.15316 + (slot == 0 ? u : 0.0);    // 下料臂（初值 = 照片原位 198.9）
+                double phUp = 0.18235 + (slot == 1 ? u : 0.0);      // 上料臂（初值 = 照片原位 763.5）
                 // 需求 40：搬运臂未启动时停在默认停放位 530.2（照片原位 694.4 靠左
                 // 2 个料盘宽度）。需求 43：slot 2 的目标位改为「抓放剧本」分段插值
                 //（见下方搬运臂块），不再走全行程三角波 —— 首尾仍精确回 530.2。
@@ -1948,10 +2025,31 @@ namespace HandlerGuide.ViewModels
                 // 相位初值都取成「t = 0 时 lift = 0」⇒ 静态首屏与真机照片逐像素重合。
                 // 需求 38 起改由**时隙门控**推进（见上方），不再直接吃 t —— 这样搬运臂
                 // 的时隙里横梁是冻结的，不会升进搬运臂的高度层。
-                double beamLiftD = Triangle(phBeamD) * BEAM_STROKE - BD_UP;
+                // 需求 60：脚本驱动时，两根横梁 + 两个红滑座的 Y 改读真实 Y 轴位置
+                // （下料Y轴 / 上料Y轴），不再按演示相位 t 自演 —— 脚本 moveabs 才能真正
+                // 驱动整机俯视图上的横梁升降。演示模式（非脚本）仍走 t 函数。
+                double beamLiftD, beamLiftU;
+                if (scriptDriven)
+                {
+                    // 下料Y轴 0..300 → 横梁 lift：位置 0 = 最下（工作位 +161.90），
+                    // 300 = 最上（抬起位 -236.89）。上料Y轴同理：0 = 静止位，300 = 最上。
+                    double yd = AxisPos01("下料Y轴");
+                    double yu = AxisPos01("上料Y轴");
+                    beamLiftD = (BEAM_STROKE - BD_UP) - yd * BEAM_STROKE;
+                    beamLiftU = -yu * BEAM_STROKE;
+                    // 伺服状态跟着真实轴走，脚本停掉切回演示时不会瞬移
+                    servoBeamD.SnapPx(beamLiftD);
+                    servoBeamU.SnapPx(beamLiftU);
+                }
+                else
+                {
+                    // 需求 64：目标位由梯形相位给出，实际位置由伺服按真实 v/a 积分 ——
+                    // 横梁是实打实的 300mm 行程 @800mm/s、4000mm/s²，走一趟 0.575s。
+                    beamLiftD = servoBeamD.StepPx(Trap(phBeamD) * BEAM_STROKE - BD_UP, dt, !running);
+                    beamLiftU = servoBeamU.StepPx(-Trap(phBeamU) * BEAM_STROKE, dt, !running);
+                }
                 beamDown.Y = BD_Y + beamLiftD;
                 carriageDown.Y = CD_Y + beamLiftD;
-                double beamLiftU = -Triangle(phBeamU) * BEAM_STROKE;
                 beamUp.Y = BU_Y + beamLiftU;
                 carriageUp.Y = CU_Y + beamLiftU;
 
@@ -1961,7 +2059,8 @@ namespace HandlerGuide.ViewModels
                 // 正好是照片原位 198.9，静态首屏与真机照片逐像素重合。
                 double uaX = scriptDriven
                     ? AxisToCanvas("下料X轴", UA_X0, UA_X1)
-                    : UA_X0 + Triangle(phDown) * (UA_X1 - UA_X0);
+                    : servoDown.StepPx(UA_X0 + Trap(phDown) * (UA_X1 - UA_X0), dt, !running);
+                if (scriptDriven) servoDown.SnapPx(uaX);
                 uaArm.X = uaX;
                 uaArm.Y = UA_Y + beamLiftD;
 
@@ -1990,7 +2089,8 @@ namespace HandlerGuide.ViewModels
                 // 时隙结束回到停放位 763.5，把走廊让给搬运臂。
                 double u2X = scriptDriven
                     ? AxisToCanvas("上料X轴", U2_X0, U2_X1)
-                    : U2_X0 + Triangle(phUp) * (U2_X1 - U2_X0);
+                    : servoUp.StepPx(U2_X0 + Trap(phUp) * (U2_X1 - U2_X0), dt, !running);
+                if (scriptDriven) servoUp.SnapPx(u2X);
                 u2Arm.X = u2X;
                 u2Arm.Y = U2_Y + beamLiftU;
 
@@ -2044,12 +2144,12 @@ namespace HandlerGuide.ViewModels
                 // 需求 39（方案 A）：避让**按时隙门控** —— slot 0 只避下料、slot 1 只避
                 // 上料；轮到搬运臂（slot 2）时两组都已回停放位 = 走廊已让出，不再钳位，
                 // 搬运臂全行程走位（与真机 SR-11「停放位不占走廊」同语义）。
-                // 实际渲染位置 trayX 对目标**限速跟随**（上限 ≈ 三角波最大扫速，自由
-                // 扫掠时逐帧贴满目标）：让位钳位释放的突跳被限速成平滑滑移，不会瞬移。
+                // 实际渲染位置 trayX = 伺服跟随目标（需求 64 起按 搬运X轴 真实 v/a 积分）：
+                // 让位钳位释放的突跳被伺服平滑吃掉，不会瞬移。
                 // 需求 43：slot 2 改为「抓放剧本」分段插值（关键帧首尾都精确回停放位），
                 // slot 0/1 停在停放位。需求 44：上料位空盘待搬（feedChips=0）时本轮
-                // 改演「空盘搬运」剧本（见下）。常规剧本时间轴（u 0..1，共 8s，各段速率 ≈130px/s，
-                // 均低于限速跟随上限 170px/s ⇒ trayX 无滞后、边界精确回位）：
+                // 改演「空盘搬运」剧本（见下）。常规剧本时间轴（u 0..1，一个时隙 ≈2.7s，
+                // 每段的行程都短于伺服走完它的真实时间 ⇒ 段内能走完并停稳，边界精确回位）：
                 //   0.000-0.073  停放位 → 进空盘（臂头对准塔中心）
                 //   0.073-0.196  抓盘停留（u≥0.10 抓走一片：进空盘 -1 层，臂下挂空盘）
                 //   0.196-0.501  → 本轮目标自动盘（需求 45：最空的塔；三塔都不空不演）
@@ -2075,8 +2175,8 @@ namespace HandlerGuide.ViewModels
                 double dropCX = (TrayPlan[refillIdx].U + TrayPlan[refillIdx].DU / 2) * CW;   // 需求 45：目标 = 最空的自动盘
                 double dropX = dropCX - armW / 2.0;
                 // 需求 44：空盘搬运剧本关键帧 —— 停放位 → 上料位（抓空盘）→ 出空盘
-                // 下方皮带上（放盘）→ 回停放位；各段速率 ≤71px/s，低于限速跟随上限
-                // ⇒ trayX 无滞后、边界精确回位。
+                // 下方皮带上（放盘）→ 回停放位；每段行程都短，伺服能在段内走完并停稳
+                // ⇒ trayX 边界精确回位。
                 double carryPickX = feedCX - armW / 2.0;      // ≈699.3（上料位）
                 double carryDropX = outEmptyCX - armW / 2.0;  // ≈576.1（出空盘）
                 double trayTarget = armRestX;
@@ -2156,19 +2256,25 @@ namespace HandlerGuide.ViewModels
                     if (slot == 1 && YOverlap(armRestY, armH, U2_Y + beamLiftU, U2_H))
                         headX = PushOut(headX, armW, u2X - ARM_CLR, u2X + U2_W + ARM_CLR,
                                         armX0, armX1 - armW);
-                    double trayV = 2.1 * 0.125 * (armX1 - armW - armX0) * dt;
-                    double trayStep = headX - trayX;
-                    if (trayStep > trayV) trayStep = trayV;
-                    else if (trayStep < -trayV) trayStep = -trayV;
-                    trayX += trayStep;
+                    // 需求 64：原来这里是一个固定 176px/s 的「限速跟随」，速度跟轴表无关。
+                    // 现在换成伺服跟随：搬运X轴 0..700mm @800mm/s、4000mm/s²，
+                    // 折算到画布 754px ⇒ 全行程约 1.1s，和真机同一段时间。
+                    trayX = servoTray.StepPx(headX, dt, false);
                 }
                 else
                 {
                     didGrab = didDrop = false;   // 非运行状态重置，重新启动后剧本从头演
                     didPick = false;             // 需求 44：吸取锁存一并复位
                     didDropU = didGrabD = didDropD = false;   // 需求 48：取放锁存一并复位
+                    // 需求 64：停机时把伺服钉回停放位（静态首屏与真机照片重合）
+                    trayX = armRestX;
+                    servoTray.SnapPx(trayX);
                 }
-                if (scriptDriven) trayX = AxisToCanvas("搬运X轴", armX0, armX1 - armW);
+                if (scriptDriven)
+                {
+                    trayX = AxisToCanvas("搬运X轴", armX0, armX1 - armW);
+                    servoTray.SnapPx(trayX);
+                }
                 trayArm.X = trayX;
                 // 需求 43：抓着的空盘贴在臂头下方（抓起后显示，放盘后隐藏）
                 grabTray.Fill = holdingTray ? layerPlate : null;
@@ -2468,11 +2574,170 @@ namespace HandlerGuide.ViewModels
             return x;
         }
 
-        /// <summary>0..1 三角波（周期 1）。</summary>
+        // ==================================================================
+        //  需求 64 · 画布按真机时间运动
+        // ==================================================================
+        // 用户：「仿真的时候，轴移动需要时间的，和真设备一样的时间」。
+        //
+        // 原来的画布是**纯演示速度**：每个时隙 8s，相位是三角波 ⇒ 手臂匀速滑过去、
+        // 到端头瞬间反向，既没有加速段也没有减速段，全程花的时间也和轴表里的参数无关
+        // （下料X 900mm 在画布上要走 4s，真机 1200mm/s ÷ 6000mm/s² 只要 0.95s）。
+        //
+        // 现在改成两层：
+        //   ① 相位从三角波换成**梯形波**（两端各停 PhaseHold）—— 真机每条轴都是
+        //      「加速 → 匀速 → 减速 → 停一下再反向」，端头必须给伺服留减速时间；
+        //   ② 每个机构的画布位置不再由相位直接给出，而是喂进 <see cref="CanvasServo"/>：
+        //      内部按**工程单位 mm** 用该轴真实的 v/a/d 积分（与 SimMotionCard 同一条律），
+        //      所以画布上每段移动花的时间 = 真机同行程的时间。
+        //   ③ 时隙长度也不再写死，按轴表反算（见 SlotSeconds），保证相位上升段
+        //      正好等于最慢那条轴走完行程的时间。
+        private const double PhaseHold = 0.30;   // 梯形相位两端各停留的比例
+
+        /// <summary>0..1 三角波（周期 1）。2D 平面图（BuildLayoutCanvas）还在用。</summary>
         private static double Triangle(double x)
         {
             double p = Mod(x, 1.0);
             return p < 0.5 ? p * 2 : (1 - p) * 2;
+        }
+
+        /// <summary>
+        /// 0..1 梯形波（周期 1）：两端各停留 <see cref="PhaseHold"/>，中间线性走。
+        /// 与三角波的区别就是端头那一段「停住」—— 伺服靠它把速度减到 0。
+        /// </summary>
+        private static double Trap(double x)
+        {
+            double r = (1 - PhaseHold) / 2;      // 上升段占 0.35
+            double p = Mod(x, 1.0);
+            if (p < r) return p / r;                                  // 上升
+            if (p < r + PhaseHold) return 1.0;                        // 上端停留
+            if (p < 2 * r + PhaseHold) return 1.0 - (p - r - PhaseHold) / r;   // 下降
+            return 0.0;                                               // 下端停留
+        }
+
+        /// <summary>
+        /// 画布上的一条「轴」：对外只吐画布 px，内部按工程单位 mm 走梯形速度曲线，
+        /// v/a/dec 全部现取轴表（<see cref="MotionManager.Cfg"/>），所以改轴参数立即生效。
+        /// </summary>
+        private sealed class CanvasServo
+        {
+            private readonly string _name;
+            private readonly double _px0, _px1;   // 轴软限位 lo → px0，hi → px1
+            private double _posMm, _vel;
+            private bool _init;
+
+            internal CanvasServo(string axisName, double px0, double px1)
+            {
+                _name = axisName; _px0 = px0; _px1 = px1;
+            }
+
+            /// <summary>读轴表；轴不存在返回 false（调用方退回「直接给目标位」的旧行为）。</summary>
+            private bool Read(out double lo, out double hi, out double vmax, out double acc, out double dec)
+            {
+                lo = 0; hi = 1; vmax = acc = dec = 1;
+                int i = MotionManager.Instance.AxisIndex(_name);
+                if (i < 0) return false;
+                var c = MotionManager.Instance.Cfg(i);
+                lo = Math.Min(c.MinMm, c.MaxMm);
+                hi = Math.Max(c.MinMm, c.MaxMm);
+                if (hi - lo < 1e-6) hi = lo + 1;
+                vmax = c.MaxVel > 1e-6 ? c.MaxVel : 100;
+                acc = c.Acc > 1e-6 ? c.Acc : 1000;
+                dec = c.Dec > 1e-6 ? c.Dec : acc;
+                return true;
+            }
+
+            /// <summary>把内部状态钉到某个画布位置（脚本接管 / 停止时用，避免切换瞬移）。</summary>
+            internal void SnapPx(double px)
+            {
+                if (!Read(out double lo, out double hi, out _, out _, out _)) return;
+                _posMm = lo + (hi - lo) * ((px - _px0) / (_px1 - _px0));
+                _vel = 0;
+                _init = true;
+            }
+
+            /// <summary>
+            /// 推进一帧并返回画布 px。<paramref name="snap"/> = true 时直接落位（未运行时
+            /// 保持静态首屏，不做积分）。
+            /// </summary>
+            internal double StepPx(double targetPx, double dt, bool snap)
+            {
+                if (!Read(out double lo, out double hi, out double vmax, out double acc, out double dec))
+                    return targetPx;
+
+                double targetMm = lo + (hi - lo) * ((targetPx - _px0) / (_px1 - _px0));
+                if (snap || !_init || dt <= 0)
+                {
+                    _posMm = targetMm; _vel = 0; _init = true;
+                    return targetPx;
+                }
+
+                double err = targetMm - _posMm;
+                double remain = Math.Abs(err);
+                if (remain <= 0.002 && Math.Abs(_vel) < 0.5)
+                {
+                    _posMm = targetMm;
+                    _vel = 0;
+                }
+                else
+                {
+                    double dir = Math.Sign(err);
+                    // 三重约束：轴最高速 / 减速段还能刹住 / 一步不越过目标
+                    double vBrake = Math.Sqrt(2 * dec * remain);
+                    double vStep = remain / dt;
+                    double vDes = Math.Min(vmax, Math.Min(vBrake, vStep)) * dir;
+                    double dv = vDes - _vel;
+                    double rate = Math.Abs(vDes) > Math.Abs(_vel) ? acc : dec;
+                    double maxDv = rate * dt;
+                    if (Math.Abs(dv) > maxDv) dv = Math.Sign(dv) * maxDv;
+                    _vel += dv;
+
+                    double step = _vel * dt;
+                    if (Math.Sign(step) == dir && Math.Abs(step) >= remain)
+                    {
+                        _posMm = targetMm;
+                        _vel = 0;
+                    }
+                    else _posMm += step;
+                }
+
+                double f = (_posMm - lo) / (hi - lo);
+                if (f < 0) f = 0; else if (f > 1) f = 1;
+                return _px0 + (_px1 - _px0) * f;
+            }
+        }
+
+        /// <summary>
+        /// 一个演示时隙的秒数。需求 64：原来写死 8s（纯演示速度，比真机慢 3~4 倍），
+        /// 现在按轴表反算 —— 相位上升段占 (1−PhaseHold)/2 = 0.35 个时隙，
+        /// 取四条主运动轴里最慢的那条（下料X/上料X 900mm @1200mm/s、6000mm/s² ⇒ 0.95s）
+        /// ⇒ 时隙 ≈ 2.7s，一轮（下料/上料/搬运）≈ 8.2s，和真机节拍同量级。
+        /// </summary>
+        private static double SlotSeconds()
+        {
+            double worst = 0;
+            try
+            {
+                var m = MotionManager.Instance;
+                foreach (var name in new[] { "下料X轴", "上料X轴", "下料Y轴", "上料Y轴" })
+                {
+                    int i = m.AxisIndex(name);
+                    if (i < 0) continue;
+                    var c = m.Cfg(i);
+                    double d = Math.Abs(c.MaxMm - c.MinMm);
+                    worst = Math.Max(worst, StrokeSeconds(Math.Max(1, c.MaxVel), Math.Max(1, c.Acc), d));
+                }
+            }
+            catch { }
+            if (worst < 0.05) return 8.0;                        // 拿不到轴表就退回旧值
+            return worst / ((1 - PhaseHold) / 2);
+        }
+
+        /// <summary>梯形曲线走完 d 需要的时间（到不了匀速段就是三角形）。</summary>
+        private static double StrokeSeconds(double v, double a, double d)
+        {
+            if (d <= 0) return 0;
+            if (d <= v * v / a) return 2 * Math.Sqrt(d / a);
+            return d / v + v / a;
         }
 
         /// <summary>两色线性插值（t = 0 → a，t = 1 → b）。</summary>

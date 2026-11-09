@@ -40,7 +40,11 @@ namespace HandlerGuide.Views
         private readonly MainViewModel _vm = new MainViewModel();
         private readonly DispatcherTimer _timer;
         private readonly DispatcherTimer _fastTimer;
-        private DateTime _lastFast = DateTime.Now;
+        private readonly System.Diagnostics.Stopwatch _fastClock = new System.Diagnostics.Stopwatch();
+        private double _lastFastSec;
+
+        /// <summary>急停/卡顿下最多一次补多少秒，超过就丢掉（避免界面挂起后暴走）。</summary>
+        private const double CatchUpMaxSeconds = 5.0;
 
         /// <summary>供自检 / 测试访问视图模型。</summary>
         public MainViewModel Vm => _vm;
@@ -91,18 +95,33 @@ namespace HandlerGuide.Views
             _timer.Tick += (s, e) => _vm.Tick();
             _timer.Start();
 
-            // 运动仿真快速通道：约 20fps 推进梯形速度曲线与轨迹动画
-            _lastFast = DateTime.Now;
+            // 运动仿真快速通道：约 20fps 推进梯形速度曲线与轨迹动画。
+            // ⚠ 这里**绝对不能**把 dt 压成常数（旧版 dt>0.5 就替换成 0.05）。
+            //   压了就等于机器时间比墙钟慢：Lua 脚本里 go()/pause() 用的是真实
+            //   时间，而轴的位置靠 dt 积分 —— 两者不同步时，一圈 8.5s 的脚本
+            //   会被拖成几分钟，节拍/UPH 全部失去对照意义。
+            //   改用单调计时器取真实间隔，MotionManager.Tick 内部再按 20ms 分步。
+            _fastClock.Restart();
+            _lastFastSec = 0;
             _fastTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
             _fastTimer.Tick += (s, e) =>
             {
-                var now = DateTime.Now;
-                double dt = (now - _lastFast).TotalSeconds;
-                _lastFast = now;
-                if (dt <= 0 || dt > 0.5) dt = 0.05;
+                double nowSec = _fastClock.Elapsed.TotalSeconds;
+                double dt = nowSec - _lastFastSec;
+                _lastFastSec = nowSec;
+                if (dt <= 0) return;
+                if (dt > CatchUpMaxSeconds) dt = CatchUpMaxSeconds;
                 _vm.FastTick(dt);
             };
             _fastTimer.Start();
+
+            // 关窗必须停表：DispatcherTimer 的回调持有窗口引用，不停就会在窗口
+            // 关掉之后继续推进仿真（自检里连开两个窗口 ⇒ 仿真时钟跑成 2 倍速）。
+            Closed += (s, e) =>
+            {
+                try { _timer.Stop(); } catch { }
+                try { _fastTimer.Stop(); } catch { }
+            };
 
             _vm.Tick();
         }

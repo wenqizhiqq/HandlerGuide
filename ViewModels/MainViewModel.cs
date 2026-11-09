@@ -456,8 +456,34 @@ namespace HandlerGuide.ViewModels
             M.TickClock();
             // 批次运行 / 停机时间累计（Channel 500ms → 1/120 分钟）。温启志 18719361399
             LotOps.Tick(1.0 / 120.0);
+            CheckClockFidelity();
             LiveRegistry.RefreshAll();
             RaiseStatus();
+        }
+
+        // 仿真时钟 vs 墙钟的健康检查：真机上机器时间必然等于墙钟时间，
+        // 一旦偏差持续扩大，说明界面线程在拖住运控通道（节拍 / UPH 会失真）。
+        private readonly System.Diagnostics.Stopwatch _wallClock = System.Diagnostics.Stopwatch.StartNew();
+        private DateTime _clockWarnAt = DateTime.MinValue;
+
+        /// <summary>仿真时钟是否跟得上墙钟（自检与现场排查用）。</summary>
+        public double SimClockSeconds => Motion.MotionManager.Instance.SimClockSeconds;
+
+        /// <summary>系统运行（墙钟）秒数。</summary>
+        public double WallClockSeconds => _wallClock.Elapsed.TotalSeconds;
+
+        private void CheckClockFidelity()
+        {
+            double wall = _wallClock.Elapsed.TotalSeconds;
+            if (wall < 15) return;
+            double sim = SimClockSeconds;
+            // 允许 5s 或 5% 的漂移（启动阶段、窗口拖动都会短暂落后）
+            if (Math.Abs(wall - sim) < Math.Max(5.0, wall * 0.05)) return;
+            if ((DateTime.Now - _clockWarnAt).TotalSeconds < 60) return;
+            _clockWarnAt = DateTime.Now;
+            Ops.Warn("仿真时钟落后墙钟 " + (wall - sim).ToString("0.0") + "s（墙钟 "
+                     + wall.ToString("0.0") + "s / 仿真 " + sim.ToString("0.0")
+                     + "s）—— 界面卡顿已拖慢机器时间，此时的节拍与 UPH 不能当真实数据看");
         }
 
         /// <summary>

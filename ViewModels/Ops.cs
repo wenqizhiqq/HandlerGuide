@@ -2354,11 +2354,35 @@ namespace HandlerGuide.ViewModels
         // ==================================================================
 
         /// <summary>
+        /// 轴参数存档的版本号。轴表结构（轴号 / 行程 / 停放位）一变就要 +1：
+        /// 否则旧存档按轴号套到新轴上会张冠李戴，最典型的后果是
+        /// 「垂直轴限位顶 < ZUp ⇒ 互锁永远判未抬起 ⇒ 同组水平轴被永久拒绝」。
+        /// 需求 71 起 = 3：上料X轴 / 下料X轴 最高速 1200 → 1500mm/s（400W 伺服皮带龙门
+        /// 的正常档位，样本手册 Index Time ≤0.6s 就是靠这个速度），并把两条臂的
+        /// 「共轨」假设拆掉（分支2 / 分支4 两条独立导轨）。旧存档里的 1200 会盖住
+        /// 轴表，导致仿真节拍比真机慢 20%，所以必须换版本号重置。
+        /// </summary>
+        private const int AxisParamVersion = 3;
+
+        /// <summary>
         /// 约定：轴相关参数的键名形如 <c>ax{轴号}_min / _max / _vmax / _acc / _home</c>。
         /// 页面上改完按「应用」，这里统一下装到 MotionManager 的轴配置。
         /// </summary>
         public static void ApplyAllAxisConfigs()
         {
+            // ---- 版本迁移 ----------------------------------------------------
+            int ver = (int)M.GetNum("axis_param_version", 0);
+            if (ver != AxisParamVersion)
+            {
+                int cnt = 0;
+                foreach (var a in Mm.Axes) { ResetAxisParams(a); cnt++; }
+                M.SetNum("axis_param_version", AxisParamVersion);
+                M.Log("警告", "轴参数存档来自旧轴表（版本 " + ver + " → " + AxisParamVersion
+                      + "），已按真机轴表重置 " + cnt
+                      + " 根轴的限位/速度/回零位 —— 旧轴号张冠李戴会把安全互锁卡死");
+                return;
+            }
+
             int n = 0;
             foreach (var a in Mm.Axes)
             {
@@ -2388,11 +2412,42 @@ namespace HandlerGuide.ViewModels
                         double t = a.MinMm; a.MinMm = a.MaxMm; a.MaxMm = t;
                         M.Log("警告", a.Name + " 软限位上下限写反了，已自动对调");
                     }
+                    if (!MotionManager.AxisParamSane(a))
+                    {
+                        // 存档本身自相矛盾（限位容不下回零位 / 抬起阈值）⇒ 退回轴表值
+                        double badMax = a.MaxMm, badHome = a.HomeMm, badZUp = a.ZUpMm;
+                        ResetAxisParams(a);
+                        M.Log("警告", a.Name + " 的参数存档自相矛盾（max=" + badMax.ToString("0.###")
+                              + " / home=" + badHome.ToString("0.###") + "，抬起阈值 "
+                              + badZUp.ToString("0.###") + "），已退回轴表值 max="
+                              + a.MaxMm.ToString("0.###") + " home=" + a.HomeMm.ToString("0.###"));
+                        n++;
+                        continue;
+                    }
                     Mm.Card?.Configure(a);
                     n++;
                 }
             }
             if (n > 0) M.Log("信息", "已下装 " + n + " 个轴的参数到控制卡");
+        }
+
+        /// <summary>把一根轴的参数按轴表重置，并回写全部存档键（含电机参数页的显示种子）。</summary>
+        private static void ResetAxisParams(AxisConfig a)
+        {
+            Mm.ResetAxisDefaults(a.Index);
+            M.SetNum("ax" + a.Index + "_min", a.MinMm);
+            M.SetNum("ax" + a.Index + "_max", a.MaxMm);
+            M.SetNum("ax" + a.Index + "_home", a.HomeMm);
+            M.SetNum("ax" + a.Index + "_vmax", a.MaxVel);
+            M.SetNum("ax" + a.Index + "_acc", a.Acc);
+            // 电机参数页用 mc_* 做显示种子；不同步刷掉的话，那页还显示旧值，
+            // 用户一按「应用轴参数」又把它写回 ax*_，问题原地复活。
+            M.SetNum("mc_min_" + a.Index, a.MinMm);
+            M.SetNum("mc_max_" + a.Index, a.MaxMm);
+            M.SetNum("mc_home_" + a.Index, a.HomeMm);
+            M.SetNum("mc_vel_" + a.Index, a.MaxVel);
+            M.SetNum("mc_acc_" + a.Index, a.Acc);
+            Mm.Card?.Configure(a);
         }
 
         /// <summary>把界面上的轴参数从控制卡当前配置回填到模型（打开页面时用）。</summary>

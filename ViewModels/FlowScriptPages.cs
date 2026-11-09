@@ -47,7 +47,15 @@ namespace HandlerGuide.ViewModels
         // 需求 53：列表只占 30%，只留「流程名 / 状态 / 编辑」三列；
         // 循环数 / 当前步 / 令牌 / 错误 移到编辑器顶部那行说明里（见 Caption）。
         // 需求 57：底部按钮去掉，改成纯监视面板 —— 列表加回「循环数」，运行状态一眼能看到
-        const double WMark = 12, WName = 82, WState = 36, WLoops = 34;
+        // 需求 63（用户：「@流程列表 显示不全」）：流程名一列原来只有 82 —— LiveElement 的模板
+        // 自带左右各 8px 内边距，真正给字用的只有 82−16=66px，而最长名「03 上料前排吸嘴」
+        // 要约 78px，所以每条都被截掉尾巴。这里把列表列宽重排：
+        //   · 名称 112（文字区 96px，够 9 个汉字级别）＝主诉求；
+        //   · 状态 46（文字区 30px，正好放「未启动」三个字 —— 状态串只有 运行/已停/未启动）；
+        //   · 循环 32（文字区 16px，四位数循环计数也放得下）；
+        //   · 选中符 14（原来 12 连「▶」都塞不进 16px 内边距，等于白占）。
+        // 同时把左右分栏 3:7 → 3.7:6.3，给列表腾出放得下这些列宽的宽度（含竖向滚动条 17px）。
+        const double WMark = 14, WName = 112, WState = 46, WLoops = 32;
 
         /// <summary>当前选中的流程名（右侧编辑器显示的就是它）。</summary>
         public static string Selected { get; private set; } = "";
@@ -225,7 +233,9 @@ namespace HandlerGuide.ViewModels
             editorArea.HAlign = HorizontalAlignment.Stretch;
             editorArea.VAlign = VerticalAlignment.Stretch;
 
-            var body = E.Grid().Cols("3*", "7*").Rows("*");
+            // 需求 63：3:7 → 3.7:6.3 —— 流程名 / 状态两列要能整行显示（见上方列宽注释），
+            // 编辑器一侧仍留 6.3/10 × 735 ≈ 463px，写 Lua 足够。
+            var body = E.Grid().Cols("3.7*", "6.3*").Rows("*");
             body.Add(listArea, 0, 0);
             body.Add(editorArea, 0, 1);
             body.HAlign = HorizontalAlignment.Stretch;

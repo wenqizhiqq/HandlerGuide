@@ -40,6 +40,9 @@ namespace HandlerGuide.Motion
         private readonly Dictionary<int, AxisConfig> _cfg = new Dictionary<int, AxisConfig>();
         private readonly Dictionary<int, AxisState> _st = new Dictionary<int, AxisState>();
 
+        /// <summary>已经按停放位做过一次上电初始化的轴（Configure 只播种一次）。</summary>
+        private readonly HashSet<int> _seeded = new HashSet<int>();
+
         /// <summary>本卡实际配置过的轴号（升序）。真机轴号不连续（缺 17 / 38），
         /// 所以积分 / 停止 / 快照都只遍历这张表，不能按 0..轴数 硬走。</summary>
         private readonly List<int> _axisIdx = new List<int>();
@@ -108,6 +111,14 @@ namespace HandlerGuide.Motion
             {
                 st = new AxisState();
                 _st[cfg.Index] = st;
+            }
+            if (_seeded.Add(cfg.Index))
+            {
+                // 第一次下发这张卡的配置 = 上电初始化：机台停在停放位（回零位）。
+                // 不能从 0 起：多数轴的停放位不是 0（下料X 900、搬运X 442.3、
+                // 各仓 Z 500…），停在 0 会被安全层判成「已离开停放位」，
+                // X 走廊分时互斥直接把另外两根臂永久拒掉（上料X 被拒 818 次就是这条）。
+                st.PositionMm = Clamp(cfg, cfg.HomeMm);
             }
             st.PositionMm = Clamp(cfg, st.PositionMm);
             st.TargetMm = st.PositionMm;
@@ -292,7 +303,11 @@ namespace HandlerGuide.Motion
                 }
 
                 double err = st.TargetMm - st.PositionMm;
-                if (Math.Abs(err) <= InPosTol && Math.Abs(st.Velocity) < 0.5)
+                // 已经在目标上：立刻停住。旧版要求「速度也 < 0.5」才算到位，
+                // 于是「刚好走到目标、但还带着残余速度」的那一帧会掉进下面的
+                // 积分分支：err=0 ⇒ dir=0 ⇒ 防越界判据失效，残余速度把位置
+                // 继续推过头（实测 前压头Z 冲到 26.6，越过软限位 25 直接报警）。
+                if (Math.Abs(err) <= 1e-9 || (Math.Abs(err) <= InPosTol && Math.Abs(st.Velocity) < 0.5))
                 {
                     st.PositionMm = st.TargetMm;
                     st.Velocity = 0;
@@ -324,6 +339,11 @@ namespace HandlerGuide.Motion
 
                 // 本步位移；若会越过目标则直接吸附到目标（模拟伺服到位）
                 double step = st.Velocity * dt;
+                // 兜底防越界：无论符号判据怎么算，位置都不许跨过目标
+                double next = st.PositionMm + step;
+                if ((dir >= 0 && next > st.TargetMm) || (dir <= 0 && next < st.TargetMm))
+                    next = st.TargetMm;
+                step = next - st.PositionMm;
                 if (Math.Sign(step) == dir && Math.Abs(step) >= remain)
                 {
                     st.PositionMm = st.TargetMm;
@@ -339,13 +359,17 @@ namespace HandlerGuide.Motion
                 st.PositionMm += step;
 
                 // 位置噪声：让读数看起来像真实编码器反馈（极小，不影响判定）。
-                // 必须放在软限位钳制之前，否则噪声可能把位置顶到限位之外而误报警。
-                st.PositionMm += (_rnd.NextDouble() - 0.5) * 0.0008;
+                // ⚠ 只在运动时叠加：停在软限位上的轴（各 Z 轴 home 就是 max）静止时
+                //   叠噪声会每帧「越界」0.0002mm，被下面的钳制判成撞限位而报警停机。
+                if (st.Busy || Math.Abs(st.Velocity) > 0.5)
+                    st.PositionMm += (_rnd.NextDouble() - 0.5) * 0.0008;
 
                 // ---- 软限位硬钳制（防撞的最后一道闸）----
                 double clamped = Clamp(c, st.PositionMm);
-                if (Math.Abs(clamped - st.PositionMm) > 1e-9)
+                double over = Math.Abs(clamped - st.PositionMm);
+                if (over > 0.01)
                 {
+                    double raw = st.PositionMm;
                     st.PositionMm = clamped;
                     st.TargetMm = clamped;
                     st.Velocity = 0;
@@ -354,9 +378,14 @@ namespace HandlerGuide.Motion
                     st.SoftLimit = true;
                     // 撞到软限位即产生报警，需人工清除 —— 提醒操作员不要继续顶
                     st.Alarm = true;
-                    st.LastReject = c.Name + " 触发软限位（" + clamped.ToString("0.###") + "），已停机报警";
+                    st.LastReject = c.Name + " 触发软限位（原始 " + raw.ToString("0.####")
+                                    + " → " + clamped.ToString("0.###") + "，目标 "
+                                    + st.TargetMm.ToString("0.####") + "，限位 ["
+                                    + c.MinMm.ToString("0.###") + "," + c.MaxMm.ToString("0.###")
+                                    + "]），已停机报警";
                     continue;
                 }
+                if (over > 0) st.PositionMm = clamped;    // 亚微米级钳制，不算撞限位
 
                 // 状态刷新
                 st.Busy = Math.Abs(st.TargetMm - st.PositionMm) > InPosTol || Math.Abs(st.Velocity) > 0.5;

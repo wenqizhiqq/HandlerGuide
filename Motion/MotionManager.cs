@@ -205,6 +205,23 @@ namespace HandlerGuide.Motion
         /// <summary>累计运动指令条数。</summary>
         public int MoveCount { get; private set; }
 
+        /// <summary>
+        /// 仿真时钟：所有 Tick(dt) 传入的 dt 累计得到（秒）。
+        /// 与墙钟对比就能看出「界面卡顿有没有把机器时间拖慢」——
+        /// 真机上这两个数应该一直是同步的。
+        /// </summary>
+        public double SimClockSeconds { get; private set; }
+
+        /// <summary>
+        /// 单步积分上限（秒）。梯形速度曲线是离散积分，一步跨度太大就会
+        /// 一步冲过目标、或者直接触发 SimMotionCard 内部的 0.2s 截断而
+        /// 悄悄丢掉时间。所以一条 Tick 里按这个上限拆成多步。
+        /// </summary>
+        private const double SimStepMax = 0.02;
+
+        /// <summary>最近一帧里最多补多少秒（防长时间挂起后一次补太多）。</summary>
+        private const double SimCatchUpMax = 5.0;
+
         /// <summary>自演示节拍是否运行中。</summary>
         public bool AutoCycle { get; private set; }
 
@@ -290,10 +307,24 @@ namespace HandlerGuide.Motion
             new AxisRule { Key = "前梭车X", Min = 0, Max = 1200, Home = 0, Vel = 1500, Acc = 8000, Rail = "SHUTTLE", Clearance = 120, Unit = "mm" },
             new AxisRule { Key = "后梭车X", Min = 0, Max = 1200, Home = 1200, Vel = 1500, Acc = 8000, Rail = "SHUTTLE", Clearance = 120, Unit = "mm" },
 
-            // ---- 上 / 下料臂 X：共享 X 走廊（ARM_X），停放位一前一后 ----
-            new AxisRule { Key = "上料X轴", Min = 0, Max = 900, Home = 0, Vel = 1200, Acc = 6000, Rail = "ARM_X", Clearance = 40, Unit = "mm" },
-            new AxisRule { Key = "下料X轴", Min = 0, Max = 900, Home = 900, Vel = 1200, Acc = 6000, Rail = "ARM_X", Clearance = 40, Unit = "mm" },
-            new AxisRule { Key = "搬运X轴", Min = 0, Max = 700, Home = 0, Vel = 800, Acc = 4000, Clearance = 40, Unit = "mm" },
+            // ---- 上 / 下料臂 X：**两条独立导轨**（需求 71 更正）----
+            // 交接资料 HandoverTables：上料X轴(26) 在 **分支2**、下料X轴(10) 在 **分支4**，
+            // 是两个独立的 EtherCAT 分支 / 独立龙门，机械上不共轨。旧版把它们挂在同一条
+            // 虚构的 "ARM_X" 导轨上（那是 31 轴旧仿真表的遗留），于是 SR-08/SR-11 把它们
+            // 锁成「同一时刻只有一根能离开停放位」——上料、测试、下料只能串行，一圈 8.46s，
+            // UPH 3.4K，永远追不上样本手册的 11K。真机（含资料里的平移式机型）是
+            // 上下料并行 + 双梭车双压头流水线，这里按真表把共轨约束拆掉：
+            //   · 上料臂 分支2 / 下料臂 分支4 → 互不干涉，可同时动；
+            //   · 画布上的包络也不重叠（上料臂 X 674.1~930.16px，下料臂 X 72~475.15px）。
+            // 真正需要互斥的是「上料臂 ↔ 同分支2 的料盘搬运臂」（都要进取料区），见 CorridorX。
+            new AxisRule { Key = "上料X轴", Min = 0, Max = 900, Home = 0, Vel = 1500, Acc = 6000, Clearance = 40, Unit = "mm" },
+            new AxisRule { Key = "下料X轴", Min = 0, Max = 900, Home = 900, Vel = 1500, Acc = 6000, Clearance = 40, Unit = "mm" },
+            // 需求 66：搬运X 的停放位不是 0。需求 40 定的停放位是画布 530.2px
+            // （= 照片原位 694.4 靠左 2 个料盘宽），按画布几何 0..700mm ↔ 120..769.2px
+            // 折过来正好 442.3mm。Home 取 0 会有两个后果：①〔全部回零〕把手臂停到
+            // 最左端（画布 120px，正压在自动盘3 上）；② 脚本一启动画布就瞬移 410px。
+            // X 走廊互斥判据用的就是 HomeMm±40，所以停放位必须写在这里。
+            new AxisRule { Key = "搬运X轴", Min = 0, Max = 700, Home = 442.3, Vel = 800, Acc = 4000, Clearance = 40, Unit = "mm" },
             new AxisRule { Key = "上料Y轴", Min = 0, Max = 300, Home = 0, Vel = 800, Acc = 4000, Clearance = 40, Unit = "mm" },
             new AxisRule { Key = "下料Y轴", Min = 0, Max = 300, Home = 0, Vel = 800, Acc = 4000, Clearance = 40, Unit = "mm" },
 
@@ -762,10 +793,11 @@ namespace HandlerGuide.Motion
             });
             Rules.Add(new SafetyRule
             {
-                Id = "SR-08", Name = "双臂走廊互斥",
-                Detail = "上料X轴 / 下料X轴 共享走廊，间距不得小于 " + RailClearance("ARM_X").ToString("0") + "mm",
+                Id = "SR-08", Name = "前梭车 / 前压头联动互锁",
+                Detail = "前梭车 X 走位前 前压头Z 必须抬到 " + ZUpOf("压头测试工位").ToString("0")
+                         + "mm 以上（压头没抬就送料 = 撞压头）",
                 Blocking = true,
-                Satisfied = () => RailClear("ARM_X")
+                Satisfied = () => ShuttlePressClear(_axShuttleF, _axPressFZ)
             });
             Rules.Add(new SafetyRule
             {
@@ -776,8 +808,17 @@ namespace HandlerGuide.Motion
             });
             Rules.Add(new SafetyRule
             {
-                Id = "SR-11", Name = "X 走廊三臂分时互斥",
-                Detail = "上料X轴 / 下料X轴 / 搬运X轴 共享 X 走廊，同一时刻只允许一根离开停放位" + "（回停放位永远放行，否则会死锁）",
+                Id = "SR-11", Name = "后梭车 / 后压头联动互锁",
+                Detail = "后梭车 X 走位前 后压头Z 必须抬到 " + ZUpOf("压头测试工位").ToString("0")
+                         + "mm 以上；前 / 后梭车共轨，间距 ≥ " + RailClearance("SHUTTLE").ToString("0") + "mm",
+                Blocking = true,
+                Satisfied = () => ShuttlePressClear(_axShuttleB, _axPressBZ) && RailClear("SHUTTLE")
+            });
+            Rules.Add(new SafetyRule
+            {
+                Id = "SR-12", Name = "上料臂 / 料盘搬运臂 X 走廊互斥",
+                Detail = "上料X轴(分支2) / 搬运X轴(分支2) 共享取放料区，同一时刻只允许一根离开停放位"
+                         + "（回停放位永远放行，否则会死锁）｜下料X轴为分支4独立导轨，不参与",
                 Blocking = true,
                 Satisfied = () =>
                 {
@@ -922,6 +963,43 @@ namespace HandlerGuide.Motion
             return new AxisConfig { Index = axis, Name = "轴" + axis };
         }
 
+        /// <summary>
+        /// 把某根轴的参数恢复成「轴表推导值」（HandoverTables + AxisRules）。
+        /// 用途：旧参数存档迁移 —— 轴表改过之后，按轴号存下来的限位会张冠李戴，
+        /// 例如 下料吸嘴1Z轴 被写成变距轴的 -20..20，而 ZUp=29 ⇒ 互锁永远判
+        /// 「同组垂直轴未抬起」，同组水平轴被永久拒绝，整机一动就被拦。
+        /// </summary>
+        public void ResetAxisDefaults(int axis)
+        {
+            AxisConfig a;
+            if (!_byIndex.TryGetValue(axis, out a)) return;
+            var h = HandoverTables.Axes.FirstOrDefault(x => x.Index == axis);
+            if (h == null) return;
+            var r = DefaultsFor(h);
+            a.MinMm = r.Min;
+            a.MaxMm = r.Max;
+            a.HomeMm = r.Home;
+            a.MaxVel = r.Vel;
+            a.Acc = r.Acc;
+            a.Dec = r.Acc;
+            a.IsVertical = r.Vertical;
+            a.ZUpMm = r.ZUp;
+            a.RailId = r.Rail ?? "";
+            a.ClearanceMm = r.Clearance;
+            a.Unit = string.IsNullOrEmpty(r.Unit) ? "mm" : r.Unit;
+        }
+
+        /// <summary>该轴参数是否自相矛盾（限位容不下回零位 / 抬起阈值）。</summary>
+        public static bool AxisParamSane(AxisConfig a)
+        {
+            if (a == null) return true;
+            if (a.MinMm > a.MaxMm) return false;
+            if (a.HomeMm < a.MinMm - 1e-9 || a.HomeMm > a.MaxMm + 1e-9) return false;
+            // 垂直轴：正向限位必须容得下 ZUp，否则「抬起」这个状态永远达不到
+            double floor = a.IsVertical ? Math.Max(a.HomeMm, a.ZUpMm) : a.HomeMm;
+            return a.MaxMm >= floor - 1e-9;
+        }
+
         /// <summary>轴号是否存在于本表。</summary>
         public bool HasAxis(int axis) => axis >= 0 && _byIndex.ContainsKey(axis);
 
@@ -964,21 +1042,23 @@ namespace HandlerGuide.Motion
         }
 
         /// <summary>
-        /// 需求 38：共享同一条 X 走廊的三根轴 —— 上料X轴(26) / 下料X轴(10) / 搬运X轴(27)
-        /// （旧名：上料取放臂X / 下料取放臂X / 料盘传送臂，别名表仍在）。
-        /// 用户：「搬运料盘手臂需要和上料下料手臂不能冲突了，怕撞击」
-        /// ⇒ 三者**分时轮流**：同一时刻只允许一根轴离开停放位（HomeMm）。
-        /// 注意 搬运X轴 不挂 RailId —— 它与 上料X轴 的停放位都是 0mm，若挂同一条导轨会被
-        /// RailClear 判成「间距 0 < 40」，规则表一开机就是红的；分时互斥才是正确的语义。
+        /// X 走廊互斥轴对 —— 需求 71 更正为「上料X轴(26) / 搬运X轴(27)」。
+        /// 这两根都在 **分支2**，都要把手臂伸到进料盘/空盘仓那一片取放料区，机械上是
+        /// 真会撞的；下料X轴(10) 在 **分支4**，与它们不同分支、不同龙门，需求 71 起
+        /// **不再参与**这条互斥（否则上下料无法并行，UPH 只能停在 3.4K）。
+        /// 语义仍是「分时轮流」：同一时刻只允许一根离开停放位（HomeMm ± clearance），
+        /// 且**回停放位永远放行**（否则走廊清空只能靠回停放位，会把自己锁死）。
+        /// 注意 搬运X轴 不挂 RailId —— 它与 上料X轴 的停放位不同（442.3 / 0），
+        /// 挂同一条导轨会被 RailClear 判成「间距 442 < 40 以外的乱账」；分时互斥才是正确语义。
         /// 轴号在 BuildAxes 末尾按真名解析（真机轴号不连续，不能再写死下标）。
         /// </summary>
         private int[] CorridorX = new int[0];
 
-        /// <summary>填 X 走廊的三根轴号（BuildAxes 末尾调用）。</summary>
+        /// <summary>填 X 走廊的轴号（BuildAxes 末尾调用）。</summary>
         private void BuildCorridor()
         {
             var list = new List<int>();
-            foreach (var n in new[] { "上料X轴", "下料X轴", "搬运X轴" })
+            foreach (var n in new[] { "上料X轴", "搬运X轴" })
             {
                 int ix = AxisIndex(n);
                 if (ix >= 0 && !list.Contains(ix)) list.Add(ix);
@@ -999,7 +1079,7 @@ namespace HandlerGuide.Motion
                 double op = Position(idx);
                 if (Math.Abs(op - o.HomeMm) > clearance)
                     return "互锁：X 走廊上 " + o.Name + " 已离开停放位（" + F(op) + "，停放 " + F(o.HomeMm)
-                         + "），三臂分时互斥，已拒绝（防撞）";
+                         + "），走廊分时互斥，已拒绝（防撞）";
             }
             return null;
         }
@@ -1020,6 +1100,38 @@ namespace HandlerGuide.Motion
                         return false;
                 }
             return true;
+        }
+
+        // ------------------------------------------------------------------
+        //  需求 71：梭车 ↔ 压头 联动互锁
+        //
+        //  真机的送料顺序是「压头抬起 → 梭车把料座送进压头下方 → 压头下压」。
+        //  时序错了就是撞压头，所以这条必须在安全层（而不是脚本里）兜住：
+        //    · 梭车走位前，对应压头 Z 必须已抬到抬起阈值（ZUp）以上；
+        //    · 压头在下位时，梭车只允许待在「不在压头正下方」的位置。
+        //  正压测位来自 FlowPoints：前 500 / 后 700（两梭车共轨、间距 200 > 120）。
+        //  注意：不做「压头下压必须先看到梭车到位」这一条 —— 那是工艺互锁，
+        //  11_前压头 这类单独调机的流程要在空座上点动下压，放在安全层会把它锁死。
+        // ------------------------------------------------------------------
+
+        /// <summary>压头是否已抬起（轴不存在 = 视为允许）。</summary>
+        private bool PressUp(int pressAxis)
+            => pressAxis < 0 || Position(pressAxis) >= Cfg(pressAxis).ZUpMm - 0.001;
+
+        /// <summary>梭车正压测区（+/-60mm）。</summary>
+        private bool InPressZone(int shuttleAxis, double pos)
+        {
+            if (shuttleAxis == _axShuttleF) return Math.Abs(pos - FlowPoints.ShFTest) <= 60;
+            if (shuttleAxis == _axShuttleB) return Math.Abs(pos - FlowPoints.ShBTest) <= 60;
+            return false;
+        }
+
+        /// <summary>梭车 / 压头联动规则判据（SR-08 / SR-11）。</summary>
+        private bool ShuttlePressClear(int shuttleAxis, int pressAxis)
+        {
+            if (shuttleAxis < 0 || pressAxis < 0) return true;
+            if (PressUp(pressAxis)) return true;                       // 压头抬着，梭车随便走
+            return !InPressZone(shuttleAxis, Position(shuttleAxis));    // 压头在下：梭车不许在正下方
         }
 
         // ==================================================================
@@ -1076,8 +1188,15 @@ namespace HandlerGuide.Motion
                     }
                 }
 
-                // 3) 需求 38：X 走廊三臂分时互斥 —— 上料取放臂X / 下料取放臂X / 料盘搬运臂。
-                //    同一时刻只允许一根轴离开停放位；别的臂还在走廊里时，本次运动直接拒绝。
+                // 3) 需求 71：梭车走位前，对应压头必须已抬起（压头没抬就送料 = 撞压头）
+                int pressPair = axis == _axShuttleF ? _axPressFZ : (axis == _axShuttleB ? _axPressBZ : -1);
+                if (pressPair >= 0 && !PressUp(pressPair))
+                    return MotionResult.Reject("互锁：梭车走位前 " + Cfg(pressPair).Name + " 未抬起（"
+                                              + F(Position(pressPair)) + " < " + F(Cfg(pressPair).ZUpMm)
+                                              + "），已拒绝（防撞）");
+
+                // 4) 需求 38 / 71：上料臂 ↔ 料盘搬运臂 X 走廊分时互斥。
+                //    同一时刻只允许一根离开停放位；别的臂还在走廊里时，本次运动直接拒绝。
                 //    **回停放位永远放行** —— 否则走廊清空只能靠回停放位，会把自己锁死。
                 if (Array.IndexOf(CorridorX, axis) >= 0
                     && Math.Abs(target - c.HomeMm) > c.ClearanceMm)
@@ -1417,9 +1536,19 @@ namespace HandlerGuide.Motion
         //  周期推进
         // ==================================================================
 
-        /// <summary>由界面定时器驱动。</summary>
+        /// <summary>
+        /// 由界面定时器驱动。dt = 距离上一帧的**真实墙钟时间**（不要压缩它，
+        /// 压缩就等于让机器跑得比真机慢；压缩后的节拍没法跟样本手册的
+        /// Index Time / UPH 对照）。
+        /// </summary>
         public void Tick(double dt)
         {
+            if (dt <= 0) return;
+            if (dt > SimCatchUpMax) dt = SimCatchUpMax;
+            // 时钟先记账（即使仿真卡还没连上也照记），这样「仿真时钟 vs 墙钟」
+            // 的偏差可以当健康指示看：一直同步才说明界面没在拖慢机器时间。
+            SimClockSeconds += dt;
+
             if (_card == null) return;
             if (DemoSkipped)
             {
@@ -1427,11 +1556,20 @@ namespace HandlerGuide.Motion
                 MachineModel.Instance.Log("警告", "演示节拍未能解析到全部所需轴名，已跳过建立（检查轴表）");
             }
 
-            // 1) 仿真卡推进物理积分
-            _card.Step(dt);
+            // 1) 仿真卡推进物理积分。必须分步：SimMotionCard.Step 内部把 dt 截到
+            //    0.2s，一步跨过去的话超出部分的时间会被静默丢弃 —— 那正是
+            //    「脚本一圈 8.5s、界面却要跑好几分钟」的根因。
+            double left = dt;
+            while (left > 1e-9)
+            {
+                double s = Math.Min(left, SimStepMax);
+                _card.Step(s);
+                left -= s;
+            }
 
             // 2) 由轴状态推导部分输入点，让 IO 面板是"活"的
             SyncDerivedInputs();
+            SyncVacuumFeedback();
 
             // 3) 回写 MachineModel.Motors，供既有《诊断 / 电机状态》等页面复用
             var mm = MachineModel.Instance;
@@ -1477,6 +1615,35 @@ namespace HandlerGuide.Motion
                 _card.SetInput(InPressDownOk, Position(_axPressFZ) < 1 && Position(_axPressBZ) < 1);
             _card.SetInput(InServoAlarm, AnyAlarm());
         }
+
+        /// <summary>
+        /// 真空反馈回显：把「吸真空n」输出映射到同名的「真空n」输入。
+        /// 真机是阀一开、真空开关在几十毫秒内闭合；仿真里没人去闭合它，于是
+        /// 流程线程等「8 路真空反馈齐了才记投料」永远等到超时 —— 投料恒 0 颗。
+        /// 这里按输出状态回显（1 帧滞后 ≈ 20~80ms，与真机的建立时间同量级）。
+        /// 只动「吸真空 → 真空」这一组点，IO 面板手动置位其它点不受影响。
+        /// </summary>
+        private void SyncVacuumFeedback()
+        {
+            if (_card == null) return;
+            if (_vacMap == null)
+            {
+                _vacMap = new List<int[]>();
+                var re = new System.Text.RegularExpressions.Regex(@"^(.*)吸真空(\d+)$");
+                foreach (var o in Outputs)
+                {
+                    var mt = re.Match(o.Name);
+                    if (!mt.Success) continue;
+                    var inPt = FindInput(mt.Groups[1].Value + "真空" + mt.Groups[2].Value);
+                    if (inPt != null) _vacMap.Add(new[] { o.Bit, inPt.Bit });
+                }
+            }
+            for (int k = 0; k < _vacMap.Count; k++)
+                _card.SetInput(_vacMap[k][1], _card.ReadOut(_vacMap[k][0]));
+        }
+
+        /// <summary>真空阀 → 真空开关的位号对（懒构建）。</summary>
+        private List<int[]> _vacMap;
 
         /// <summary>「轴在停放位附近」→ 兼容输入点（轴号无效时不动这一路）。</summary>
         private void SetInputAt(int bit, int axis, double tol)

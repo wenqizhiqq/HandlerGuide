@@ -432,7 +432,7 @@ namespace HandlerGuide.ViewModels
             return E.V(
                 E.T("所有运动指令下发前都会先通过以下互锁裁决；任一条阻塞项不满足，指令被直接拒绝并写入信息记录。",
                     11.5, E.Sec, false, TextWrapping.Wrap),
-                E.Group("安全互锁规则（SR-01 ~ SR-10）", ruleBox),
+                E.Group("安全互锁规则（SR-01 ~ SR-12）", ruleBox),
                 E.Group("软限位与轴归属", E.Scroll(lim, 260, ScrollBarVisibility.Disabled, ScrollBarVisibility.Auto)));
         }
 
@@ -442,8 +442,8 @@ namespace HandlerGuide.ViewModels
             var canvas = BuildTraceCanvas();
             return E.V(
                 E.H(
-                    E.T("共享走廊：上料X轴 / 下料X轴（0~900mm）", 11, E.Sec).Wd(300),
-                    E.T("小车导轨：小车 A / B（0~1200mm）", 11, E.Sec).Wd(260),
+                    E.T("上料 X / 下料 X：各 0~900mm（两条独立导轨：分支2 / 分支4）", 11, E.Sec).Wd(340),
+                    E.T("梭车导轨：前 / 后梭车（0~1200mm，间隙 120）", 11, E.Sec).Wd(280),
                     E.T("Z 轴高度（0~30mm）", 11, E.Sec)),
                 canvas,
                 E.H(
@@ -457,8 +457,9 @@ namespace HandlerGuide.ViewModels
                     Live("demo_step", null, 300),
                     E.T("完成循环：", 11.5, E.Sec, true).Wd(76),
                     Live("demo_cycles", null, 60)),
-                E.T("红色半透明带 = 上料臂的安全间隙区（80mm）；下料臂一旦进入该区域即触发 SR-08 互锁，"
-                    + "运动指令被拒绝。演示节拍每一步都走同一套互锁，因此不会撞机。",
+                E.T("红色半透明带 = 上料臂与料盘搬运臂共用的取放料走廊（两者都在分支2）；谁先离开停放位，"
+                    + "另一根就被 SR-12 拒绝。下料臂在分支4 的独立导轨上，与上料臂并行不互斥；"
+                    + "梭车走位前压头必须抬起（SR-08 / SR-11），每一步都过同一套互锁，因此不会撞机。",
                     10.5, E.Sec, false, TextWrapping.Wrap));
         }
 

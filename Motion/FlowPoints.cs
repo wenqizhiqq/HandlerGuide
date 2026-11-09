@@ -216,8 +216,21 @@ namespace HandlerGuide.Motion
         //  机械基值重新标一遍。Buffer 与 Safe 在资料里基值相同（都 −722.990），
         //  这里给 60 让两个工位有区分度。
 
-        /// <summary>搬运X 停放位 / 安全位（= 回零位 0）[表]。</summary>
-        public const double TfSafe = 0;
+        /// <summary>
+        /// 搬运X 停放位 / 安全位 = 轴表里的回零位（需求 40 定的 530.2px ↔ 442.3mm）。
+        /// ⚠ 必须与轴表一致，不能写死 0：X 走廊三臂分时互斥的判据是
+        /// <c>HomeMm ± 40</c>，搬运臂停在 0 时会被判成「已离开停放位」，
+        /// 上料X / 下料X 会被永久拒绝（实测上料X 连续被拒 800+ 次、一颗都投不进去）。
+        /// </summary>
+        public static double TfSafe
+        {
+            get
+            {
+                var m = Motion.MotionManager.Instance;
+                int ax = m.AxisIndex("搬运X轴");
+                return ax >= 0 ? m.Cfg(ax).HomeMm : 442.3;
+            }
+        }
         /// <summary>搬运X 缓存台位（mm）。[推导] 资料基值与 Safe 相同，给 60 区分。</summary>
         public const double TfBuffer = 60;
         /// <summary>搬运X 空盘仓线位（mm）。[推导] |−950.52 − (−722.99)| = 227.6 → 223。</summary>

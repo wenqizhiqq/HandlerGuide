@@ -294,6 +294,151 @@ namespace HandlerGuide
                        : diff == 0 ? " （警告：画面没有变化）"
                        : " （未开启截图，跳过像素比较）"));
 
+                // ---- 时钟保真自检（需求 70）------------------------------------
+                // 真机上一圈就是 8.5 秒墙钟。如果仿真时钟被界面拖慢，脚本里
+                // go()/pause() 等的是真实时间、轴位移靠 dt 积分，一圈就会拖成
+                // 好几分钟，节拍/UPH 全部失真。这里让真正的 50ms 快速定时器
+                // 跑 2 秒墙钟，中间故意阻塞 UI 线程 300ms 复现卡顿，检查
+                // 仿真时钟能不能补回来（MotionManager.Tick 已改成分步积分）。
+                {
+                    double sim0 = m.SimClockSeconds;
+                    var swc = System.Diagnostics.Stopwatch.StartNew();
+                    var deadline = DateTime.Now.AddSeconds(2.0);
+                    bool blockedOnce = false;
+                    while (DateTime.Now < deadline)
+                    {
+                        // 泵一次消息队列：定时器回调、渲染、绑定都在这里跑
+                        win.Dispatcher.Invoke(() => { },
+                            System.Windows.Threading.DispatcherPriority.Background);
+                        if (!blockedOnce && swc.Elapsed.TotalSeconds > 0.8)
+                        {
+                            blockedOnce = true;
+                            // 600ms 是刻意的：旧实现里 dt>0.5 就被压成 0.05，
+                            // 外加 SimMotionCard.Step 内部再截到 0.2 —— 这种量级的
+                            // 卡顿每发生一次就丢掉大半秒机器时间。600ms 能把它抓出来。
+                            System.Threading.Thread.Sleep(600);   // 模拟界面卡顿
+                        }
+                        System.Threading.Thread.Sleep(5);
+                    }
+                    double wall = swc.Elapsed.TotalSeconds;
+                    double sim = m.SimClockSeconds - sim0;
+                    bool clockOk = Math.Abs(wall - sim) <= Math.Max(0.2, wall * 0.08);
+                    Log("clock selftest: wall=" + wall.ToString("0.000") + "s sim="
+                        + sim.ToString("0.000") + "s ratio=" + (wall > 0 ? (sim / wall).ToString("0.000") : "-")
+                        + " 阻塞600ms " + (blockedOnce ? "已注入" : "未注入")
+                        + (clockOk ? " PASS" : " FAIL（仿真时钟没跟上墙钟）"));
+                }
+
+                // ---- 端到端节拍校验（需求 70）----------------------------------
+                // 上面证明的是「时钟不丢时间」，这里再证明「轴真的按真机速度走」：
+                // 让 上料X轴 走 450mm，梯形曲线理论耗时 = 450/1200 + 1200/6000
+                // = 0.575s（轴表：v=1200mm/s、a=6000mm/s²）。墙钟实测值必须落在
+                // 理论值的 ±20% 内 —— 这才是「一圈 8.5 秒」能不能成立的前提。
+                // 上料X 被互锁拒（吸嘴没抬）时改用 前梭车X轴 600mm / 0.5875s 复测。
+                try
+                {
+                    int axU = m.AxisIndex("上料X轴");
+                    int axD = m.AxisIndex("下料X轴");
+                    Action pump1 = () => win.Dispatcher.Invoke(() => { },
+                        System.Windows.Threading.DispatcherPriority.Background);
+                    Func<int, double, bool> waitStop = (ax, budget) =>
+                    {
+                        var t = System.Diagnostics.Stopwatch.StartNew();
+                        while (t.Elapsed.TotalSeconds < budget)
+                        {
+                            pump1();
+                            if (m.AnyBusy()) { System.Threading.Thread.Sleep(5); continue; }
+                            if (ax < 0 || !m.State(ax).Busy) return true;
+                            System.Threading.Thread.Sleep(5);
+                        }
+                        return false;
+                    };
+
+                    if (axU < 0 || axD < 0)
+                        Log("cycle selftest: 轴表里没有 上料X轴/下料X轴，跳过");
+                    else
+                    {
+                        // 诊断：下料吸嘴 Z 状态（走 X 的前置条件）
+                        int nz = m.AxisIndex("下料吸嘴1Z轴");
+                        if (nz >= 0)
+                        {
+                            var r0 = m.MoveAbs(nz, m.Cfg(nz).MaxMm);
+                            var st0 = m.State(nz);
+                            Log("cycle selftest: 下料吸嘴1Z轴 pos=" + st0.PositionMm.ToString("0.00")
+                                + " servo=" + st0.ServoOn + " homed=" + st0.Homed
+                                + " max=" + m.Cfg(nz).MaxMm.ToString("0.0")
+                                + " 抬到顶=" + (r0.Accepted ? "接受" : "拒：" + r0.Reason));
+                            waitStop(nz, 1.0);
+                        }
+
+                        // 先让下料臂回停放位：SR-11 规定 X 走廊同一时刻只许一根离开停放位
+                        bool okPark = m.MoveAbs(axD, m.Cfg(axD).HomeMm).Accepted
+                                      && waitStop(axD, 3.0);
+                        bool okGo = okPark && m.MoveAbs(axU, 450).Accepted;
+                        var swMove = System.Diagnostics.Stopwatch.StartNew();
+                        bool okStop = okGo && waitStop(axU, 3.0);
+                        double used = swMove.Elapsed.TotalSeconds;
+
+                        if (!okPark || !okGo || !okStop)
+                        {
+                            // 上下料吸嘴不在抬起位时水平轴会被安全层拒（真机同此：
+                            // 走 X 之前必须抬吸嘴）。这不是节拍问题，走备选轴测。
+                            Log("cycle selftest: 上料X轴 运动被拒（" + m.LastReject + "），改用 前梭车X轴");
+                            int axS = m.AxisIndex("前梭车X轴");
+                            int axB = m.AxisIndex("后梭车X轴");
+                            // 后梭车停在导轨上会挡住前梭车的扫掠区间（SR-09），先归位
+                            if (axB >= 0)
+                            {
+                                m.MoveAbs(axB, m.Cfg(axB).HomeMm);
+                                waitStop(axB, 3.0);
+                            }
+                            if (axS >= 0 && m.MoveAbs(axS, 600).Accepted)
+                            {
+                                swMove.Restart();
+                                okStop = waitStop(axS, 3.0);
+                                used = swMove.Elapsed.TotalSeconds;
+                                var cs = m.Cfg(axS);
+                                double vS = cs.MaxVel > 1.0 ? cs.MaxVel : 1.0;
+                                double aS = cs.Acc > 1.0 ? cs.Acc : vS;
+                                double theo = 600.0 / vS + vS / aS;
+                                bool spOk = okStop && Math.Abs(used - theo) <= theo * 0.20;
+                                Log("cycle selftest: 前梭车X轴 0→600mm 理论 " + theo.ToString("0.000")
+                                    + "s｜墙钟 " + used.ToString("0.000") + "s｜偏差 "
+                                    + ((used - theo) / theo * 100).ToString("+0.0;-0.0") + "%"
+                                    + (spOk ? " PASS（轴速与真机一致）" : " FAIL（轴速与轴表不符）"));
+                                m.MoveAbs(axS, m.Cfg(axS).HomeMm);
+                                waitStop(axS, 3.0);
+                            }
+                            else
+                            {
+                                Log("cycle selftest: 前梭车X轴 也不可用（" + m.LastReject + "），本项跳过");
+                            }
+                        }
+                        else
+                        {
+                            // 理论值一律从轴表现取，写死速度会和轴表改版脱钩（需求 71：1200→1500）
+                            var cu = m.Cfg(axU);
+                            double dU = 450.0;
+                            double vU = cu.MaxVel > 1.0 ? cu.MaxVel : 1.0;
+                            double aU = cu.Acc > 1.0 ? cu.Acc : vU;      // 梯形：加速段 + 匀速段
+                            double theory = dU / vU + vU / aU;
+                            bool speedOk = Math.Abs(used - theory) <= theory * 0.20;
+                            Log("cycle selftest: 上料X轴 0→450mm 理论 " + theory.ToString("0.000")
+                                + "s｜墙钟 " + used.ToString("0.000") + "s｜偏差 "
+                                + ((used - theory) / theory * 100).ToString("+0.0;-0.0") + "%"
+                                + (speedOk ? " PASS（轴速与真机一致）" : " FAIL（轴速与轴表不符）"));
+                        }
+
+                        // 还原：上料X 回停放位，别把走廊占着留给后面的 ops 自检
+                        m.MoveAbs(axU, m.Cfg(axU).HomeMm);
+                        waitStop(axU, 3.0);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log("cycle selftest crash: " + ex.Message);
+                }
+
                 if (demoStarted) m.StopDemo();     // 还原现场，别泄漏进 ops 自检
                 win.Close();
             }
@@ -885,6 +1030,35 @@ namespace HandlerGuide
                     () => fe.Threads.Count(t2 => t2.Loops > 0) == 19);
                 Chk("流程已下发真实运动指令（不再是空转）", () => { },
                     () => Ops.FlowMoveIssued > 0);
+                // 投料链路诊断：LotIn=0 时一眼看出卡在哪一节（仓 → 搬运 → 上料）
+                {
+                    var vb = Motion.VarBox.GetD;
+                    Log("flow feed chain: 进料仓盘数=" + vb("进料仓盘数").ToString("0")
+                        + " 待测盘已备好=" + vb("待测盘已备好").ToString("0")
+                        + " 上料位有盘=" + vb("上料位有盘").ToString("0")
+                        + " 上料位剩余=" + vb("上料位剩余颗数").ToString("0")
+                        + " 搬运等待=" + vb("搬运等待").ToString("0")
+                        + " 搬运上料循环=" + vb("搬运上料循环").ToString("0")
+                        + " 进料仓循环=" + vb("进料仓循环").ToString("0")
+                        + " 进料仓送出盘数=" + vb("进料仓送出盘数").ToString("0")
+                        + " 上料臂循环=" + vb("上料臂循环").ToString("0")
+                        + " 取料失败批次=" + vb("取料失败批次").ToString("0"));
+                    var rejList = new System.Collections.Generic.List<string>();
+                    foreach (var a in mm.Axes)
+                        if (fe.AxisRejects(a.Index) > 0)
+                            rejList.Add(a.Name + "×" + fe.AxisRejects(a.Index));
+                    rejList.Sort();
+                    Log("flow reject axes: " + (rejList.Count == 0 ? "无" : string.Join("；", rejList))
+                        + "｜最近一次：" + mm.LastReject);
+                    foreach (var a in mm.Axes)
+                    {
+                        var st2 = mm.State(a.Index);
+                        if (st2.Alarm)
+                            Log("  ! 报警轴 " + a.Name + " pos=" + st2.PositionMm.ToString("0.##")
+                                + " [" + a.MinMm.ToString("0.#") + "," + a.MaxMm.ToString("0.#") + "]"
+                                + " home=" + a.HomeMm.ToString("0.#") + "：" + st2.LastReject);
+                    }
+                }
                 Chk("投料颗数 > 0（守恒行不再恒显示尚未投料）", () => { },
                     () => Motion.VarBox.GetD("LotIn") > 0);
                 Chk("守恒等式差值为 0（投料 = ΣBin + 在制 + 报废）", () => { },
