@@ -262,9 +262,13 @@ namespace HandlerGuide.ViewModels
                                 // 需求 56：7 个按钮改成一行（Wrap 在窄窗口会自动折行，宽了就只有一行）
                                 E.Band("仿真节拍控制", Palette.BandBlue,
                                         E.Wrap(
-                                            // 需求 55：脚本运行与仿真页面联动 —— 启动演示节拍 = 画布动 + 全部 Lua 流程起，
+                                            // 需求 55：脚本运行与仿真页面联动 —— 启动演示节拍 = 画布动 + Lua 流程起，
                                             // 停止演示 = 两者一起停。
-                                            E.Btn("启动演示节拍", () => { MotionManager.Instance.ScriptDriven = true; MotionManager.Instance.StartDemo(); LuaFlowHost.StartAll(); }, "PrimaryButton", 12),
+                                            // 需求 76：这里改成**只起主流程**（31_平移分选）。原来调 StartAll()
+                                            // 会把 01~30 这些单模块调试脚本一起拉起来，它们和整机流程抢同一批轴、
+                                            // 各自把轴拽回自己的停放位（01 的最后一步就是 go("上料X轴", 0)），
+                                            // 结果整机流程走不动、轴停在 0 位 —— 看着就是「脚本没跑起来」。
+                                            E.Btn("启动演示节拍", () => { MotionManager.Instance.ScriptDriven = true; MotionManager.Instance.StartDemo(); LuaFlowHost.StartMain(); }, "PrimaryButton", 12),
                                             E.Btn("停止演示", () => { MotionManager.Instance.StopDemo(); LuaFlowHost.StopAll(); }, "PrimaryButton", 12),
                                             E.Btn("急停", () => MotionManager.Instance.TriggerEStop(), "DangerButton", 12),
                                             E.Btn("急停复位", () => MotionManager.Instance.ResetEStop(), "PrimaryButton", 12),
@@ -1906,7 +1910,33 @@ namespace HandlerGuide.ViewModels
             // 原来是一个固定 176px/s 的限速）：让位钳位释放时从让位点平滑滑回停放位，不会瞬移。
             const double ARM_CLR = 34.0;                    // 安全间隙（画布 px，≈40mm）
             // 需求 64：时隙长度按轴表反算（≈2.7s，见 SlotSeconds 的推导），一轮 ≈ 8.2s。
+            //
+            // 需求 75（用户：「轴速度需要 1 秒 10px」）：
+            // 点位「仿真.画布速度」> 0 时，时隙不再按轴表时间算，而是**按像素速度反算**——
+            // 每个时隙里「行程最长的那根机构」在画布上的速度正好 = 该值（px/s）。
+            //   · 三个时隙各自算长度，因为三组机构的画布行程差很多（下料X 290px、
+            //     上料X 171px、搬运臂 754px、两根横梁各 399px）；
+            //   · 其余轴按真机速度比例更慢（各机构画布比例 0.19~1.33 px/mm 不同，
+            //     物理上不可能让所有轴同时 = 10px/s，只能保证「最快的那根 = 设定值」）。
+            // 填 0（或留空）= 退回需求 64 的真机时间口径。
+            double pxSpeed = CanvasPxSpeed();
+            double SLOT_D = pxSpeed > 0 ? SlotByPx(Math.Max(UA_X1 - UA_X0, BEAM_STROKE), pxSpeed) : 0;
+            double SLOT_U = pxSpeed > 0 ? SlotByPx(Math.Max(U2_X1 - U2_X0, BEAM_STROKE), pxSpeed) : 0;
+            double SLOT_T = pxSpeed > 0 ? SlotByPx(armX1 - armX0, pxSpeed) : 0;
             double SLOT_SEC = SlotSeconds();
+            if (SLOT_D <= 0) { SLOT_D = SLOT_SEC; SLOT_U = SLOT_SEC; SLOT_T = SLOT_SEC; }
+            double CYC_SEC = SLOT_D + SLOT_U + SLOT_T;      // 一轮（三个时隙）总秒数
+            // 需求 75：把实际生效的时隙打进日志 —— 用户改「仿真.画布速度」后能直接看到
+            // 「画布上一轮要多少秒」，不用靠猜。
+            try
+            {
+                App.Log(string.Format(
+                    "布局画布：时隙 下料 {0:0.0}s / 上料 {1:0.0}s / 搬运 {2:0.0}s（一轮 {3:0.0}s）"
+                    + "｜画布速度 {4}",
+                    SLOT_D, SLOT_U, SLOT_T, CYC_SEC,
+                    pxSpeed > 0 ? pxSpeed.ToString("0.#") + "px/s" : "按真机时间（已关闭）"));
+            }
+            catch { }
             // 五条「画布轴」的伺服跟随器：X 三条（上料/下料/搬运）+ Y 两条（两根横梁）。
             // px 端点按各机构自己的画布几何给，内部再折算成 mm —— 见 CanvasServo。
             var servoDown = new CanvasServo("下料X轴", UA_X0, UA_X1);
@@ -2006,10 +2036,12 @@ namespace HandlerGuide.ViewModels
                 // 需求 60：脚本驱动时，手臂/搬运臂的位置改读真实轴位置（不再按演示相位走）
                 bool scriptDriven = MotionManager.Instance.ScriptDriven;
                 if (running) t += dt;
-                double cyc = Mod(t, 3.0 * SLOT_SEC);
-                int slot = (int)(cyc / SLOT_SEC);
-                if (slot > 2) slot = 2;
-                double u = (cyc - slot * SLOT_SEC) / SLOT_SEC;  // 时隙内进度 0..1
+                // 需求 75：三个时隙长度不再相等（见 SLOT_D/U/T），所以按累计边界定位。
+                double cyc = Mod(t, CYC_SEC);
+                int slot = cyc < SLOT_D ? 0 : (cyc < SLOT_D + SLOT_U ? 1 : 2);
+                double slotOff = slot == 0 ? 0 : (slot == 1 ? SLOT_D : SLOT_D + SLOT_U);
+                double slotLen = slot == 0 ? SLOT_D : (slot == 1 ? SLOT_U : SLOT_T);
+                double u = (cyc - slotOff) / slotLen;   // 时隙内进度 0..1
                 // 需求 38 时隙归属：0 = 下料组 / 1 = 上料组 / 2 = 搬运臂。
                 double phBeamD = BD_PHASE + (slot == 0 ? u : 0.0);  // 下料横梁/滑座（t = 0 → lift 0）
                 double phBeamU = (slot == 1 ? u : 0.0);             // 上料横梁/滑座（t = 0 → lift 0）
@@ -2123,7 +2155,7 @@ namespace HandlerGuide.ViewModels
                         didPick = true;
                         int n = Math.Min(8, feedChips);
                         feedChips -= n; carryU = n;
-                        if (demo) App.Log("req48 pickU cyc=" + ((int)(t / (3.0 * SLOT_SEC))) +
+                        if (demo) App.Log("req48 pickU cyc=" + ((int)(t / (CYC_SEC))) +
                                           " 上料位=" + feedChips + " 挂料=" + carryU + "颗");
                     }
                     // 加热盘网格画布 x ≈ 799.8..876.4：吸嘴中心进入该窗口即放盘
@@ -2132,7 +2164,7 @@ namespace HandlerGuide.ViewModels
                         didDropU = true;
                         heatLoad = Math.Min(176, heatLoad + carryU);
                         carryU = 0;
-                        if (demo) App.Log("req48 placeU cyc=" + ((int)(t / (3.0 * SLOT_SEC))) +
+                        if (demo) App.Log("req48 placeU cyc=" + ((int)(t / (CYC_SEC))) +
                                           " 加热盘=" + heatLoad + "颗");
                     }
                 }
@@ -2208,7 +2240,7 @@ namespace HandlerGuide.ViewModels
                             if (!didGrab && u >= 0.32)
                             {
                                 didGrab = true; holdingTray = true;
-                                if (demo) App.Log("req44 carry grab cyc=" + ((int)(t / (3.0 * SLOT_SEC))) +
+                                if (demo) App.Log("req44 carry grab cyc=" + ((int)(t / (CYC_SEC))) +
                                                   "（从上料位抓走空盘）");
                             }
                             if (!didDrop && u >= 0.74)
@@ -2223,7 +2255,7 @@ namespace HandlerGuide.ViewModels
                                 else if (layerCnt[5] > 1) layerCnt[5]--;
                                 srcTower = (srcTower + 1) % 3;
                                 feedChips = FEED_FULL; feedRefills++;     // 新料盘就位（芯片装满）
-                                if (demo) App.Log("req44 carry drop cyc=" + ((int)(t / (3.0 * SLOT_SEC))) +
+                                if (demo) App.Log("req44 carry drop cyc=" + ((int)(t / (CYC_SEC))) +
                                                   " out=" + layerCnt[4] + "层 tower" + usedTower + "=" +
                                                   layerCnt[usedTower] + "层（空盘并入出空盘，新盘自动盘补位）");
                             }
@@ -2234,7 +2266,7 @@ namespace HandlerGuide.ViewModels
                             {
                                 didGrab = true; holdingTray = true;
                                 if (layerCnt[3] > 1) layerCnt[3]--;      // 从进空盘抓走一片
-                                if (demo) App.Log("req43 grab cyc=" + ((int)(t / (3.0 * SLOT_SEC))) +
+                                if (demo) App.Log("req43 grab cyc=" + ((int)(t / (CYC_SEC))) +
                                                   " tray3=" + layerCnt[3] + "层（进空盘抓走一片后）");
                             }
                             if (!didDrop && u >= 0.52)
@@ -2242,7 +2274,7 @@ namespace HandlerGuide.ViewModels
                                 didDrop = true; holdingTray = false;
                                 if (layerCnt[refillIdx] < MachineModel.MaxTrayLayers) layerCnt[refillIdx]++;
                                 towerHold[refillIdx] = 1.2;              // 塔顶升一格再落回
-                                if (demo) App.Log("req43 drop cyc=" + ((int)(t / (3.0 * SLOT_SEC))) +
+                                if (demo) App.Log("req43 drop cyc=" + ((int)(t / (CYC_SEC))) +
                                                   " tower=" + refillIdx + " layers=" + layerCnt[refillIdx] + "层（放盘后）");
                             }
                         }
@@ -2352,7 +2384,7 @@ namespace HandlerGuide.ViewModels
                             if (Math.Abs(ncx - cx) < TrayPlan[i].DU * CW / 2.0 && trayChips[i] >= 8)
                             {
                                 didGrabD = true; trayChips[i] -= 8; carryD = 8;
-                                if (demo) App.Log("req48 pickD cyc=" + ((int)(t / (3.0 * SLOT_SEC))) +
+                                if (demo) App.Log("req48 pickD cyc=" + ((int)(t / (CYC_SEC))) +
                                                   " 缓存盘" + (i - 5) + "=" + trayChips[i] + "颗");
                                 break;
                             }
@@ -2365,7 +2397,7 @@ namespace HandlerGuide.ViewModels
                         {
                             didDropD = true;
                             trayChips[outIdx] += carryD; carryD = 0;
-                            if (demo) App.Log("req48 placeD cyc=" + ((int)(t / (3.0 * SLOT_SEC))) +
+                            if (demo) App.Log("req48 placeD cyc=" + ((int)(t / (CYC_SEC))) +
                                               " 出料盘" + (outIdx - 10) + "=" + trayChips[outIdx] + "颗");
                         }
                     }
@@ -2403,7 +2435,7 @@ namespace HandlerGuide.ViewModels
                             beltT = 0; heatLoad -= 8;
                             beltSlot[free] = 8; beltSlotTgt[free] = tgt;
                             beltSlotX[free] = beltX + beltW - 40;
-                            if (demo) App.Log("req48 out-test cyc=" + ((int)(t / (3.0 * SLOT_SEC))) +
+                            if (demo) App.Log("req48 out-test cyc=" + ((int)(t / (CYC_SEC))) +
                                               " 出测8颗上皮带 加热盘=" + heatLoad +
                                               " 目标缓存盘" + (tgt - 5));
                         }
@@ -2419,7 +2451,7 @@ namespace HandlerGuide.ViewModels
                     if (beltSlotX[s] + 19.0 <= tgtCX)
                     {
                         trayChips[beltSlotTgt[s]] += beltSlot[s];
-                        if (demo) App.Log("req48 belt cyc=" + ((int)(t / (3.0 * SLOT_SEC))) +
+                        if (demo) App.Log("req48 belt cyc=" + ((int)(t / (CYC_SEC))) +
                                           " 皮带送达缓存盘" + (beltSlotTgt[s] - 5) +
                                           "=" + trayChips[beltSlotTgt[s]] + "颗");
                         beltSlot[s] = 0;
@@ -2446,7 +2478,7 @@ namespace HandlerGuide.ViewModels
                 // 芯片只可能在这几处：上料位待测盘 / 上料吸嘴挂料 / 加热盘在测 /
                 // 皮带在途 / 下料吸嘴挂料 / 缓存盘与出料盘 / 已回仓。任何一处凭空多或少，
                 // 这行的 total 就不会等于 160。
-                int cycNow = (int)(t / (3.0 * SLOT_SEC));
+                int cycNow = (int)(t / (CYC_SEC));
                 if (demo && cycNow != lastCycLogged)
                 {
                     lastCycLogged = cycNow;
@@ -2712,6 +2744,35 @@ namespace HandlerGuide.ViewModels
         /// 取四条主运动轴里最慢的那条（下料X/上料X 900mm @1200mm/s、6000mm/s² ⇒ 0.95s）
         /// ⇒ 时隙 ≈ 2.7s，一轮（下料/上料/搬运）≈ 8.2s，和真机节拍同量级。
         /// </summary>
+        /// <summary>
+        /// 需求 75 · 画布像素速度（px/s）。读点位「仿真.画布速度」：
+        /// <list type="bullet">
+        /// <item>&gt; 0 → 该值：画布上**行程最长的那根轴** 1 秒走这么多像素；</item>
+        /// <item>≤ 0 → 关闭，退回按轴表真机时间（需求 64 口径）。</item>
+        /// </list>
+        /// 用户原话：「轴速度需要 1 秒 10px」⇒ 默认 10。
+        /// </summary>
+        private static double CanvasPxSpeed()
+        {
+            double v;
+            // 未登记过 = 10（用户口径：1 秒 10 像素）。填 0 或负数 = 关闭，按真机时间。
+            try { v = VarBox.GetD("点位.仿真.画布速度", 10); }
+            catch { return 0; }
+            if (v <= 0 || v > 5000) return 0;      // 0/负 = 真机时间；5000 以上视为填错
+            return v;
+        }
+
+        /// <summary>
+        /// 需求 75 · 按像素速度反算一个时隙的长度。时隙里相位只在前
+        /// (1−PhaseHold)/2 = 35% 的时间走完行程（两端各停 30%），
+        /// 所以 SLOT = 行程px ÷ (像素速度 × 0.35)。
+        /// </summary>
+        private static double SlotByPx(double strokePx, double pxSpeed)
+        {
+            if (pxSpeed <= 0 || strokePx <= 0) return 0;
+            return strokePx / (pxSpeed * (1 - PhaseHold) / 2);
+        }
+
         private static double SlotSeconds()
         {
             double worst = 0;

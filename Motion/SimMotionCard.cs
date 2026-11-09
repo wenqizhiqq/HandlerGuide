@@ -55,6 +55,13 @@ namespace HandlerGuide.Motion
         private bool _open;
 
         /// <summary>
+        /// 仿真慢放倍率：1 = 按轴表真速度（默认）；2 = 半速、5 = 1/5 速（看得清机构动作）；
+        /// 0.5 = 两倍速。只缩放**本步推进的时间**，不改轴表 MaxVel / Acc，所以
+        /// 「轴参数」「软限位」「安全判据」全部照原值走，安全自检不受影响。
+        /// </summary>
+        public double SpeedScale { get; set; } = 1.0;
+
+        /// <summary>
         /// 构造：axisCount = 轴数，inputCount / outputCount = 位地址空间大小
         /// （交接资料真表 352 入 / 160 出 + 各 32 位兼容段）。
         /// 上电默认不再硬编码「输入 0/1/2/3」，安全链路由 MotionManager.SeedSimInputs 按点名置位。
@@ -286,6 +293,11 @@ namespace HandlerGuide.Motion
         public void Step(double dt)
         {
             if (!_open || dt <= 0) return;
+
+            // 慢放：把本步的时间缩小，轴就按比例走慢（位置积分、到位判据全不变）。
+            // 先缩放再截断，否则 0.5 倍速时缩小后仍会被 0.2s 的钳位吃掉。
+            double sc = SpeedScale;
+            if (sc > 0 && Math.Abs(sc - 1.0) > 1e-9) dt /= sc;
             if (dt > 0.2) dt = 0.2; // 防止界面卡顿后一次跳太远
 
             foreach (var i in _axisIdx)

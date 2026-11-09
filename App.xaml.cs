@@ -178,8 +178,15 @@ namespace HandlerGuide
                 // 自检可选用：HG_LUA=1 时连 Lua 流程一起跑，用来抓“执行到哪一行 / 行耗时”的截图
                 if (Environment.GetEnvironmentVariable("HG_LUA") == "1")
                 {
-                    try { int n0 = Flow.LuaFlowHost.Scan(); int n1 = Flow.LuaFlowHost.StartAll();
-                          Log("lua selftest: scan=" + n0 + " start=" + n1); }
+                    // 需求 76：走〔启动演示节拍〕现在用的那条路径（只起主流程），
+                    // 顺手把「起了几条」打进日志 —— 以前是 31 条全起，和整机流程抢轴。
+                    try
+                    {
+                        int n0 = Flow.LuaFlowHost.Scan();
+                        int n1 = Flow.LuaFlowHost.StartMain();
+                        Log("lua selftest: scan=" + n0 + " startMain=" + n1
+                            + " 运行中=" + ViewModels.FlowScriptPages.RunningCount() + " 条");
+                    }
                     catch (Exception ex) { Log("lua selftest 失败: " + ex.Message); }
                 }
 

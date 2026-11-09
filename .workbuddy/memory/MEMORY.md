@@ -6,6 +6,10 @@
 - 只用 PowerShell；⚠️ 改完 `.lua` **必须手动** `Copy-Item Scripts\x.lua bin\Debug\net8.0-windows\Scripts\`，构建不刷新运行目录脚本。
 - Lua 后台真跑 `python -X utf8 artifacts\req64_lua_harness.py --cycles N --out f.txt`；`--yield-rate 1.0` 额定口径、`--tray-cap 16` 压换盘；`artifacts\req66_regress.py` 17 场景。
 - ⚠️ `artifacts/*.py` 只能用 Write/Edit 改，PowerShell 写回会变 DLP 密文。
+- ⚠️ **`.lua` 不能用 Edit/Write 改**：本机 DLP 会把它们透明加密（头 `88 7D 1C`），Lua 读到密文报 `unexpected symbol near '?'`。
+  只能 Python 写 `.tmp` + `os.replace`（`artifacts/_fix31*.py` 是范例）；改完查 `head=45,45,32`(=`-- `) 才算明文。
+- 宿主链路后台验证（**不启动 WPF**）：`%TEMP%\hg_lua_probe`（NLua 1.7.9 控制台），跑 `luahost_probe.exe <脚本> <报告>`，
+  A1 = `DoString(string)`、A2 = 字节级加载，判定「脚本能不能加载 / 中文键是否命中 / 是否进入开工并下发 moveabs」。
 
 ## 架构
 - 轴 45 根不连续：4/5 梭车X、10/11 下料X/Y、18..25 下料吸嘴Z、26/27 上料X/搬运X、28..30 三仓Z、32 上料Y、35..37 仓Y、39..46 上料吸嘴Z。按名取轴。
@@ -30,8 +34,33 @@
   - **结果：额定 35 圈稳态 11,495**（Index 0.29s/峰值 0.50s、JAM 0/万、料账 288=280+8+0）；17 场景全 PASS。
   - 口径：11,495 是**额定**（无重测/无换盘）；97% 良率下 10.3K（每 4 批整批重压 1.5s，是质量动作不是产能）。`换盘压测（盘容16）` 净节拍 16,050 ⇒ 节拍已不是瓶颈。
   - ⚠️ `seg_add` 必须 `(SEG[k] or 0)+d`，新分类第一次是 nil 会抛「算术 nil」。
+- **74 常驻循环 + 慢放**（日志 `2026-11-09.md`）：
+  - 「仿真刚开始就结束」两个根因：① 全工程没人把 `分选.启用` 置 1，而旧条件要求它=1 ⇒ 一启动就进待机；
+    ② 布局页〔启动演示节拍〕不调 `Scan()`，`flows` 空时 `StartAll` 启动 0 条。
+    修法：启动条件 → `demo or (en and safe)`（`仿真.演示` 由 `StartDemo/StopDemo` 置）；`StartAll()` 空列表自动 `Scan()`。
+  - 主循环 `pcall(start_line)`：出错只锁存这一轮、正常收尾自动接下一轮，只有 `running()` 变假才退出（宿主 `running()` = `f.Running && !stopAll`，`DoString` 返回即「已退出」）。
+  - 慢放 `点位.仿真.慢放倍率`（1=真机速度，2=半速，5=1/5，0.5=两倍）：`SimMotionCard.SpeedScale` 缩 dt（**先除再截 0.2**）+ `drive()` 只放大真实 `pause`，`NOW/RUN_MS` 不变 ⇒ 观感慢、UPH 口径不变。
+  - `Flow/LuaFlowHost.cs` 新增 `simspeed(v)`；`MotionManager.SimSpeedScale` 每帧同步给仿真卡。
+  - ⚠️ `dotnet build` 出现 `Stack overflow (Copy.DoCopyIfNecessary)` 时：先手动 `Copy-Item` 那个 .lua 再 build；**不要**改 `BaseOutputPath`（bin\Debug 不被排除 ⇒ 52 条 MC3074）。
+- **76 中文跨边界（这才是「脚本没跑起来」的真根因）**：探针 `artifacts/_luahost_final.txt`
+  - `NLua.DoString(string)` 把源码按 ANSI(GBK) 编码后才交给 `luaL_loadbuffer` ⇒ **源码进 Lua 之前**每个中文已是 `?`(0x3F)。
+    于是 `boxget("仿真.演示")` 恒 0 ⇒ 主循环恒落待机 ⇒ 界面「刚开始就结束 / 轴一直在原位」。转义、C# 侧解码都救不回来。
+  - 修 ①：宿主改 `e.State.LoadBuffer(Encoding.UTF8.GetBytes(text), name)` + `st.PCall(0,0,0)`（`LuaFlowHost.Run`），
+    `ReadScriptText` 保留密文检测。修 ②：字符串 interop 同样走 ANSI（Lua→C# 也变 `?`），
+    脚本顶层 `__wrapNames(...)` 把所有 API 名字编成 `h:`+UTF-8 十六进制，C# `LuaFlowHost.Unhex()` 解回；无 `h:` 前缀原样返回（旧脚本不受影响）。
+  - ⚠️ NLua 注册的委托在 Lua 里是 **userdata 不是 function**（`type(f)=="function"` 会把包装全跳过）；
+    转发必须**保参数个数**（`table.unpack(args,1,n)`），多传一个 nil 就 `Cannot invoke delegate (invalid arguments)`。
+  - 测试台 `req64_lua_harness.py` 的每个 stub 都要 `_uh()` 解码（含 `boxinc`，漏它 = 0 产出、料账 746 颗/批）。
+  - 验证：A1(DoString) FAIL / A2(字节加载) PASS；17 场景回归 `req76_regress.txt` 全 PASS，额定 35 圈 11,495 不变。
 
 ## 其它
+- **75 画布轴速度 = 1 秒 10px**（`点位.仿真.画布速度`，MotionManager 构造登记默认 10）：
+  只改 `LayoutPages` 的**时隙长度算法**（`SlotByPx = 行程px ÷ (px速度 × 0.35)`，0.35=`(1−PhaseHold)/2`），
+  轴表 MaxVel 一律不动。三时隙不再等长（下料/上料 113.9s、搬运 215.4s，一轮 443s），
+  槽定位改按累计边界 `cyc<SLOT_D ? 0 : ...`，demo 日志 `(3.0*SLOT_SEC)` 全换 `(CYC_SEC)`。
+  ⚠️ 各机构画布比例差 7 倍（上料 0.19 / 下料 0.32 / 横梁 1.33 / 搬运 1.08 px/mm），
+  **不可能所有轴同时 10px/s** ⇒ 口径 = 每槽「行程最长的那根」= 设定值，其余按真机比例更慢。
+  填 0/负数 = 退回需求 64 的真机时间（8.2s/轮）。脚本运行时的慢放仍看 `仿真.慢放倍率`，两者不互相覆盖。
 - 画布三臂只有 X 自由度，t=0 与照片重合；横梁 sprite 长度不许加长。文件头尾署名「温启志 18719361399」。
 - `.workbuddy/memory/*.md` 本机透明加密，PowerShell 读密文，只能用 Read/Edit。
 - ⚠️ 一切理论值从轴表现算；`--slow-ui`（time_scale<1）场景不做规格判定；良率<100% 不按额定口径判 UPH，否则「良率差⇒UPH 不合格」是同义反复。

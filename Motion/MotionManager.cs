@@ -234,6 +234,19 @@ namespace HandlerGuide.Motion
         /// <summary>节拍是否处于「暂停」（保持 AutoCycle，但不推进步骤）。</summary>
         public bool Paused { get; private set; }
 
+        /// <summary>
+        /// 仿真慢放倍率（1 = 轴表真速度，2 = 半速，5 = 1/5 速，0.5 = 两倍速）。
+        /// 只影响**仿真卡**的推进时间，轴表 MaxVel / Acc、软限位、安全判据一律照原值；
+        /// 所以慢放只改观感，不会把「轴速与真机一致」这条自检口径改掉。
+        /// Lua 侧用 simspeed(v) 设置，对应点位「仿真.慢放倍率」。
+        /// </summary>
+        public double SimSpeedScale
+        {
+            get => _simScale;
+            set => _simScale = (value > 0.05 && value < 100) ? value : 1.0;
+        }
+        private double _simScale = 1.0;
+
         /// <summary>当前节拍步骤描述。</summary>
         public string DemoStepText { get; private set; } = "未运行";
 
@@ -255,6 +268,10 @@ namespace HandlerGuide.Motion
             BuildIo();
             BuildRules();
             BuildDemo();
+            // 需求 75：画布像素速度先登记一条默认值（10 px/s = 用户口径「1 秒 10px」），
+            // 界面的变量黑板才看得到、改得动。LayoutPages 的 CanvasPxSpeed() 读同一个键，
+            // 没登记过时也按 10 算；填 0 或负数 = 关闭，退回按轴表真机时间（需求 64）。
+            if (!VarBox.Has("点位.仿真.画布速度")) VarBox.SetD("点位.仿真.画布速度", 10);
             // 默认先接仿真卡，Connect() 会尝试升级到真卡。
             UseSim();
         }
@@ -1559,6 +1576,9 @@ namespace HandlerGuide.Motion
             // 1) 仿真卡推进物理积分。必须分步：SimMotionCard.Step 内部把 dt 截到
             //    0.2s，一步跨过去的话超出部分的时间会被静默丢弃 —— 那正是
             //    「脚本一圈 8.5s、界面却要跑好几分钟」的根因。
+            // 0) 慢放倍率同步给仿真卡（真卡没有这回事，脚本也不该在真机上慢放）
+            if (_card is SimMotionCard speedCard) speedCard.SpeedScale = _simScale;
+
             double left = dt;
             while (left > 1e-9)
             {

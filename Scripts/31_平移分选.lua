@@ -13,6 +13,22 @@
 --     上料臂（ARM_X 令牌按批 take/give）。01_上料XY / 10_下料XY 这类单模块
 --     调试流程请在生产时关掉，否则会抢同一根轴。
 --
+--  ────────────────────────────────────────────────────────────────────────
+--  【运行方式 / 需求 74】脚本是**常驻**的，不是跑一遍就结束
+--    · 外层 while running() 只在收到停止请求（running() 变假）时才退出。
+--      内层一轮 start_line() 收尾或出错都只影响这一轮 —— 出错锁存等复位、
+--      正常收尾自动接下一轮，Lua 线程不会因为「跑完」而结束
+--      （那在界面上就是「仿真刚开始就结束」）。
+--    · 分选.启用 0→1 = 一直连续生产，直到停机；不会每批 reset 重头开始。
+--    · 仿真慢放：变量/点位「仿真.慢放倍率」
+--        1（默认）= 按轴表真速度（= 真机速度，UPH 11K 就是这个口径）
+--        2 / 5    = 半速 / 1/5 速，画布上梭车、压头、吸嘴的动作看得清
+--        0.5      = 两倍速
+--      它同时缩小「仿真卡推进的时间」和「脚本等待」，所以轴与节拍一起慢下来，
+--      但 NOW / RUN_MS 照原样走 —— UPH 与节拍统计不受慢放影响。
+--    · 布局页〔启动演示节拍〕原来不 Scan 脚本目录，flows 为空时 StartAll 启动
+--      0 条，看上去就是「闪一下就结束」；现在 StartAll 会先自动 Scan。
+--
 --  温启志 18719361399
 --  ────────────────────────────────────────────────────────────────────────
 --  【需求 66~70】真机标准流程与判定口径（已全部落地，逐条见下方注释）
@@ -97,6 +113,60 @@
 --    · 换盘、补空盘、清针、温控、重测全部保留，但都挪到「不挡节拍」的位置
 --      （换盘在上料任务里顺手做，补盘在两臂都空出来的时候做）。
 -- ============================================================================
+
+-- ============================================================================
+--  【需求 76】跨 Lua / C# 边界的中文字符串通道（这条不修好，脚本永远跑不起来）
+--
+--  实测（后台探针 artifacts/_luahost_probe.txt，NLua 1.7.9 + KeraLua 1.4.9 / Lua 5.4）：
+--      boxget("分选.启用") 到达 C# 时变成 "??.??"（UTF-8 字节 3F 3F 2E 3F 3F）
+--  ⇒ NLua 的字符串 interop 走的是系统 ANSI（GBK），中文一律被打成 '?'，**有损不可逆**。
+--  后果：
+--      · boxget("仿真.演示") 永远是 0 ⇒ 主循环永远落进待机分支 ⇒「脚本没跑起来」；
+--      · 轴名 / IO 名同样失效 ⇒ 就算进了生产，一条 moveabs 也下不去。
+--  上一版试过把源码里的中文转成 "\u{XXXX}"，**更坏**：转义出来的仍是 UTF-8 字节，
+--  一样被打成 '?'，而且 2 个 '?' 变 6 个（探针 B 段实测）。
+--
+--  解决办法：所有跨边界的名字**先转成 ASCII 十六进制**再传，C# 侧（LuaFlowHost.Unhex）
+--  解回 UTF-8：
+--      "分选" (E5 88 86 E9 80 89)  →  "h:E58886E98089"   ← 纯 ASCII，不会被打码
+--  在脚本加载时装一次包装即可：所有 API 的**第一个参数**都是名字，统一走 hex。
+--  脚本其余 1500 行一行都不用改。
+-- ============================================================================
+local function __hx(s)
+    if type(s) ~= "string" then return s end
+    return "h:" .. (s:gsub(".", function(c)
+        return string.format("%02X", string.byte(c))
+    end))
+end
+
+local function __wrapNames(...)
+    for i = 1, select("#", ...) do
+        local name = select(i, ...)
+        local f = _G[name]
+        if f ~= nil then
+            rawset(_G, name, function(...)
+                -- 名字（第一个参数）转 hex，其余原样；**参数个数必须保持**：
+                -- C# 委托按签名绑定，多传一个 nil 就 "invalid arguments"。
+                local n = select("#", ...)
+                if n == 0 then return f() end
+                local first = (select(1, ...))
+                if type(first) ~= "string" then return f(...) end
+                local args = { ... }
+                args[1] = __hx(first)
+                return f(table.unpack(args, 1, n))
+            end)
+        end
+    end
+end
+
+__wrapNames(
+    "boxget", "boxset", "boxinc", "boxwait", "point",
+    "ax", "moveabs", "moverel", "home", "pos", "inpos",
+    "readin", "writeout", "outval", "stable",
+    "take", "give",
+    "step", "log", "alarm")
+
+
 
 local OWNER   = 31
 local OWNER_P = 32
@@ -194,10 +264,38 @@ local STOPPING  = false
 
 local SEG = { load = 0, contact = 0, test = 0, unload = 0, tray = 0, wait = 0 }
 
+-- 仿真慢放倍率（点位「仿真.慢放倍率」，1 = 真机速度）
+--   > 1 放慢：2 = 半速、5 = 1/5 速，看画布上梭车 / 压头 / 吸嘴的动作
+--   < 1 加快：0.5 = 两倍速，压测流程跑得快一点
+--   只影响「等多久」，不改轴表 MaxVel / Acc，也不改节拍与 UPH 的口径。
+local SLOW = 1.0
+
+local function apply_slow()
+    -- 首次运行把默认值写进变量表，界面上才能看到并直接改这一项
+    if boxget("点位.仿真.慢放倍率") == 0 then boxset("点位.仿真.慢放倍率", 1) end
+    -- 【需求 75】画布像素速度（px/s）：画布上「1 秒走多少像素」，C# 侧 LayoutPages 直接读，
+    --   只管「启动演示节拍」时的画布演示速度（默认 10，填 0/负数 = 按轴表真机时间）。
+    --   这里**不写默认值** —— 由 MotionManager 启动时登记，免得脚本每轮把用户改的 0 盖回 10。
+    --   脚本运行时的慢放仍看上一项「仿真.慢放倍率」，两者互不干扰。
+    local v = tonumber(point("仿真.慢放倍率")) or 0
+    if v <= 0.05 or v > 100 then v = 1.0 end
+    SLOW = v
+    -- 轴也按同一倍率走慢，否则脚本在等、机构却瞬间到位，看起来像「闪一下」
+    if simspeed then pcall(simspeed, v) end
+    return v
+end
+
 local function drive(ms)
     ms = math.floor(tonumber(ms) or 1)
     if ms < 1 then ms = 1 end
-    pause(ms)
+    -- 慢放：只放大真实睡眠，逻辑时间 NOW / RUN_MS 照原样走。
+    -- 这样节拍和 UPH 仍是真机口径，慢放不会把产能算虚。
+    local real = ms
+    if SLOW > 1.001 or SLOW < 0.999 then
+        real = math.floor(ms * SLOW)
+        if real < 1 then real = 1 end
+    end
+    pause(real)
     NOW = NOW + ms
     if IN_CYCLE then RUN_MS = RUN_MS + ms end
 end
@@ -1371,9 +1469,11 @@ end
 local function start_line()
     reset_state()
     ensure_state()                 -- 三本账（上料盘 / 空盘仓 / 5 个落料点）
+    local sc = apply_slow()        -- 仿真慢放（1 = 真机速度；只在仿真卡上生效）
     IN_CYCLE = true
     boxset("分选.状态", 1)
-    step("开工：双梭车 + 双压头流水线启动（上料 / 压测前 / 压测后 / 下料 四任务并行）")
+    step("开工：双梭车 + 双压头流水线启动（上料 / 压测前 / 压测后 / 下料 四任务并行）"
+         .. (sc ~= 1 and ("｜仿真慢放 ×" .. sc) or ""))
     spawn("上料", task_loader)
     spawn("压测-前", function() task_press("F") end)
     spawn("压测-后", function() task_press("B") end)
@@ -1387,33 +1487,61 @@ end
 
 boxset("分选.状态", 0)
 local started = false
+local rounds  = 0
 
+-- 「不断循环」的关键：这个 while 只在 running() 变假（收到停止请求 / 关窗）时才退出。
+-- 一次 start_line() 返回只代表**这一轮收尾**，绝不允许它把整个脚本带走：
+--   出错  → 锁存停机，回到「等复位」，脚本仍常驻；
+--   正常收尾 → 直接接着跑下一轮。
 while running() do
+    local en   = boxget("分选.启用") == 1        -- 正式生产总开关
+    local demo = boxget("仿真.演示") == 1        -- 〔启动演示节拍〕= StartDemo 置的位
+    local safe = boxget("SafeOk") == 1
+
     if boxget("分选.故障停") == 1 then
         if boxget("分选.启用") ~= 1 then boxset("分选.故障停", 0) end
         boxset("分选.状态", 2)
         step("已锁存停机：排除故障后把 分选.启用 置 0 再置 1 复位")
         sleep(PERIOD)
     elseif FAULT then
-        -- 任务里出的错：锁存停机，等人工复位
+        FAULT = false
         boxset("分选.故障停", 1)
         boxset("分选.状态", 2)
         alarm("流水线任务出错，已锁存停机（排除后把 分选.启用 置 0 再置 1 复位）")
-        FAULT = false
         sleep(PERIOD)
-    elseif boxget("分选.启用") == 1 and (boxget("SafeOk") == 1 or boxget("仿真.演示") == 1) then
+    elseif demo or (en and safe) then
+        -- 仿真演示：仿真.演示 由 MotionManager.StartDemo 置 1（〔启动演示节拍〕按钮），
+        --   StopDemo 置 0 —— 点一下就动，不需要另外去置 分选.启用。
+        -- 正式生产：分选.启用 = 1 且安全扫描通过。
+        -- 旧版把 分选.启用 当硬条件，而全工程没有任何地方置过它 ⇒ 点「启动演示节拍」
+        -- 之后脚本立刻进待机，界面上就是「仿真刚开始就结束」。
         started = true
-        start_line()
-        if running() then
-            -- 流水线正常结束（停止请求）或锁存停机
-            if boxget("分选.故障停") == 1 then boxset("分选.状态", 2) else boxset("分选.状态", 0) end
+        rounds = rounds + 1
+        -- pcall：初始化、调度器、点表读取里任何一处抛错都只锁存这一轮，
+        -- 不让异常冒到宿主把 Lua 线程结束掉（那在界面上同样是「刚开始就结束」）。
+        local ok, err = pcall(start_line)
+        if not ok then
+            FAULT = true
+            alarm("流水线第 " .. rounds .. " 轮异常中止：" .. tostring(err))
         end
+        if running() and not FAULT then
+            -- 没收到停止请求却返回了 = 本轮任务全部收尾。接着来下一轮。
+            boxset("分选.状态", 0)
+            step("第 " .. rounds .. " 轮收尾，自动开始下一轮（脚本常驻，不停）")
+            sleep(100)
+        end
+    elseif en then
+        boxset("分选.状态", 0)
+        step("等待安全条件：SafeOk=0（先到「运动仿真」页点〔流程启动〕拉起安全扫描线程）")
+        sleep(PERIOD)
     else
         boxset("分选.状态", 0)
-        step("待机：置 分选.启用 = 1 后开始平移分选")
+        step("待机：置 分选.启用 = 1 或点〔启动演示节拍〕；脚本常驻，不会跑完就退")
         sleep(PERIOD)
     end
 end
+
+log("流程退出：running() 变假（收到停止请求），共 " .. rounds .. " 轮")
 
 -- ============================================================================
 --  停机收尾
