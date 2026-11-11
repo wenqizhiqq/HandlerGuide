@@ -18,6 +18,11 @@
 - SR-08 前后梭车/压头联动、SR-11 后梭车压头、SR-12 两臂走廊互斥；`ShuttlePressClear` 判梭车在压区时压头必须抬起。`AxisParamVersion` 3。
 - `SimMotionCard`：`Step` 内部截 dt≤0.2s；首次 `Configure` 播种 `HomeMm`；噪声仅运动时叠加。`SyncVacuumFeedback()` 回显真空否则投料恒 0。
 - 时钟：快速通道用 `Stopwatch` 真实间隔，禁压 dt；关窗 `_timer.Stop()`。cycle/梭车理论值从 `m.Cfg(ax)` 现算，**禁止写死速度**。
+- **IO 两套表并存（需求 86）**：主表 `HandoverTables.Inputs/Outputs`（303/123，U0_X2.0 编号）驱动仿真；
+  附表「上料/下料-输入输出」是 GL20 远端 IO 另一版接线，存 `Gl20Inputs/Gl20Outputs/Gl20Analog`（301/145/4，
+  表内点号 输入216·输出200 + 块内位号），`Gl20Blocks` 26 块、`Gl20FastIn` 8 路、`Gl20OriginAxes` 20 根、
+  `BusBranches`(Sheet2 X2~X6)、`SpareParts`(Sheet1 型号)。界面只读页 `MotionPages.TabGl20()`。
+  解析要点：附表块标题可能在 col0/col7，同行两个标题=左右两个独立块，否则左右共用一个块。
 
 ## 31_平移分选.lua
 - 66 八嘴+真空确认+飞拍+三本账+连败锁存；67 Auto塔/NG仓/压头真空/变距旋转/进料仓换盘；68 per-site→逐 bin 停靠+UPH上限；69 重测/温控/清针/落料真空复核。

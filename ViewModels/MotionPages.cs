@@ -340,10 +340,11 @@ namespace HandlerGuide.ViewModels
                     E.T("总量守恒：", 11.5, E.Sec, true).Wd(76),
                     Live("flow_conservation", null, 940, E.BandGrey, E.P, 10.5))));
 
-            // ---------------- 四个标签页 ----------------
+            // ---------------- 五个标签页 ----------------
             root.Children.Add(E.Tabs(
                 ("轴控制", () => TabAxis()),
                 ("IO 监视", () => TabIo()),
+                ("附表 IO（GL20）", () => TabGl20()),
                 ("安全互锁", () => TabSafety()),
                 ("轨迹预览", () => TabTrace())));
 
@@ -405,7 +406,115 @@ namespace HandlerGuide.ViewModels
                         10.5, E.Sec, false, TextWrapping.Wrap)));
         }
 
-        /// <summary>标签页 3：安全互锁。</summary>
+        /// <summary>
+        /// 标签页 3：附表 IO（GL20 远端 IO 版本）。
+        /// 资料来源是同一个 Excel 里另外两张 sheet「上料-输入输出」「下料-输入输出」，
+        /// 它们和主表（轴控 / 输入输出&amp;阀岛）不是一套编号：主表是 U0_X2.0「块_字节.位」，
+        /// 附表是「输入216 / 输出200」连续点号，而且块号重名（主表 U0 = 23 个输入，
+        /// 附表 U0 = 另外 32 个）——所以这里按表原样全量归档：点号 + 块 + 块内位号 +
+        /// 物料型号 + 脚位，只读展示；仿真点位仍走主表，两套不混。
+        /// </summary>
+        private static Element TabGl20()
+        {
+            var all = new List<HandoverGl20>();
+            all.AddRange(HandoverTables.Gl20Inputs);
+            all.AddRange(HandoverTables.Gl20Outputs);
+            all.AddRange(HandoverTables.Gl20Analog);
+
+            var inner = E.V();
+            foreach (var b in HandoverTables.Gl20Blocks)
+            {
+                var wrap = new WrapElement();
+                int n = 0;
+                foreach (var p in all)
+                {
+                    if (p.Area != b.Area || p.Block != b.Block || p.IsOutput != b.IsOutput) continue;
+                    wrap.Children.Add(Gl20Chip(p));
+                    n++;
+                }
+                if (n == 0)
+                {
+                    // 表里整块没填点名（下料 U24 / U25）：也列出来，否则「按表格」就不完整
+                    inner.Children.Add(E.Group(
+                        b.Area + " · " + b.Block + " · " + (b.IsOutput ? "输出" : "输入") + " · " + b.Title,
+                        E.T("该块 " + b.Slots + " 位在表格里没有填点名（保留空槽，不臆造名字）", 11, E.Sec)));
+                    continue;
+                }
+                inner.Children.Add(E.Group(
+                    b.Area + " · " + b.Block + " · " + (b.IsOutput ? "输出" : "输入") + " · " + b.Title
+                    + "（" + n + " 点 / " + b.Slots + " 位）",
+                    wrap));
+            }
+
+            // 版卡高速输入
+            var fastWrap = new WrapElement();
+            foreach (var f in HandoverTables.Gl20FastIn)
+            {
+                fastWrap.Children.Add(E.H(
+                    E.T("版卡 " + f[1], 10, E.Sec).Wd(60),
+                    E.T(f[0], 11, E.P, false, TextWrapping.NoWrap).Wd(140))
+                    .Marg(new Thickness(0, 1, 12, 1)));
+            }
+            inner.Children.Add(E.Group("U30 版卡 - 高速输入 IN01 ~ IN08（中转感应5 / 料梭产品检测）", fastWrap));
+
+            // 轴原点感应
+            var orgWrap = new WrapElement();
+            foreach (var a in HandoverTables.Gl20OriginAxes)
+            {
+                orgWrap.Children.Add(E.H(
+                    E.T(a, 11, E.P, false, TextWrapping.NoWrap).Wd(104),
+                    E.T("原点", 10, E.Acc))
+                    .Marg(new Thickness(0, 1, 12, 1)));
+            }
+            inner.Children.Add(E.Group("轴感应器 - 20 根轴的原点信号（上料 10 + 下料 10，与 45 轴表逐根对应）", orgWrap));
+
+            // EtherCAT 分支（工作簿 Sheet2）
+            var busWrap = new WrapElement();
+            foreach (var b in HandoverTables.BusBranches)
+            {
+                busWrap.Children.Add(E.H(
+                    E.T(b[0], 11, E.Acc, true).Wd(32),
+                    E.T(b[1], 11, E.P, false, TextWrapping.NoWrap).Wd(120))
+                    .Marg(new Thickness(0, 1, 14, 1)));
+            }
+            inner.Children.Add(E.Group("EtherCAT 分支 X2 ~ X6（Sheet2：哪个口挂阀岛 / 哪一侧的轴与 IO）", busWrap));
+
+            // 型号清单（工作簿 Sheet1）
+            var partWrap = new WrapElement();
+            foreach (var b in HandoverTables.SpareParts)
+            {
+                partWrap.Children.Add(E.H(
+                    E.T(b[0], 9.5, E.Sec).Wd(124),
+                    E.T(b[1], 11, E.P, false, TextWrapping.NoWrap).Wd(124),
+                    E.T(b[2], 9.5, E.Sec, false, TextWrapping.NoWrap).Wd(280))
+                    .Marg(new Thickness(0, 1, 12, 1)));
+            }
+            inner.Children.Add(E.Group("传感器 / 阀岛 / 真空件型号清单（Sheet1，按料号去重 14 种）", partWrap));
+
+            return E.V(
+                E.T("附表「上料-输入输出」「下料-输入输出」（GL20-3200END / GL20-0032ETN 远端 IO 版本）全量："
+                    + HandoverTables.Gl20Inputs.Length + " 入 / " + HandoverTables.Gl20Outputs.Length + " 出 / "
+                    + HandoverTables.Gl20Analog.Length + " 模拟量 + 8 路高速输入 + 20 个轴原点。",
+                    11.5, E.Sec, false, TextWrapping.Wrap),
+                E.T("这两张表的编号是「输入216 / 输出200」，与主表 U0_X2.0 是同一台机的另一版接线清单，块号重名，"
+                    + "因此只做归档展示（点号 / 位号 / 型号 / 脚位），不并入仿真点位；仿真仍按主表 303 入 / 123 出驱动。",
+                    10.5, E.Sec, false, TextWrapping.Wrap),
+                E.Scroll(inner, 540, ScrollBarVisibility.Disabled, ScrollBarVisibility.Auto));
+        }
+
+        /// <summary>附表 IO 的一行：表内点号 + 块内位号 + 点名 + 型号 + 脚位。</summary>
+        private static Element Gl20Chip(HandoverGl20 p)
+        {
+            return E.H(
+                E.T((p.IsOutput ? "输出" : "输入") + p.Addr.ToString(), 10, E.Sec).Wd(54),
+                E.T((p.IsOutput ? "Y" : "X") + (p.Bit / 8) + "." + (p.Bit % 8), 9.5, E.Sec).Wd(38),
+                E.T(p.Name, 11, E.P, false, TextWrapping.NoWrap).Wd(136),
+                E.T(string.IsNullOrEmpty(p.Model) ? "—" : p.Model, 9.5, E.Sec, false, TextWrapping.NoWrap).Wd(150),
+                E.T(string.IsNullOrEmpty(p.Pin) ? "—" : p.Pin, 9.5, E.Sec).Wd(26))
+                .Marg(new Thickness(0, 1, 10, 1));
+        }
+
+        /// <summary>标签页 4：安全互锁。</summary>
         private static Element TabSafety()
         {
             var m = MotionManager.Instance;
@@ -436,7 +545,7 @@ namespace HandlerGuide.ViewModels
                 E.Group("软限位与轴归属", E.Scroll(lim, 260, ScrollBarVisibility.Disabled, ScrollBarVisibility.Auto)));
         }
 
-        /// <summary>标签页 4：轨迹预览（动画画布 + 演示节拍）。</summary>
+        /// <summary>标签页 5：轨迹预览（动画画布 + 演示节拍）。</summary>
         private static Element TabTrace()
         {
             var canvas = BuildTraceCanvas();
