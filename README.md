@@ -11,10 +11,8 @@ HandlerGuide 是一套用 WPF / .NET 8（net8.0-windows）编写的半导体三�
 仿真页投入的工作量最多。2D 工程图是 11 个模组的平面示意；整机俯视图以真机照片为底图（手臂和横梁已从底图擦除），14 个料盘按照片逐像素量测的坐标定位——上排 6 个叠层盘、中排 5 个缓存盘、左下 3 个出料盘，右侧两块加热盘各 176 个工位；三根手臂、两根横梁和两个红色滑座全部从照片抠图，且各自只沿一个自由度运动。料流全部事件化：上料吸嘴 2×4 吸料 → 加热盘 → 小车 B（右侧上料位、中间测试位、左侧下料位，4×8 格）→ 缓存盘 → 下料吸嘴按 Bin 落盘；出料盘满 32 颗后整盘升进出空盘塔，空位由搬运料盘手臂从进空盘补一片，补上之前下料臂持料等待。每 24 秒输出一行总量守恒自检。
 
 质量保障依靠一套开箱自检：HG_SELFTEST 运行 52 项界面与绑定检查、31 轴运动检查和 223 项操作校验，再逐像素比对两帧确认动画确实在动；离线还有 Python 镜像回归，检查料流守恒、容量上限与无死锁。整体而言，它是一个“界面复刻 + 运动仿真 + 安全互锁 + 自检回归”四位一体的机器控制软件原型。
-<img width="2559" height="1527" alt="6293166af4fbb4fafbf9702bb9eb42f2" src="https://github.com/user-attachments/assets/4fd773ba-97b3-4fa7-bda2-6d92df292fba" />
+<img width="1280" height="763" alt="3c7b2f091bc9ee87567407b86003c2a7" src="https://github.com/user-attachments/assets/dbebf935-fef1-4322-b9b2-79312db7ba14" />
 
-
-<img width="1280" height="766" alt="9e81b00ed1e227df01babf80c5677f73" src="https://github.com/user-attachments/assets/bd555a33-4865-43f5-b84a-ec470ddfbf51" />
 <img width="2559" height="1530" alt="8e9f80d3a8d72decfa77c4ca1aa2ca7b" src="https://github.com/user-attachments/assets/1ecc461f-e725-46cc-a662-7ed0ba0c3707" />
 <img width="2559" height="1529" alt="8ad374d20d8abc9ea86059fb78e9f291" src="https://github.com/user-attachments/assets/27f8ca26-dfc1-4050-a6f7-831bf8b308bd" />
 <img width="2048" height="1120" alt="b0201473545c0b1043addad40a40aba6" src="https://github.com/user-attachments/assets/32bb1107-095e-4c24-821e-9a8cb0744bc8" />
