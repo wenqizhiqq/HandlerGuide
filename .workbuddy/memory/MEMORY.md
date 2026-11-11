@@ -54,6 +54,14 @@
   - 验证：A1(DoString) FAIL / A2(字节加载) PASS；17 场景回归 `req76_regress.txt` 全 PASS，额定 35 圈 11,495 不变。
 
 ## 其它
+- **⚠️ 11-11 11:33 整树还原（用户确认「有意的」）**：`git reflog` 显示
+  `HEAD=50eb4b0 "x移动" 11:35:36`（提交在还原后的树上，工作区 clean），
+  `ViewModels / Scripts / Editing / Flow` 目录 mtime 全停在 11:33:12。
+  今天未提交的需求 **79（14×35=490 格 + 料账）、80（上料Y逐行 + 皮带相位）、
+  81（满盘搬运 + `料盘.臂载`）、82（料盘 469）全部作废**，磁盘回到 11-09 那一版
+  （`FEED_COLS=5/FEED_ROWS=8`、`feedY≈292`、31.lua 无 `feed_cell`）。
+  用户口径：**画布只要 X 移动**，不要按旧笔记恢复这些功能；`Flow/LuaFlowHost.cs`
+  需求 76 的修复属于早先提交，仍有效。教训：改前改后先 `git status`、及时 commit，C# 没有备份。
 - **75 画布轴速度 = 1 秒 10px**（`点位.仿真.画布速度`，MotionManager 构造登记默认 10）：
   只改 `LayoutPages` 的**时隙长度算法**（`SlotByPx = 行程px ÷ (px速度 × 0.35)`，0.35=`(1−PhaseHold)/2`），
   轴表 MaxVel 一律不动。三时隙不再等长（下料/上料 113.9s、搬运 215.4s，一轮 443s），

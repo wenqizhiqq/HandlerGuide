@@ -1042,6 +1042,53 @@ namespace HandlerGuide.ViewModels
             return f;
         }
 
+        // ------------------------------------------------------------------
+        //  需求 83：上料位料盘的规格一律取自「软件设置」，画布不写死
+        //  温启志 18719361399 · 用户：「料盘的 xy 的料数量，需要根据软件的设置的」
+        //  来源链路（配方管理 → 料盘设定）：
+        //    ①「料盘定义」表里 [上料盘] 那一行（td_t_0）选的是哪个料盘类型；
+        //    ② 该类型页签的「X数量 / Y数量」（tp_nx_N / tp_ny_N）= 盘面列数 / 行数。
+        //  满盘颗数 = 列 × 行，与脚本 31_平移分选.lua 的「料盘.容量」同一个物理格位数。
+        //  取不到（首次启动没存过参数）时回退到界面上显示的默认值 8 × 20。
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// 上料盘所用的料盘类型编号（1..3）。「料盘定义」第 0 行 = 上料盘（见
+        /// RecipePages.TrayPage 的 defList）；该格存的是下拉索引 0/1/2 ⇒ 类型 1/2/3。
+        /// 存了「小车 / 加热板」等越界值时按类型 1 处理。
+        /// </summary>
+        private static int FeedTrayType()
+        {
+            var mm = MachineModel.Instance;
+            int idx = mm.Choices.TryGetValue("td_t_0", out var v) ? v : 0;
+            return idx >= 0 && idx <= 2 ? idx + 1 : 1;
+        }
+
+        /// <summary>
+        /// 读料盘规格里的一个数量（列 / 行）。非数字、小于 1 时回退 def；
+        /// 上限 200 防止手误输入 9999 把画布画出几万个 RectItem。
+        /// </summary>
+        private static int FeedTrayCount(string key, double def)
+        {
+            double v = MachineModel.Instance.GetNum(key, def);
+            int n = (int)Math.Round(v);
+            if (n < 1) n = (int)Math.Round(def);
+            return Math.Max(1, Math.Min(200, n));
+        }
+
+        /// <summary>
+        /// 料盘格子的三个尺寸参数：内缩 / 圆角 / 格线粗细，全部按格距自适应。
+        /// 需求 83：换成 8×20 这种密盘时单格只有 ~9px，若还用固定的「内缩 3.2 / 圆角 2 /
+        /// 格线 1px」，料色只剩中间一条缝、格线糊成一片 —— 所以按窄边比例缩放。
+        /// </summary>
+        private static (double Inset, double Radius, double Gap) TrayCellMetrics(double cw, double ch)
+        {
+            double m = Math.Min(cw, ch);
+            return (Math.Max(0.35, Math.Min(3.2, m * 0.16)),      // 内缩
+                    Math.Max(0.6, Math.Min(2.0, m * 0.12)),       // 圆角
+                    Math.Max(0.5, Math.Min(1.0, m * 0.09)));      // 格线
+        }
+
         private static CanvasElement BuildLayoutCanvasTop()
         {
             // 1010×819 —— 与底图 1696×1376（≈1.233）等比，且与 3D 画布同高。
@@ -1149,6 +1196,15 @@ namespace HandlerGuide.ViewModels
             var trayLayerLabel = new List<TextItem>();     // 盘内层数文字
             var trayLayerWarn = new List<TextItem>();      // 盘内「需增加料盘」
             var trayLayerWash = new List<RectItem>();      // 报警黄色底光
+
+            // ---- 需求 83（用户：「这些料盘一样」）----
+            // 画布上所有**带格子的料盘**（中排 5 个缓存盘 / 左下 3 个出料盘 / 上料位料盘）
+            // 统一用同一套规格 = 「料盘设定」里上料盘所用料盘类型的 X数量 × Y数量。
+            // 原来这里是「深盘 5×10、绿盘 4×8、上料位 5×8」三种格子，看着就不是同一种 Tray；
+            // 现在只认一个来源，换 Tray 规格时三种盘一起变，密度天然一致。
+            int trayType = FeedTrayType();
+            int trayCols = FeedTrayCount("tp_nx_" + trayType, 8);
+            int trayRows = FeedTrayCount("tp_ny_" + trayType, 20);
 
             for (int i = 0; i < TrayPlan.Length; i++)
             {
@@ -1260,10 +1316,11 @@ namespace HandlerGuide.ViewModels
                 trayLayerWash.Add(null);
 
                 // ③ 格子层：用 DrawingBrush 按「一格」的尺寸平铺 —— 一张盘只占 1 个图元
-                //    就画出整片格子（深盘 5×10 格，绿盘 4×8 格，格子接近正方形）。
-                int cols = tp.Green ? 4 : 5;
-                int rows = tp.Green ? 8 : 10;
+                //    就画出整片格子。需求 83：列/行 = 料盘设定的 X数量 / Y数量，
+                //    与上料位料盘、缓存盘、出料盘完全同一规格（绿盘也一样）。
+                int cols = trayCols, rows = trayRows;
                 double cw = w / cols, ch = h / rows;
+                var cellM = TrayCellMetrics(cw, ch);
                 var pocket = new DrawingBrush
                 {
                     TileMode = TileMode.Tile,
@@ -1273,8 +1330,10 @@ namespace HandlerGuide.ViewModels
                     Drawing = new GeometryDrawing
                     {
                         Brush = body,
-                        Pen = new Pen(line, 1),
-                        Geometry = new RectangleGeometry(new Rect(0.5, 0.5, cw - 1, ch - 1)),
+                        Pen = new Pen(line, cellM.Gap),
+                        Geometry = new RectangleGeometry(
+                            new Rect(cellM.Gap * 0.5, cellM.Gap * 0.5,
+                                     cw - cellM.Gap, ch - cellM.Gap)),
                     },
                 };
                 cv.Items.Add(new RectItem
@@ -1286,20 +1345,19 @@ namespace HandlerGuide.ViewModels
                     StrokeThickness = 0,
                 });
 
-                // ④ 物料格：每个格子里一颗料（比格子内缩 3px，露出格子的边）
+                // ④ 物料格：每个格子里一颗料（比格子内缩一点，露出格子的边；内缩随格距自适应）
                 var devs = new List<RectItem>();
                 for (int r = 0; r < rows; r++)
                 {
                     for (int c = 0; c < cols; c++)
                     {
-                        const double inset = 3.2;
                         var dv = new RectItem
                         {
-                            X = x + c * cw + inset,
-                            Y = y + r * ch + inset,
-                            W = Math.Max(2, cw - inset * 2),
-                            H = Math.Max(2, ch - inset * 2),
-                            Radius = 2,
+                            X = x + c * cw + cellM.Inset,
+                            Y = y + r * ch + cellM.Inset,
+                            W = Math.Max(1, cw - cellM.Inset * 2),
+                            H = Math.Max(1, ch - cellM.Inset * 2),
+                            Radius = cellM.Radius,
                             Fill = tp.Green ? devGreen : devBlue,
                         };
                         cv.Items.Add(dv);
@@ -1489,16 +1547,23 @@ namespace HandlerGuide.ViewModels
             // 料盘空了，就会被搬运料盘手臂搬运到出空盘的位置，通过皮带到出空盘层」。
             //  · 盘体与中排缓存盘同款（深色盘身 + 格纹），X 与进料盘对齐、Y 与中排
             //    皮带同一高度带 = 进料盘下方那条输送段上的工位；
-            //  · 需求 46（用户：「进料盘这个需要和其他料盘的物料大小一样」）：格网改成
-            //    与中排缓存盘同款的 5 列 × 10 行（同盘宽/高 ⇒ 单格与物料尺寸完全一致），
-            //    40 颗芯片占**下面 8 行**（上 2 行空格）；上料吸嘴每吸一次 2×4 = 8 颗
-            //    （动画里逐格熄灭，剩余芯片留在盘底 = 吸嘴从最上层往下吸）；
             //  · 吸空后由搬运臂「空盘搬运」剧本端走（见 Draw 内需求 44 块）。
+            //
+            //  需求 83（温启志 18719361399）· 用户：「料盘的 xy 的料数量，需要根据软件
+            //  的设置的」/「这些料盘一样」——盘面是几列 × 几行、满盘几颗，一律取**软件设置**，
+            //  并且和上面中排缓存盘 / 左下出料盘**共用同一套规格**，画布不再写死：
+            //    · 「配方管理 → 料盘设定 → 料盘定义」里 [上料盘] 那一行选了哪种料盘类型
+            //      （td_t_0：0/1/2 ⇒ 料盘类型 1/2/3）；
+            //    · 该类型的「X数量 / Y数量」（tp_nx_N / tp_ny_N）= 盘面列数 / 行数；
+            //    · 满盘颗数 = 列 × 行 —— 这就是 Tray 的物理格位数，也是脚本
+            //      「料盘.容量」的同一个量（默认料盘类型1 是 8 × 20 = 160 颗）；
+            //    · 上料吸嘴每吸一次 2×4 = 8 颗，动画里逐格熄灭、剩余芯片留在盘底。
+            //  换 Tray 规格（例如 14×35 = 490）只需在该页改两个数量，所有盘一起跟着变。
             double feedX = TrayPlan[5].U * CW, feedW = TrayPlan[5].DU * CW;   // ≈710.3 / 82.8
             double feedY = TrayPlan[6].V * CH, feedH = TrayPlan[6].DV * CH;   // ≈292.0 / 174.2
-            const int FEED_COLS = 5, FEED_ROWS = 8;           // 物料 40 颗 = 5 列 × 8 行
-            const int FEED_GRID_ROWS = 10;                    // 需求 46：格网行数与中排缓存盘同款
-            const int FEED_FULL = FEED_COLS * FEED_ROWS;     // 40 颗 = 5 次 2×4 吸取
+            int FEED_COLS = trayCols;                                        // 与中排/下排盘同规格
+            int FEED_ROWS = trayRows;
+            int FEED_FULL = FEED_COLS * FEED_ROWS;                           // 满盘颗数
             cv.Items.Add(new RectItem
             {
                 X = feedX, Y = feedY, W = feedW, H = feedH, Radius = 3,
@@ -1506,7 +1571,9 @@ namespace HandlerGuide.ViewModels
             });
             // 说明小字（需求 61）：进料盘下来的料盘停在这个工位，上料吸嘴从这里 2×4 吸料。
             Tag("上料位料盘", feedX + (feedW - 58) / 2, feedY - 17, 58);
-            double feedCw = feedW / FEED_COLS, feedCh = feedH / FEED_GRID_ROWS;   // 单格 = 中排缓存盘同款
+            // 单格尺寸 = 盘面 ÷ 设置的列数/行数（内缩/圆角/格线随格距自适应，见 TrayCellMetrics）
+            double feedCw = feedW / FEED_COLS, feedCh = feedH / FEED_ROWS;
+            var feedCellM = TrayCellMetrics(feedCw, feedCh);
             cv.Items.Add(new RectItem
             {
                 X = feedX, Y = feedY, W = feedW, H = feedH, Radius = 3,
@@ -1519,26 +1586,30 @@ namespace HandlerGuide.ViewModels
                     Drawing = new GeometryDrawing
                     {
                         Brush = darkBody,
-                        Pen = new Pen(darkLine, 1),
-                        Geometry = new RectangleGeometry(new Rect(0.5, 0.5, feedCw - 1, feedCh - 1)),
+                        Pen = new Pen(darkLine, feedCellM.Gap),
+                        Geometry = new RectangleGeometry(
+                            new Rect(feedCellM.Gap * 0.5, feedCellM.Gap * 0.5,
+                                     feedCw - feedCellM.Gap, feedCh - feedCellM.Gap)),
                     },
                 },
                 Stroke = darkBody, StrokeThickness = 0,
             });
             // 芯片格：列表头部 = 最底行（填充序「从下到上、从左到右」）→ 剩余芯片
             // 画在盘底、上层先被吸空（Draw 里按 feedChips 逐格点亮）。
+            // 需求 83：格数与「料盘设定」的 X/Y 数量严格相等 ⇒ 点亮 k 颗 = 前 k 格，
+            // 与脚本「料盘.容量」同一口径（列×行）。
             var feedCells = new List<RectItem>();
-            const double feedInset = 3.2;                     // 与其他盘物料同一公式：格子内缩 3.2px、圆角 2
+            double feedInset = feedCellM.Inset;
+            double feedRadius = feedCellM.Radius;
             for (int fr = FEED_ROWS - 1; fr >= 0; fr--)
             {
-                int gr = FEED_GRID_ROWS - 1 - fr;             // 格网行号（0=顶行）：40 颗占下 8 行
                 for (int fc = 0; fc < FEED_COLS; fc++)
                 {
                     var cell = new RectItem
                     {
-                        X = feedX + fc * feedCw + feedInset, Y = feedY + gr * feedCh + feedInset,
-                        W = Math.Max(2, feedCw - feedInset * 2), H = Math.Max(2, feedCh - feedInset * 2),
-                        Radius = 2,
+                        X = feedX + fc * feedCw + feedInset, Y = feedY + fr * feedCh + feedInset,
+                        W = Math.Max(1, feedCw - feedInset * 2), H = Math.Max(1, feedCh - feedInset * 2),
+                        Radius = feedRadius,
                         // 与其他盘物料同款渲染：Stroke/StrokeThickness 走 RectItem 默认值
                         // （Border 默认 1px 透明边框会把可见填充内收 1px），两边像素尺寸才对得上。
                         Fill = devBlue,
@@ -1998,11 +2069,12 @@ namespace HandlerGuide.ViewModels
             // → 按 bin 分选入收料盘 → 满盘轨道回仓换新盘。俯视图映射：
             //   上料位 = 待测盘；上料臂 = 上料吸嘴（吸 8 颗放加热盘）；
             //   加热盘 = 测试工位（琥珀 = 在测）；测完 6s 一批经中排皮带进缓存盘（梭台）；
-            //   下料臂 = 下料吸嘴（从缓存盘吸 8 颗按 bin 放进出料盘）；出料盘满 32 颗 =
-            //   满盘回仓换新盘（颗数记入 shipped）。总量守恒：
-            //   feedChips + carryU + heatLoad + 皮带在途 + carryD + Σ(6..13 盘) + shipped = 160。
+            //   下料臂 = 下料吸嘴（从缓存盘吸 8 颗按 bin 放进出料盘）；出料盘满一盘（列×行，
+            //   需求 83 起跟着料盘设定走）= 满盘回仓换新盘（颗数记入 shipped）。总量守恒：
+            //   feedChips + carryU + heatLoad + 皮带在途 + carryD + Σ(6..13 盘) + shipped
+            //   = 4 × FEED_FULL + FEED_FULL × 换盘次数。
             int[] trayChips = new int[TrayPlan.Length];   // 各盘实际芯片数（只用 6..13）
-            for (int i = 6; i <= 8; i++) trayChips[i] = 40;   // 三张中转缓存盘首屏有料
+            for (int i = 6; i <= 8; i++) trayChips[i] = FEED_FULL;   // 三张中转缓存盘首屏满盘
             int carryU = 0;          // 上料吸嘴挂料颗数
             int carryD = 0;          // 下料吸嘴挂料颗数
             int heatLoad = 0;        // 加热盘在测颗数
@@ -2010,8 +2082,8 @@ namespace HandlerGuide.ViewModels
             double beltT = 0;        // 出测节拍计时（每 6s 出一批 8 颗）
             int shipped = 0;         // 满盘回仓累计颗数
             int lastCycLogged = -1;  // 需求 48：每个循环打一行总量守恒自检
-            int feedRefills = 0;     // 需求 48：换入新料盘的次数（一盘 40 颗是凭空进来的）
-            int outIdx = 11;         // 当前分选目标出料盘（满 32 颗换下一张）
+            int feedRefills = 0;     // 需求 48：换入新料盘的次数（一盘 = 列×行，按料盘设定）
+            int outIdx = 11;         // 当前分选目标出料盘（满一盘换下一张）
             bool didDropU = false;   // 本上料时隙「放加热盘」是否已触发
             bool didGrabD = false, didDropD = false;   // 下料臂吸/放锁存
             bool demo = Environment.GetEnvironmentVariable("HG_DEMO") == "1";   // 自检抓拍模式：事件写日志 + 动画 dt 固定（见 Draw 内）
@@ -2404,7 +2476,7 @@ namespace HandlerGuide.ViewModels
                 }
                 // 满盘回仓换新盘（平移分选机「满盘传送回料盒」）：整盘颗数记入 shipped，
                 // 同时给这张盘一次绿色换盘脉冲 —— 画面看得出「满盘送走、空盘换入」。
-                if (trayChips[outIdx] >= 32)
+                if (trayChips[outIdx] >= FEED_FULL)
                 {
                     shipped += trayChips[outIdx]; trayChips[outIdx] = 0;
                     swapIdx = outIdx; swapT = 1.2;
@@ -2460,6 +2532,8 @@ namespace HandlerGuide.ViewModels
 
                 // ---- 需求 48：缓存/出料盘物料显示 = 实际颗数（需求 41 的 cellPh 闪烁退役）----
                 // 缓存盘从上往下点亮（吸嘴逐排放上），出料盘从下往上点亮（堆料观感）。
+                // 需求 83：格数 = 列×行（8×20 时 9 张盘共 1440 格），每帧逐个赋 Fill 太浪费，
+                // 目标画刷没变就跳过（ReferenceEquals 短路，与旧版 490 格盘同一套做法）。
                 for (int i = 6; i < trayDevices.Count; i++)
                 {
                     var devs = trayDevices[i];
@@ -2470,8 +2544,11 @@ namespace HandlerGuide.ViewModels
                     var devBrush = green ? devGreen : devBlue;
                     int cnt = Math.Min(trayChips[i], n);
                     for (int j = 0; j < n; j++)
-                        devs[j].Fill = green ? (j >= n - cnt ? devBrush : null)
-                                             : (j < cnt ? devBrush : null);
+                    {
+                        var want = green ? (j >= n - cnt ? devBrush : null)
+                                         : (j < cnt ? devBrush : null);
+                        if (!ReferenceEquals(devs[j].Fill, want)) devs[j].Fill = want;
+                    }
                 }
 
                 // ---- 需求 48：总量守恒自检（每个 24s 循环一行，写进日志）----
@@ -2486,8 +2563,8 @@ namespace HandlerGuide.ViewModels
                     for (int s = 0; s < BELT_SLOT; s++) inTransit += beltSlot[s];
                     int total = feedChips + carryU + heatLoad + inTransit + carryD + shipped;
                     for (int i = 6; i < TrayPlan.Length; i++) total += trayChips[i];
-                    // 每换入一张新料盘就多 FEED_FULL 颗，所以基准是 160 + 40×换盘次数。
-                    int expect = FEED_FULL + 3 * 40 + FEED_FULL * feedRefills;
+                    // 每换入一张新料盘就多 FEED_FULL 颗；首屏 = 上料位一盘 + 3 张缓存盘各一盘。
+                    int expect = FEED_FULL * (1 + 3) + FEED_FULL * feedRefills;
                     App.Log("req48 conservation cyc=" + cycNow + " total=" + total +
                           " (应=" + expect + ") 换盘=" + feedRefills +
                           " 上料位=" + feedChips + " 挂上=" + carryU +
@@ -2525,7 +2602,10 @@ namespace HandlerGuide.ViewModels
                 // ---- 需求 44：上料位芯片显示（剩余 feedChips 颗；填充序从下到上，
                 //      所以剩余芯片留在盘底、上层先被吸空）----
                 for (int k = 0; k < feedCells.Count; k++)
-                    feedCells[k].Fill = k < feedChips ? devBlue : null;
+                {
+                    var want = k < feedChips ? devBlue : null;
+                    if (!ReferenceEquals(feedCells[k].Fill, want)) feedCells[k].Fill = want;
+                }
 
                 // ---- 需求 43：自动盘塔顶升（放盘瞬间整摞上移一格，停 1.2s 后落回）----
                 for (int i = 0; i < 6; i++)
